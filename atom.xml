@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
 
-  <title><![CDATA[My Octopress Blog]]></title>
-  <link href="http://mandubian.github.com/mandubian/atom.xml" rel="self"/>
-  <link href="http://mandubian.github.com/mandubian/"/>
-  <updated>2012-07-13T18:01:11+02:00</updated>
-  <id>http://mandubian.github.com/mandubian/</id>
+  <title><![CDATA[Mandubian Blog]]></title>
+  <link href="http://www.mandubian.com/mandubian/atom.xml" rel="self"/>
+  <link href="http://www.mandubian.com/mandubian/"/>
+  <updated>2012-07-14T00:10:38+02:00</updated>
+  <id>http://www.mandubian.com/mandubian/</id>
   <author>
-    <name><![CDATA[Your Name]]></name>
-    
+    <name><![CDATA[Pascal Voitot]]></name>
+    <email><![CDATA[pascal.voitot.dev@gmail.com]]></email>
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
