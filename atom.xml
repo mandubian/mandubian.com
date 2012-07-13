@@ -2,10 +2,10 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
 
   <title><![CDATA[Mandubian Blog]]></title>
-  <link href="http://www.mandubian.com/mandubian/atom.xml" rel="self"/>
-  <link href="http://www.mandubian.com/mandubian/"/>
-  <updated>2012-07-14T00:10:38+02:00</updated>
-  <id>http://www.mandubian.com/mandubian/</id>
+  <link href="http://www.mandubian.com/atom.xml" rel="self"/>
+  <link href="http://www.mandubian.com/"/>
+  <updated>2012-07-14T00:16:53+02:00</updated>
+  <id>http://www.mandubian.com/</id>
   <author>
     <name><![CDATA[Pascal Voitot]]></name>
     <email><![CDATA[pascal.voitot.dev@gmail.com]]></email>
