@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
 
-  <title><![CDATA[Mandubian Blog]]></title>
-  <link href="http://www.mandubian.com/atom.xml" rel="self"/>
+  <title><![CDATA[Category: xml | Mandubian Blog]]></title>
+  <link href="http://www.mandubian.com/blog/categories/xml/atom.xml" rel="self"/>
   <link href="http://www.mandubian.com/"/>
   <updated>2012-07-14T01:28:52+02:00</updated>
   <id>http://www.mandubian.com/</id>
@@ -20,15 +20,15 @@
     <id>http://www.mandubian.com/blog/2012/07/14/xmlsoap-ersatz</id>
     <content type="html"><![CDATA[<h1>XML/SOAP to/from scala structures with <em>xmlsoap-ersatz</em></h1>
 
-<blockquote><p><a href="https://github.com/mandubian/scala-xmlsoap-ersatz">xmlsoap-ersatz</a> is a toolset to help people serialize/deserialize XML/SOAP with Scala. I doesn&#8217;t try to respect any standard but it allows to interprete and generate any XML format with any standard you require.</p></blockquote>
+<blockquote><p><a href="https://github.com/mandubian/scala-xmlsoap-ersatz">xmlsoap-ersatz</a> is a toolset to help people serialize/deserialize XML/SOAP with Scala. I doesn't try to respect any standard but it allows to interprete and generate any XML format with any standard you require.</p></blockquote>
 
-<p>It was developed to be used with <a href="http://www.playframework.org">Play2/Scala</a> but it can work standalone as it doesn&#8217;t depend on any other library.</p>
+<p>It was developed to be used with <a href="http://www.playframework.org">Play2/Scala</a> but it can work standalone as it doesn't depend on any other library.</p>
 
 <p>xmlsoap-ersatz uses the same design as Play2 Json serialization/deserialization based on <strong>implicit typeclasses</strong>. This mechanism is very clean, robust and generic. Please note that implicits are NOT used as implicit CONVERSIONS which are often tricky and sometimes dangerous!</p>
 
-<p><em>xmlsoap-ersatz is still draft library so if you discover anything wrong, don&#8217;t hesitate to tell it</em></p>
+<p><em>xmlsoap-ersatz is still draft library so if you discover anything wrong, don't hesitate to tell it</em></p>
 
-<blockquote><p>xmlsoap-ersatz is an <a href="https://github.com/mandubian/scala-xmlsoap-ersatz">opensource public github</a> so don&#8217;t hesitate to contribute and give ideas :)</p></blockquote>
+<blockquote><p>xmlsoap-ersatz is an <a href="https://github.com/mandubian/scala-xmlsoap-ersatz">opensource public github</a> so don't hesitate to contribute and give ideas :)</p></blockquote>
 
 <br/>
 
@@ -124,7 +124,7 @@ It can be done at once by extending <code>XMLFormatter[T]</code>:</p>
 
 <ul>
 <li>the <code>write</code> function uses Scala XML literals simply.</li>
-<li>the <code>implicit</code> is important: you can declare it once in your scope and that&#8217;s all.</li>
+<li>the <code>implicit</code> is important: you can declare it once in your scope and that's all.</li>
 <li><p>the <code>age</code> field in <code>write</code> requires a special syntax:</p>
 
 <p>  <code>{ EXML.toXML(f.age, &lt;age/&gt;) }</code> means: <code>&lt;age/&gt;</code> is used as the base node and will generate following XML:</p>
@@ -136,7 +136,7 @@ It can be done at once by extending <code>XMLFormatter[T]</code>:</p>
 </li>
 <li><p>the <code>base</code> field in <code>write</code> function can be used to pass a parent context node to the writer. It is helpful in case you need to add attributes to parent node for ex as in the case of <code>age: Option[Int]</code> field.</p>
 
-<blockquote><p>But don&#8217;t forget that Scala XML nodes are immutable and that you can just copy the nodes you pass to a function.</p></blockquote></li>
+<blockquote><p>But don't forget that Scala XML nodes are immutable and that you can just copy the nodes you pass to a function.</p></blockquote></li>
 <li><p>the <em>for-comprehension</em> is just a shortcut but you could write it using flatMap/map also:</p></li>
 </ul>
 
