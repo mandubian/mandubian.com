@@ -9,7 +9,7 @@
   <meta name="author" content="Pascal Voitot">
 
   
-  <meta name="description" content="XML/SOAP to/from scala structures with xmlsoap-ersatz xmlsoap-ersatz is a toolset to help people serialize/deserialize XML/SOAP with Scala. I doesn&# &hellip;">
+  <meta name="description" content="XML/SOAP to/from scala structures with xmlsoap-ersatz xmlsoap-ersatz is a toolset to help people serialize/deserialize XML/SOAP with Scala. It doesn &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -127,6 +127,8 @@
 
 <time datetime="2012-07-14T00:59:00+02:00" pubdate data-updated="true">Jul 14<span>th</span>, 2012</time>
         
+         | <a href="/blog/2012/07/14/xmlsoap-ersatz/#disqus_thread">Comments</a>
+        
       </p>
     
   </header>
@@ -134,7 +136,7 @@
 
   <div class="entry-content"><h1>XML/SOAP to/from scala structures with <em>xmlsoap-ersatz</em></h1>
 
-<blockquote><p><a href="https://github.com/mandubian/scala-xmlsoap-ersatz">xmlsoap-ersatz</a> is a toolset to help people serialize/deserialize XML/SOAP with Scala. I doesn&#8217;t try to respect any standard but it allows to interprete and generate any XML format with any standard you require.</p></blockquote>
+<blockquote><p><a href="https://github.com/mandubian/scala-xmlsoap-ersatz">xmlsoap-ersatz</a> is a toolset to help people serialize/deserialize XML/SOAP with Scala. It doesn&#8217;t try to respect any standard but it allows to interprete and generate any XML format with any standard you require.</p></blockquote>
 
 <p>It was developed to be used with <a href="http://www.playframework.org">Play2/Scala</a> but it can work standalone as it doesn&#8217;t depend on any other library.</p>
 
@@ -142,7 +144,9 @@
 
 <p><em>xmlsoap-ersatz is still draft library so if you discover anything wrong, don&#8217;t hesitate to tell it</em></p>
 
-<blockquote><p>xmlsoap-ersatz is an <a href="https://github.com/mandubian/scala-xmlsoap-ersatz">opensource public github</a> so don&#8217;t hesitate to contribute and give ideas :)</p></blockquote>
+<blockquote><p>xmlsoap-ersatz is an <a href="https://github.com/mandubian/scala-xmlsoap-ersatz">opensource public github</a> so don&#8217;t hesitate to contribute and give ideas :)</p>
+
+<p>Full doc is in <a href="https://github.com/mandubian/scala-xmlsoap-ersatz/wiki">Github Wiki</a></p></blockquote>
 
 <br/>
 
@@ -300,6 +304,73 @@ assert(foo == Foo(1234L, "albert", 23)
 val fooXml = EXML.toXML(foo)
 assert(fooXml == fooXml)
 </code></pre>
+
+<h1>Integrate with Play2/Scala</h1>
+
+<h2>Add xmlsoap-ersatz to your confirguration (ersatz is deployed as a maven repo on github)</h2>
+
+<pre><code>object ApplicationBuild extends Build {
+
+  val appName         = "play2-xmlsoap"
+  val appVersion      = "1.0-SNAPSHOT"
+
+  val appDependencies = Seq(
+    "play2.tools.xml" %% "xmlsoap-ersatz" % "0.1-SNAPSHOT"
+  )  
+
+  val main = PlayProject(appName, appVersion, appDependencies, mainLang = SCALA).settings(
+    resolvers += ("mandubian-mvn snapshots" at "https://github.com/mandubian/mandubian-mvn/raw/master/snapshots")
+  )
+}
+</code></pre>
+
+<h2>Use xmlsoap-ersatz in your controller</h2>
+
+<pre><code>package controllers
+
+import play.api._
+import play.api.mvc._
+import play2.tools.xml._
+import play2.tools.xml.DefaultImplicits._
+
+object Application extends Controller {
+   case class Foo(id: Long, name: String, age: Option[Int])
+
+   implicit object FooXMLF extends XMLFormatter[Foo] {
+      def read(x: xml.NodeSeq): Option[Foo] = {
+      for( 
+          id &lt;- EXML.fromXML[Long](x \ "id");
+          name &lt;- EXML.fromXML[String](x \ "name");
+          age &lt;- EXML.fromXML[Option[Int]](x \ "age")
+        ) yield(Foo(id, name, age))
+      }
+
+      def write(f: Foo, base: xml.NodeSeq): xml.NodeSeq = {
+        &lt;foo&gt;
+          &lt;id&gt;{ f.id }&lt;/id&gt;
+          &lt;name&gt;{ f.name }&lt;/name&gt;
+          { EXML.toXML(f.age, &lt;age/&gt;) }
+        &lt;/foo&gt;
+     }
+  }  
+
+  def foo = Action(parse.xml) { request =&gt;
+    EXML.fromXML[Foo](request.body).map { foo =&gt;
+      Ok(EXML.toXML(foo))
+    }.getOrElse{
+      BadRequest("Expecting Foo XML data")
+    }
+  }
+
+}
+</code></pre>
+
+<h2>Finally the route in <code>conf/routes</code></h2>
+
+<pre><code>POST    /foo    controllers.Application.foo
+</code></pre>
+
+<p>Have fun and don&#8217;t hesitate to contribute</p>
 </div>
   
   
@@ -366,6 +437,15 @@ assert(fooXml == fooXml)
 
 
 
+<section class="googleplus">
+  <h1>
+    <a href="https://plus.google.com/118250856084877669014?rel=author">
+      <img src="http://www.google.com/images/icons/ui/gprofile_button-32.png" width="32" height="32">
+      Google+
+    </a>
+  </h1>
+</section>
+
 
 
   
@@ -382,9 +462,30 @@ assert(fooXml == fooXml)
 </footer>
   
 
+<script type="text/javascript">
+      var disqus_shortname = 'mandubian';
+      
+        
+        var disqus_script = 'count.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
 
 
 
+
+
+  <script type="text/javascript">
+    (function() {
+      var script = document.createElement('script'); script.type = 'text/javascript'; script.async = true;
+      script.src = 'https://apis.google.com/js/plusone.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(script, s);
+    })();
+  </script>
 
 
 
