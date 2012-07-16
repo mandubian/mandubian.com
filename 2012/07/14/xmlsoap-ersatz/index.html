@@ -287,7 +287,7 @@ It can be done at once by extending <code>XMLFormatter[T]</code>:</p>
 <pre><code>def read(x: xml.NodeSeq): Option[Foo] = {
   EXML.fromXML[Long](x \ "id").flatMap{ id =&gt;
     EXML.fromXML[String](x \ "name").flatMap { name =&gt;
-      EXML.fromXML[Int](x \ "age").flatMap{ age =&gt;
+      EXML.fromXML[Int](x \ "age").map{ age =&gt;
         Foo(id, name, age)
       }
     }
