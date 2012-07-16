@@ -1,0 +1,12 @@
+{% if site.twitter_user %}
+<section class="well">
+  <ul id="tweets" class="nav" data-user="{{site.twitter_user}}" data-count="{{site.twitter_tweet_count}}" data-replies="{{site.twitter_show_replies}}">
+    <li class="loading">Status updating...</li>
+  </ul>
+  {% if site.twitter_follow_button %}
+    <a href="http://twitter.com/{{ site.twitter_user }}" class="twitter-follow-button" data-show-count="{{ site.twitter_show_follower_count }}">Follow @{{ site.twitter_user }}</a>
+  {% else %}
+    <p>Follow <a href="http://twitter.com/{{site.twitter_user}}">@{{ site.twitter_user }}</a></p>
+  {% endif %}
+</section>
+{% endif %}

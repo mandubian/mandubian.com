@@ -159,7 +159,7 @@ For ex:
 
 # Integrate with Play2/Scala
 
-## Add xmlsoap-ersatz to your confirguration (ersatz is deployed as a maven repo on github)
+## Add xmlsoap-ersatz to your configuration (ersatz is deployed as a maven repo on github)
 
     object ApplicationBuild extends Build {
 

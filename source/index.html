@@ -21,9 +21,9 @@ layout: default
   </ul>
 </div>
 <aside class="sidebar-nav span3">
-  {% if site.blog_index_asides.size %}
-    {% include_array blog_index_asides %}
+  {% if page.sidebar == nil or page.sidebar == 'collapse' %}
+    {% include_sidebar site.blog_index_sidebar %}
   {% else %}
-    {% include_array default_asides %}
+    {% include_sidebar %}
   {% endif %}
 </aside>

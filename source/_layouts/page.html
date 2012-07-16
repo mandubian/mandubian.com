@@ -35,10 +35,10 @@ layout: default
 </article>
 {% unless page.sidebar == false %}
 <aside class="sidebar-nav span3">
-  {% if site.page_asides.size %}
-    {% include_array page_asides %}
+  {% if page.sidebar == nil or page.sidebar == 'collapse' %}
+    {% include_sidebar site.page_sidebar %}
   {% else %}
-    {% include_array default_asides %}
+    {% include_sidebar %}
   {% endif %}
 </aside>
 {% endunless %}
