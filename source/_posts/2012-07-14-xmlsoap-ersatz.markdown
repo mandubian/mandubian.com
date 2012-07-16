@@ -119,7 +119,7 @@ For ex:
     def read(x: xml.NodeSeq): Option[Foo] = {
       EXML.fromXML[Long](x \ "id").flatMap{ id =>
         EXML.fromXML[String](x \ "name").flatMap { name =>
-          EXML.fromXML[Int](x \ "age").flatMap{ age =>
+          EXML.fromXML[Int](x \ "age").map{ age =>
             Foo(id, name, age)
           }
         }
