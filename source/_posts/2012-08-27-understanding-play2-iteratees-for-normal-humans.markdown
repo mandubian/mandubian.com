@@ -640,7 +640,7 @@ val p2: Promise[Iteratee[E, A]] = it.unflatten.map( _.it )
 
 ---------------------------------------
 
-## <a name="enumeratee">Final words about `Enumeratee`</a>
+## <a name="enumeratee">Final words about _Enumeratee_</a>
 
 > You discovered `Iteratee`, then `Enumerator`…  
 > And now you come across this…  `Enumeratee`???  
