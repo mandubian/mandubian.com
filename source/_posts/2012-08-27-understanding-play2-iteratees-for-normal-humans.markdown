@@ -16,7 +16,7 @@ categories:
 - reactive
 ---
 
-#### You may have remarked that [Play2](http://www.playframework.org) provides an intriguing & a bit obscure feature called _`Iteratee`_ (and its counterparts _`Enumerator`_ and _`Enumeratee`_).  
+#### You may have remarked that [Play2](http://www.playframework.org) provides an intriguing feature called _`Iteratee`_ (and its counterparts _`Enumerator`_ and _`Enumeratee`_).  
 #### The main aim of this article is **_(to try)_ to make the `Iteratee` concept understandable for most of us** with reasonably simple arguments and without functional/math theory.  
 
 <br/>
@@ -45,7 +45,7 @@ categories:
 
 ### 1st advise: DO NOT SEARCH ABOUT ITERATEES ON GOOGLE
 
-When you search on Google for `Iteratee`, you find very obscure explanations based on pure functional approach or even mathematical theories. Even the documentation on Play Framework ([there](http://www.playframework.org/documentation/2.0.2/Iteratees)) explains `Iteratee` with a very _low-level_ approach based on those obscure states managed by a weird `fold` function...
+When you search on Google for `Iteratee`, you find very obscure explanations based on pure functional approach or even mathematical theories. Even the documentation on Play Framework ([there](http://www.playframework.org/documentation/2.0.2/Iteratees)) explains `Iteratee` with a fairly _low-level_ approach which might be hard for beginners...
 
 As a beginner in Play2, it might seem a bit tough to handle `Iteratee` concept presented in a really abstract way of manipulating data chunks.  
 It might seem so complicated that you will occult it and won't use it.  
