@@ -4,7 +4,7 @@
   <title><![CDATA[Mandubian Blog]]></title>
   <link href="http://www.mandubian.com/atom.xml" rel="self"/>
   <link href="http://www.mandubian.com/"/>
-  <updated>2012-09-01T20:19:21+02:00</updated>
+  <updated>2012-09-02T01:29:53+02:00</updated>
   <id>http://www.mandubian.com/</id>
   <author>
     <name><![CDATA[Pascal Voitot]]></name>
@@ -881,7 +881,7 @@ From previous explanation, you may deduce by yourself that the returned <code>It
 
 <hr />
 
-<h2><a name="enumeratee">Final words about <code>Enumeratee</code></a></h2>
+<h2><a name="enumeratee">Final words about <em>Enumeratee</em></a></h2>
 
 <blockquote><p>You discovered <code>Iteratee</code>, then <code>Enumerator</code>…<br/>
 And now you come across this…  <code>Enumeratee</code>???<br/>
