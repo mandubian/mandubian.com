@@ -5,7 +5,7 @@ date: 2012-08-27 11:17
 comments: true
 external-url: 
 categories: [iteratee,enumerator,enumeratee,play2,scala,web,asynchronous,non-blocking,reactive]
-keywords: play2, play framework, scala, web, realtime web, iteratee, enumerator, enumeratee, asynchronous, non-blocking reactive, data flow
+keywords: play2, play framework, scala, web, realtime web, iteratee, enumerator, enumeratee, asynchronous, non-blocking, reactive, data flow
 ---
 
 #### You may have remarked that [Play2](http://www.playframework.org) provides an intriguing feature called _`Iteratee`_ (and its counterparts _`Enumerator`_ and _`Enumeratee`_).  
