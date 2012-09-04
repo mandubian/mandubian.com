@@ -4,16 +4,8 @@ title: "Understanding Play2 Iteratees for Normal Humans"
 date: 2012-08-27 11:17
 comments: true
 external-url: 
-categories: 
-- iteratee
-- enumerator
-- enumeratee
-- play2
-- scala
-- web
-- asynchronous
-- non-blocking
-- reactive
+categories: [iteratee,enumerator,enumeratee,play2,scala,web,asynchronous,non-blocking,reactive]
+keywords: play2, play framework, scala, web, realtime web, iteratee, enumerator, enumeratee, asynchronous, non-blocking reactive, data flow
 ---
 
 #### You may have remarked that [Play2](http://www.playframework.org) provides an intriguing feature called _`Iteratee`_ (and its counterparts _`Enumerator`_ and _`Enumeratee`_).  
@@ -43,7 +35,7 @@ categories:
 </ul>
 </div>
 
-### 1st advise: DO NOT SEARCH ABOUT ITERATEES ON GOOGLE
+### 1st advice: DO NOT SEARCH ABOUT ITERATEES ON GOOGLE
 
 When you search on Google for `Iteratee`, you find very obscure explanations based on pure functional approach or even mathematical theories. Even the documentation on Play Framework ([there](http://www.playframework.org/documentation/2.0.2/Iteratees)) explains `Iteratee` with a fairly _low-level_ approach which might be hard for beginners...
 
