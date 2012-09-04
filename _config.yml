@@ -8,6 +8,7 @@ subtitle: Not so much.
 author: Pascal Voitot
 simple_search: http://google.com/search
 description: My small contributions to the opensource, backend, web & mobile.
+keywords: opensource,web,scala,javascript,java,play framework,play2,realtime,functional,tailormade,handcraft
 
 # Default date format is "ordinal" (resulting in "July 22nd 2007")
 # You can customize the format as defined in
