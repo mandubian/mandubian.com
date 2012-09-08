@@ -41,7 +41,8 @@ val js = Json.obj(
   "key3" -> Json.arr("alpha", "beta")
 )
 
-customReads.reads(js) => JsSuccess(("alpha", 123.345F, List("alpha", "beta")))
+scala> customReads.reads(js) 
+res5: JsSuccess(("alpha", 123.345F, List("alpha", "beta")))
 
 customReads.reads(js).fold(
   valid = { res => 
@@ -123,7 +124,7 @@ __ \\ "key1"
 
 // a sample on Reads[T] combinators to show the difference with both syntax
 // DON'T TRY TO UNDERSTAND THIS CODE RIGHT NOW… It's explained in next paragraphs
-val customReads: Reads[(String, Float, List[String])] = 
+val customReads = 
   (JsPath \ "key1").read(
     (JsPath \ "key11").read[String] and
     (JsPath \ "key11").read[String] and
@@ -176,16 +177,20 @@ As you can see, this function retrieves a `List[JsValue]`
 You can simply use it like:
 {% codeblock lang:scala %}
 // build a JsPath
-(__ \ "key1")(js) => List[play.api.libs.json.JsValue] = List("value1")  // actually this is JsString("value1")
+scala> (__ \ "key1")(js) 
+res12: List[play.api.libs.json.JsValue] = List("value1")  // actually this is JsString("value1")
 
 // 2-levels path
-(__ \ "key3" \ "key33")(js) => res13: List[play.api.libs.json.JsValue] = List({"key":"value2","key34":"value34"})
+scala> (__ \ "key3" \ "key33")(js)
+res13: List[play.api.libs.json.JsValue] = List({"key":"value2","key34":"value34"})
  
 // indexed path
-(__ \ "key3" \ "key32")(2)(js) => res14: List[play.api.libs.json.JsValue] = List(234.13)
+scala> (__ \ "key3" \ "key32")(2)(js)
+res14: List[play.api.libs.json.JsValue] = List(234.13)
 
 // multiple paths
-(__ \\ "key1")(js) => res17: List[play.api.libs.json.JsValue] = List("value1", "value2")
+scala> (__ \\ "key1")(js)
+res17: List[play.api.libs.json.JsValue] = List("value1", "value2")
 
 {% endcodeblock %}	
 
@@ -232,9 +237,9 @@ implicit val creatureReads = new Reads[Creature] {
   }
 }
 
-val js = Json.obj( "name" -> "gremlins", "isDead" -> false, "weight" -> 1.0F)
-val c = js.as[Creature] 
-=> Creature("gremlins", false, 1.0F)
+scala> val js = Json.obj( "name" -> "gremlins", "isDead" -> false, "weight" -> 1.0F)
+scala> val c = js.as[Creature] 
+c: Creature("gremlins", false, 1.0F)
 {% endcodeblock %}	
 
 Easy isn't it ?
@@ -258,8 +263,8 @@ java.lang.RuntimeException: Boolean expected
 Yes ugly RuntimeException (not even subtyped) but you can work around it using `JsValue.asOpt[T]` :)
 
 {% codeblock lang:scala %}
-val c: Option[Creature] = js.asOpt[Creature]
-=> None
+scala> val c: Option[Creature] = js.asOpt[Creature]
+c: None
 {% endcodeblock %}	
 
 **Cool but you only know that the deserialization `Json => Creature` failed but not where or on which field(s)?**
@@ -319,8 +324,8 @@ val errors1 = JsError( __ \ 'isDead, ValidationError("validate.error.missing", "
 val errors2 = JsError( __ \ 'name, ValidationError("validate.error.missing", "name") )
 
 // Errors are cumulative which is really interesting
-val errors = errors1 ++ errors2
-=> JsError(List((/isDead,List(ValidationError(validate.error.missing,WrappedArray(isDead)))), (/name,List(ValidationError(validate.error.missing,WrappedArray(name))))))
+scala> val errors = errors1 ++ errors2
+errors: JsError(List((/isDead,List(ValidationError(validate.error.missing,WrappedArray(isDead)))), (/name,List(ValidationError(validate.error.missing,WrappedArray(name))))))
 {% endcodeblock %}	
 
 So what's interesting there is that `JsResult[A]` is a monadic structure and can be used with classic functions of such structures: 
@@ -474,9 +479,9 @@ So there is nothing quite complicated, isn't it?
 Try it:
 
 {% codeblock lang:scala %}
-val js = Json.obj( "name" -> "gremlins", "isDead" -> false, "weight" -> 1.0F)
-js.validate[Creature] 
-=> res1: play.api.libs.json.JsResult[Creature] = JsSuccess(Creature(gremlins,false,1.0),) // nothing after last comma because the JsPath is ROOT by default
+scala> val js = Json.obj( "name" -> "gremlins", "isDead" -> false, "weight" -> 1.0F)
+scala> js.validate[Creature] 
+res1: play.api.libs.json.JsResult[Creature] = JsSuccess(Creature(gremlins,false,1.0),) // nothing after last comma because the JsPath is ROOT by default
 
 {% endcodeblock %}	
 
@@ -484,9 +489,9 @@ js.validate[Creature]
 Now what happens if you have an error now?
 
 {% codeblock lang:scala %}
-val js = Json.obj( "name" -> "gremlins", "weight" -> 1.0F)
-js.validate[Creature] 
-=>res2: play.api.libs.json.JsResult[Creature] = JsError(List((/isDead,List(ValidationError(validate.error.missing-path,WrappedArray())))))
+scala> val js = Json.obj( "name" -> "gremlins", "weight" -> 1.0F)
+scala> js.validate[Creature] 
+res2: play.api.libs.json.JsResult[Creature] = JsError(List((/isDead,List(ValidationError(validate.error.missing-path,WrappedArray())))))
 
 {% endcodeblock %}	
 
@@ -611,8 +616,8 @@ val gizmojs = Json.obj(
   "social" -> "@gizmo"
 )
 
-val gizmo = gizmojs.validate[Creature] 
-=> gizmo: play.api.libs.json.JsResult[Creature] = JsSuccess(Creature(gremlins,false,1.0,gizmo@midnight.com,(alpha,85),List(),Some(@gizmo)),)
+scala> val gizmo = gizmojs.validate[Creature] 
+gizmo: play.api.libs.json.JsResult[Creature] = JsSuccess(Creature(gremlins,false,1.0,gizmo@midnight.com,(alpha,85),List(),Some(@gizmo)),)
 
 val shaunjs = Json.obj( 
   "name" -> "zombie", 
@@ -622,8 +627,8 @@ val shaunjs = Json.obj(
   "favorites" -> Json.obj("string" -> "brain", "number" -> 2),
   "friends" -> Json.arr( gizmojs))
 
-val shaun = shaunjs.validate[Creature] 
-=> shaun: play.api.libs.json.JsResult[Creature] = JsSuccess(Creature(zombie,true,100.0,shaun@dead.com,(brain,2),List(Creature(gremlins,false,1.0,gizmo@midnight.com,(alpha,85),List(),Some(@gizmo))),None),)
+scala> val shaun = shaunjs.validate[Creature] 
+shaun: play.api.libs.json.JsResult[Creature] = JsSuccess(Creature(zombie,true,100.0,shaun@dead.com,(brain,2),List(Creature(gremlins,false,1.0,gizmo@midnight.com,(alpha,85),List(),Some(@gizmo))),None),)
 
 val errorjs = Json.obj( 
   "name" -> "gremlins", 
@@ -634,8 +639,8 @@ val errorjs = Json.obj(
   "friends" -> Json.arr()
 )
 
-errorjs.validate[Creature] 
-=> res3: play.api.libs.json.JsResult[Creature] = JsError(List((,List(ValidationError(validate.error.email,WrappedArray()), ValidationError(validate.error.minlength,WrappedArray(5)), ValidationError(validate.error.max,WrappedArray(86)), ValidationError(validate.error.min,WrappedArray(875))))))
+scala> errorjs.validate[Creature] 
+res3: play.api.libs.json.JsResult[Creature] = JsError(List((,List(ValidationError(validate.error.email,WrappedArray()), ValidationError(validate.error.minlength,WrappedArray(5)), ValidationError(validate.error.max,WrappedArray(86)), ValidationError(validate.error.min,WrappedArray(875))))))
 {% endcodeblock %}	
 
 <br/>
