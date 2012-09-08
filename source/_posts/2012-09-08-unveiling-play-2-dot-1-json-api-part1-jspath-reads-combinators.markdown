@@ -505,7 +505,7 @@ Let's imagine our creature:
 
 - is a relatively modern creature having an email and hating email addresses having less than 5 characters for a reason only known by the creature itself. 
 - may have 2 favorites data: 
-    - 1 String (called "string" in JSON) which shall not be "ni" neither "swallow" (because it loves Monty Python too much to accept this)
+    - 1 String (called "string" in JSON) which shall not be "ni" (because it loves Monty Python too much to accept this) and then to skip the first 2 chars
     - 1 Int (called "number" in JSON) which can be less than 86 or more than 875 (don't ask why, this is creature with a different logic than ours)
 - may have friend creatures
 - may have an optional social account because many creatures are not very social so this is quite mandatory
@@ -545,13 +545,15 @@ import play.api.data.validation.ValidationError
 // a reads that verifies your value is not equal to a give value
 def notEqualReads[T](v: T)(implicit r: Reads[T]): Reads[T] = Reads.filterNot(ValidationError("validate.error.unexpected.value", v))( _ == v )
 
+def skipReads(implicit r: Reads[String]): Reads[String] = r.map( _.substring(2) )
+
 implicit val creatureReads: Reads[Creature] = (
   (__ \ "name").read[String] and
   (__ \ "isDead").read[Boolean] and
   (__ \ "weight").read[Float] and
   (__ \ "email").read(email provided minLength[String](5)) and
   (__ \ "favorites").read( 
-  	(__ \ "string").read[String]( notEqualReads("ni") andThen notEqualReads("swallow") ) and
+  	(__ \ "string").read[String]( notEqualReads("ni") andThen skipReads ) and
   	(__ \ "number").read[Int]( max(86) or min(875) )
   	tupled
   ) and
@@ -571,10 +573,11 @@ Many things above can be understood very logically but let's explain a bit:
     3. has min length of 5 (we precise the type here because minLength is a generic `Reads[T]`)
 - Why not `email and minLength[String](5)`? because, as explained previously, it would generate a `Builder[Reads[(String, String)]]` whereas you expect a `Reads[String]`. The `provided` operator (aka `<~`) does what we expect: it validates both sides but if succeeded, it keeps only the result on left side.
 <br/>
-##### `notEqualReads("ni") andThen notEqualReads("swallow")`
+##### `notEqualReads("ni") andThen skipReads`
 
 - No need to write `notEqualReads[String]("ni")` because `String` type is inferred from `(__ \ "knight").read[String]` (the power of Scala typing engine)
-- `andthen` operator (aka `~>`) is simple to undestand : it validates the left and right side and if both succeeds, only keeps the result on right side.
+- `skipReads` is a customReads that skips the first 2 chars
+- `andthen` operator (aka `~>`) is simple to undestand : it validates the left and right side and if both succeeds, only keeps the result on right side. In our case, only the result of `skipReads` is kept and not the result of `notEqualReads`.
 <br/>
 ##### `max(86) or min(875)`
 
@@ -617,7 +620,7 @@ val gizmojs = Json.obj(
 )
 
 scala> val gizmo = gizmojs.validate[Creature] 
-gizmo: play.api.libs.json.JsResult[Creature] = JsSuccess(Creature(gremlins,false,1.0,gizmo@midnight.com,(alpha,85),List(),Some(@gizmo)),)
+gizmo: play.api.libs.json.JsResult[Creature] = JsSuccess(Creature(gremlins,false,1.0,gizmo@midnight.com,(pha,85),List(),Some(@gizmo)),)
 
 val shaunjs = Json.obj( 
   "name" -> "zombie", 
@@ -628,19 +631,19 @@ val shaunjs = Json.obj(
   "friends" -> Json.arr( gizmojs))
 
 scala> val shaun = shaunjs.validate[Creature] 
-shaun: play.api.libs.json.JsResult[Creature] = JsSuccess(Creature(zombie,true,100.0,shaun@dead.com,(brain,2),List(Creature(gremlins,false,1.0,gizmo@midnight.com,(alpha,85),List(),Some(@gizmo))),None),)
+shaun: play.api.libs.json.JsResult[Creature] = JsSuccess(Creature(zombie,true,100.0,shaun@dead.com,(ain,2),List(Creature(gremlins,false,1.0,gizmo@midnight.com,(alpha,85),List(),Some(@gizmo))),None),)
 
 val errorjs = Json.obj( 
   "name" -> "gremlins", 
   "isDead" -> false, 
   "weight" -> 1.0F,
   "email" -> "rrhh",
-  "favorites" -> Json.obj("string" -> "Ni", "number" -> 500),
+  "favorites" -> Json.obj("string" -> "ni", "number" -> 500),
   "friends" -> Json.arr()
 )
 
 scala> errorjs.validate[Creature] 
-res3: play.api.libs.json.JsResult[Creature] = JsError(List((,List(ValidationError(validate.error.email,WrappedArray()), ValidationError(validate.error.minlength,WrappedArray(5)), ValidationError(validate.error.max,WrappedArray(86)), ValidationError(validate.error.min,WrappedArray(875))))))
+res21: play.api.libs.json.JsResult[Creature] = JsError(List((,List(ValidationError(validate.error.email,WrappedArray()), ValidationError(validate.error.minlength,WrappedArray(5)), ValidationError(validate.error.unexpected.value,WrappedArray(ni)), ValidationError(validate.error.max,WrappedArray(86)), ValidationError(validate.error.min,WrappedArray(875))))))
 {% endcodeblock %}	
 
 <br/>
