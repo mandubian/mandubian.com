@@ -643,7 +643,7 @@ val errorjs = Json.obj(
 )
 
 scala> errorjs.validate[Creature] 
-res21: play.api.libs.json.JsResult[Creature] = JsError(List((,List(ValidationError(validate.error.email,WrappedArray()), ValidationError(validate.error.minlength,WrappedArray(5)), ValidationError(validate.error.unexpected.value,WrappedArray(ni)), ValidationError(validate.error.max,WrappedArray(86)), ValidationError(validate.error.min,WrappedArray(875))))))
+res0: play.api.libs.json.JsResult[Creature] = JsError(List((/favorites/string,List(ValidationError(validate.error.unexpected.value,WrappedArray(ni)))), (/email,List(ValidationError(validate.error.email,WrappedArray()), ValidationError(validate.error.minlength,WrappedArray(5)))), (/favorites/number,List(ValidationError(validate.error.max,WrappedArray(86)), ValidationError(validate.error.min,WrappedArray(875))))))
 {% endcodeblock %}	
 
 <br/>
