@@ -7,7 +7,6 @@ external-url:
 categories: [playframework,play2.1,json,serialization,validation, combinators, applicative]
 keywords: play 2.1, json, json serialization, json parsing, json validation, json cumulative errors, play framework, combinators, applicative
 ---
-> Thanks to [@loic_d](http://www.twitter.com/loic_d), we have a French translation of this article [there](https://gist.github.com/3727850#file_iteratees_humains.md)
 
 In incoming `Play2.1` version, a huge **re-thinking** has been done about **`JSON API` provided by `Play2.0.x`** which provides some great features but is clearly just the tip of the iceberg…  
 Here is a first presentation of those evolutions aimed at **unleashing your JSON usage in Play2** and **revealing new forms of manipulation of web dataflows from/to external data systems**.   

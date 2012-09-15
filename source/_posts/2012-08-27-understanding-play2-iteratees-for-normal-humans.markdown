@@ -8,6 +8,8 @@ categories: [iteratee,enumerator,enumeratee,play2,scala,web,asynchronous,non-blo
 keywords: play2, play framework, scala, web, realtime web, iteratee, enumerator, enumeratee, asynchronous, non-blocking, reactive, data flow
 ---
 
+> Thanks to [@loic_d](http://www.twitter.com/loic_d), we have a French translation of this article [there](https://gist.github.com/3727850#file_iteratees_humains.md)
+
 #### You may have remarked that [Play2](http://www.playframework.org) provides an intriguing feature called _`Iteratee`_ (and its counterparts _`Enumerator`_ and _`Enumeratee`_).  
 #### The main aim of this article is **_(to try)_ to make the `Iteratee` concept understandable for most of us** with reasonably simple arguments and without functional/math theory.  
 
