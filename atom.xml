@@ -4,7 +4,7 @@
   <title><![CDATA[Mandubian Blog]]></title>
   <link href="http://www.mandubian.com/atom.xml" rel="self"/>
   <link href="http://www.mandubian.com/"/>
-  <updated>2012-09-09T01:44:18+02:00</updated>
+  <updated>2012-09-15T22:34:55+02:00</updated>
   <id>http://www.mandubian.com/</id>
   <author>
     <name><![CDATA[Pascal Voitot]]></name>
@@ -18,7 +18,9 @@
     <link href="http://www.mandubian.com/2012/09/08/unveiling-play-2-dot-1-json-api-part1-jspath-reads-combinators/"/>
     <updated>2012-09-08T11:10:00+02:00</updated>
     <id>http://www.mandubian.com/2012/09/08/unveiling-play-2-dot-1-json-api-part1-jspath-reads-combinators</id>
-    <content type="html"><![CDATA[<p>In incoming <code>Play2.1</code> version, a huge <strong>re-thinking</strong> has been done about <strong><code>JSON API</code> provided by <code>Play2.0.x</code></strong> which provides some great features but is clearly just the tip of the iceberg…<br/>
+    <content type="html"><![CDATA[<blockquote><p>Thanks to <a href="http://www.twitter.com/loic_d">@loic_d</a>, we have a French translation of this article <a href="https://gist.github.com/3727850#file_iteratees_humains.md">there</a></p></blockquote>
+
+<p>In incoming <code>Play2.1</code> version, a huge <strong>re-thinking</strong> has been done about <strong><code>JSON API</code> provided by <code>Play2.0.x</code></strong> which provides some great features but is clearly just the tip of the iceberg…<br/>
 Here is a first presentation of those evolutions aimed at <strong>unleashing your JSON usage in Play2</strong> and <strong>revealing new forms of manipulation of web dataflows from/to external data systems</strong>. <br/>
 A usecase of this is manipulating DB structures directly using Json without any class models for document oriented structures such as <a href="http://www.mongodb.org">MongoDB</a></p>
 
