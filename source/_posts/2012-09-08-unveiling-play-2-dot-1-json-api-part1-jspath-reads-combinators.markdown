@@ -7,6 +7,10 @@ external-url:
 categories: [playframework,play2.1,json,serialization,validation, combinators, applicative]
 keywords: play 2.1, json, json serialization, json parsing, json validation, json cumulative errors, play framework, combinators, applicative
 ---
+> **Addendum: recent API refactoring (modified in the articled)** 
+> 
+> - `Reads[A] provided Reads[B]` has been renamed to `Reads[A] keepAnd Reads[B]` 
+> - `Reads[A] andThen Reads[B]` has been renamed to `Reads[A] andKeep Reads[B]`
 
 In incoming `Play2.1` version, a huge **re-thinking** has been done about **`JSON API` provided by `Play2.0.x`** which provides some great features but is clearly just the tip of the iceberg…  
 Here is a first presentation of those evolutions aimed at **unleashing your JSON usage in Play2** and **revealing new forms of manipulation of web dataflows from/to external data systems**.   
@@ -28,7 +32,7 @@ Json.obj(
 	<li><b><code>Reads[T]</code> / <code>Writes[T]</code> / <code>Format[T]</code> combinators</b> based on JsPath and simple logic operators</b>
 {% codeblock lang:scala %}	
 val customReads: Reads[(String, Float, List[String])] = 
-	(JsPath \ "key1").read[String](email provided minLength(5)) and 
+	(JsPath \ "key1").read[String](email keepAnd minLength(5)) and 
 	(JsPath \ "key2").read[Float](min(45)) and
 	(JsPath \ "key3").read[List[String]] 
 	tupled
@@ -531,8 +535,8 @@ case class Creature(
 - `Reads.email` which validates the String has email format  
 - `Reads.minLength(nb)` validates the minimum length of a String
 - `Reads[A] or Reads[A] => Reads[A]` operator is a classic `OR` logic operator
-- `Reads[A] provided Reads[B] => Reads[A]` is an operator that tries `Reads[A]` and `Reads[B]` but only keeps the result of `Reads[A]` (For those who know Scala parser combinators `provided == <~` )
-- `Reads[A] andThen Reads[B] => Reads[B]` is an operator that tries `Reads[A]` and `Reads[B]` but only keeps the result of `Reads[B]` (For those who know Scala parser combinators `andThen == ~>` )
+- `Reads[A] keepAnd Reads[B] => Reads[A]` is an operator that tries `Reads[A]` and `Reads[B]` but only keeps the result of `Reads[A]` (For those who know Scala parser combinators `keepAnd == <~` )
+- `Reads[A] andKeep Reads[B] => Reads[B]` is an operator that tries `Reads[A]` and `Reads[B]` but only keeps the result of `Reads[B]` (For those who know Scala parser combinators `andKeep == ~>` )
 
 {% codeblock lang:scala %}
 // import just Reads helpers in scope
@@ -551,9 +555,9 @@ implicit val creatureReads: Reads[Creature] = (
   (__ \ "name").read[String] and
   (__ \ "isDead").read[Boolean] and
   (__ \ "weight").read[Float] and
-  (__ \ "email").read(email provided minLength[String](5)) and
+  (__ \ "email").read(email keepAnd minLength[String](5)) and
   (__ \ "favorites").read( 
-  	(__ \ "string").read[String]( notEqualReads("ni") andThen skipReads ) and
+  	(__ \ "string").read[String]( notEqualReads("ni") andKeep skipReads ) and
   	(__ \ "number").read[Int]( max(86) or min(875) )
   	tupled
   ) and
@@ -564,20 +568,20 @@ implicit val creatureReads: Reads[Creature] = (
 
 Many things above can be understood very logically but let's explain a bit:
 
-##### `(__ \ "email").read(email provided minLength[String](5))`
+##### `(__ \ "email").read(email keepAnd minLength[String](5))`
 
 - As explained previously, `(__ \ "email").read(…)` applies the `Reads[T]` passed in parameter to function `read` at the given JsPath `(__ \ "email")`
-- `email provided minLength[String](5) => Reads[String]` is a Js validator that verifies JsValue:
+- `email keepAnd minLength[String](5) => Reads[String]` is a Js validator that verifies JsValue:
     1. is a String : `email: Reads[String]` so no need to specify type here
     2. has email format
     3. has min length of 5 (we precise the type here because minLength is a generic `Reads[T]`)
-- Why not `email and minLength[String](5)`? because, as explained previously, it would generate a `Builder[Reads[(String, String)]]` whereas you expect a `Reads[String]`. The `provided` operator (aka `<~`) does what we expect: it validates both sides but if succeeded, it keeps only the result on left side.
+- Why not `email and minLength[String](5)`? because, as explained previously, it would generate a `Builder[Reads[(String, String)]]` whereas you expect a `Reads[String]`. The `keepAnd` operator (aka `<~`) does what we expect: it validates both sides but if succeeded, it keeps only the result on left side.
 <br/>
-##### `notEqualReads("ni") andThen skipReads`
+##### `notEqualReads("ni") andKeep skipReads`
 
 - No need to write `notEqualReads[String]("ni")` because `String` type is inferred from `(__ \ "knight").read[String]` (the power of Scala typing engine)
 - `skipReads` is a customReads that skips the first 2 chars
-- `andthen` operator (aka `~>`) is simple to undestand : it validates the left and right side and if both succeeds, only keeps the result on right side. In our case, only the result of `skipReads` is kept and not the result of `notEqualReads`.
+- `andKeep` operator (aka `~>`) is simple to undestand : it validates the left and right side and if both succeeds, only keeps the result on right side. In our case, only the result of `skipReads` is kept and not the result of `notEqualReads`.
 <br/>
 ##### `max(86) or min(875)`
 
@@ -585,7 +589,7 @@ Many things above can be understood very logically but let's explain a bit:
 <br/>
 ##### `(__ \ "favorites").read(…)`
 
-    (__ \ "string").read[String]( notEqualReads("ni") andThen notEqualReads("swallow") ) and
+    (__ \ "string").read[String]( notEqualReads("ni") andKeep notEqualReads("swallow") ) and
     (__ \ "number").read[Int]( max(86) or min(875) )
     tupled
 

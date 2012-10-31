@@ -124,7 +124,7 @@ You apply `write[String]` on this JsPath (exactly the same as `Reads`)
   
 As you can deduce by yourself, the `Writes[T]` is far easier than the `Reads[T]` case because when writing, it doesn't try to validate so there is no error management at all.  
 
-Moreover, due to this, you have to keep in mind that operators provided for `Writes[T]` are not as rich as for `Reads[T]`. Do you remind `provided` and `andKeep` operators?  They don't have any meaning for `Writes[T]`. When writing `A~B`, you write `A and B` but not `only A or only B`. So `and` is the only operators provided for `Writes[T]`.
+Moreover, due to this, you have to keep in mind that operators provided for `Writes[T]` are not as rich as for `Reads[T]`. Do you remind `keepAnd` and `andKeep` operators?  They don't have any meaning for `Writes[T]`. When writing `A~B`, you write `A and B` but not `only A or only B`. So `and` is the only operators provided for `Writes[T]`.
  
 
 ### Complexifying the case
@@ -349,7 +349,7 @@ val creatureReads: Reads[Creature] = (
   (__ \ "name").read[String] and
   (__ \ "isDead").read[Boolean] and
   (__ \ "weight").read[Float] and
-  (__ \ "email").read(email provided minLength[String](5)) and
+  (__ \ "email").read(email keepAnd minLength[String](5)) and
   (__ \ "favorites").read( 
   	(__ \ "string").read[String]( notEqualReads("ni") andKeep skipReads ) and
   	(__ \ "number").read[Int]( max(86) or min(875) )
