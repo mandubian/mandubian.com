@@ -345,7 +345,7 @@ Let&#8217;s explain a bit (by copying Reads article changing just a few things�
 
 <p>As you can deduce by yourself, the <code>Writes[T]</code> is far easier than the <code>Reads[T]</code> case because when writing, it doesn&#8217;t try to validate so there is no error management at all.</p>
 
-<p>Moreover, due to this, you have to keep in mind that operators provided for <code>Writes[T]</code> are not as rich as for <code>Reads[T]</code>. Do you remind <code>provided</code> and <code>andKeep</code> operators?  They don&#8217;t have any meaning for <code>Writes[T]</code>. When writing <code>A~B</code>, you write <code>A and B</code> but not <code>only A or only B</code>. So <code>and</code> is the only operators provided for <code>Writes[T]</code>.</p>
+<p>Moreover, due to this, you have to keep in mind that operators provided for <code>Writes[T]</code> are not as rich as for <code>Reads[T]</code>. Do you remind <code>keepAnd</code> and <code>andKeep</code> operators?  They don&#8217;t have any meaning for <code>Writes[T]</code>. When writing <code>A~B</code>, you write <code>A and B</code> but not <code>only A or only B</code>. So <code>and</code> is the only operators provided for <code>Writes[T]</code>.</p>
 
 <h3>Complexifying the case</h3>
 
@@ -728,7 +728,7 @@ Play2.1 also provides <strong>Format Combinators</strong> due to the magic of fu
 </span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;name&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="n">and</span>
 </span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;isDead&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span> <span class="n">and</span>
 </span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;weight&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span> <span class="n">and</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;email&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">(</span><span class="n">email</span> <span class="n">provided</span> <span class="n">minLength</span><span class="o">[</span><span class="kt">String</span><span class="o">](</span><span class="mi">5</span><span class="o">))</span> <span class="n">and</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;email&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">(</span><span class="n">email</span> <span class="n">keepAnd</span> <span class="n">minLength</span><span class="o">[</span><span class="kt">String</span><span class="o">](</span><span class="mi">5</span><span class="o">))</span> <span class="n">and</span>
 </span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;favorites&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">(</span>
 </span><span class='line'>      <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;string&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">](</span> <span class="n">notEqualReads</span><span class="o">(</span><span class="s">&quot;ni&quot;</span><span class="o">)</span> <span class="n">andKeep</span> <span class="n">skipReads</span> <span class="o">)</span> <span class="n">and</span>
 </span><span class='line'>      <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;number&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Int</span><span class="o">](</span> <span class="n">max</span><span class="o">(</span><span class="mi">86</span><span class="o">)</span> <span class="n">or</span> <span class="n">min</span><span class="o">(</span><span class="mi">875</span><span class="o">)</span> <span class="o">)</span>
@@ -962,6 +962,10 @@ Json &#8220;coast to coast&#8221; without any model class…</p></blockquote>
       
       <li><a href="/blog/archives">Blog Archives</a></li>
       
+      <li class="next"><a class="basic-alignment right" href="/2012/10/29/unveiling-play-2-dot-1-json-api-part3-json-transformers/"
+        title="Next Post: Unveiling Play 2.1 Json API - Part 3 : JSON transformers">Unveiling Play 2.1 Json API - Part 3 : JSON transformers
+        &raquo;</a></li>
+      
     </ul>
   </footer>
 </article>
@@ -971,6 +975,10 @@ Json &#8220;coast to coast&#8221; without any model class…</p></blockquote>
     <section class="well">
   <ul id="recent_posts" class="nav nav-list">
     <li class="nav-header">Recent Posts</li>
+    
+      <li class="post">
+        <a href="/2012/10/29/unveiling-play-2-dot-1-json-api-part3-json-transformers/">Unveiling Play 2.1 Json API - Part 3 : JSON transformers</a>
+      </li>
     
       <li class="post">
         <a href="/2012/10/01/unveiling-play-2-dot-1-json-api-part2-writes-format-combinators/">Unveiling Play 2.1 Json API - Part 2 : Writes/Format combinators</a>

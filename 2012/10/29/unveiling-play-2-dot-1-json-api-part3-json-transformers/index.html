@@ -1,0 +1,1375 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Unveiling Play 2.1 Json API - Part 3 : JSON transformers - Mandubian Blog</title>
+  <meta name="author" content="Pascal Voitot">
+
+  
+  <meta name="description" content="Unveiling Play 2.1 Json API - Part 3 : JSON Transformers
+    
+    
+      
+        
+
+
+
+
+
+
+
+
+  
+
+
+Oct 29th, 2012 &hellip;">
+  <meta name="keywords" content="play 2.1, json, json serialization, json transform, json validation, json cumulative errors, play framework, combinators, applicative">
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://www.mandubian.com/2012/10/29/unveiling-play-2-dot-1-json-api-part3-json-transformers">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/bootstrap/bootstrap.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/stylesheets/bootstrap/responsive.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/stylesheets/syntax/syntax.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <style type="text/css">
+    body {
+      padding-bottom: 40px;
+    }
+    h1 {
+      margin-bottom: 15px;
+    }
+    img {
+      max-width: 100%;
+    }
+    .sharing, .meta, .pager {
+      margin: 20px 0px 20px 0px;
+    }
+    .page-footer p {
+      text-align: center;
+    }
+
+    article {
+      margin-bottom: 50px;
+      border-top: #DDD solid 20px;
+    }
+ 
+  </style>
+  <script src="/javascripts/libs/jquery.js"></script>
+  <script src="/javascripts/libs/modernizr-2.0.js"></script>
+  <script src="/javascripts/libs/bootstrap.js"></script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <link href="/atom.xml" rel="alternate" title="Mandubian Blog" type="application/atom+xml">
+  
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-10417377-11']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   >
+  <nav role="navigation"><div class="navbar">
+  <div class="navbar-inner">
+    <div class="container">
+      <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </a>
+
+      <a class="brand" href="/">Mandubian Blog</a>
+
+      <div class="nav-collapse">
+        <ul class="nav">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+
+        <ul class="nav pull-right" data-subscription="rss">
+          <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+          
+        </ul>
+
+        
+          <form class="pull-right navbar-search" action="http://google.com/search" method="get">
+            <fieldset role="search">
+              <input type="hidden" name="q" value="site:www.mandubian.com" />
+              <input class="search-query" type="text" name="q" results="0" placeholder="Search"/>
+            </fieldset>
+          </form>
+        
+      </div>
+    </div>
+  </div>
+</div>
+</nav>
+  <div class="container">
+    <div class="row-fluid">
+      
+<article class="hentry span9" role="article">
+
+  
+  <header class="page-header">
+    
+      <h1 class="entry-title">Unveiling Play 2.1 Json API - Part 3 : JSON Transformers</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-10-29T11:10:00+01:00" pubdate data-updated="true">Oct 29<span>th</span>, 2012</time>
+        
+         | <a href="#disqus_thread">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><blockquote><p>In <a href="/2012/09/08/unveiling-play-2-dot-1-json-api-part1-jspath-reads-combinators/">Part 1</a> and <a href="2012-10-01-unveiling-play-2-dot-1-json-api-part2-writes-format-combinators">Part 2</a> , we have presented Json combinators for <code>Reads[T]</code>, <code>Writes[T]</code> and <code>Format[T]</code>. So now you should know how to validate JSON and convert into any structure you can write in Scala and back to JSON. But as soon as I&#8217;ve begun to use those combinators to write web applications, I almost immediately encountered a case : read JSON from network, validate it and convert it into… JSON.</p></blockquote>
+
+<br/>
+
+
+<br/>
+
+
+<h1><a name="json-to-json">Introducing JSON <em>coast-to-coast</em> design</a></h1>
+
+<h3><a name="doomed-to-OO">Are we doomed to convert JSON to OO?</a></h3>
+
+<p>For a few years now, in almost all web frameworks (except recent JS serverside stuff maybe in which JSON is the default data structure), we have been used to get JSON from network and <strong>convert JSON (or even POST/GET data) into OO structures</strong> such as classes (or case classes in Scala). Why?</p>
+
+<ul>
+<li>for a good reason : <strong>OO structures are &#8220;language-native&#8221;</strong> and allows <strong>manipulating data with respect to your business logic</strong> in a seamless way while ensuring isolation of business logic from web layers.</li>
+<li>for a more questionable reason : <strong>ORM frameworks talk to DB only with OO structures</strong> and we have (kind of) convinced ourselves that it was impossible to do else… with the well-known good &amp; bad features of ORMs… (not here to criticize those stuff)</li>
+</ul>
+
+
+<h3><a name="is-default-case">Is OO conversion really the default usecase?</a></h3>
+
+<p><strong>In many cases, you don&#8217;t really need to perform any real business logic with data but validating/transforming before storing or after extracting.</strong></p>
+
+<p>Let&#8217;s take the CRUD case:</p>
+
+<ul>
+<li>You just get the data from the network, validate them a bit and insert/update into DB.</li>
+<li>In the other way, you just retrieve data from DB and send them outside.</li>
+</ul>
+
+
+<p>So, generally, for CRUD ops, you convert JSON into a OO structure just because the frameworks are only able to speak OO.</p>
+
+<blockquote><p><strong>I don&#8217;t say or pretend you shouldn&#8217;t use JSON to OO conversion but maybe this is not the most common case and we should keep conversion to OO only when we have real business logic to fulfill.</strong></p></blockquote>
+
+<h3><a name="new-players">New tech players change the way of manipulating JSON</a></h3>
+
+<p>Besides this fact, we have some new DB types such as Mongo (or CouchDB) accepting document structured data looking almost like JSON trees (<em>isn&#8217;t BSON, Binary JSON?</em>).<br/>
+With these DB types, we also have new great tools such as <a href="http://www.reactivemongo.org">ReactiveMongo</a> which provides reactive environment to stream data to and from Mongo in a very natural way.<br/>
+I&#8217;ve been working with Stephane Godbillon to integrate ReactiveMongo with Play2.1 while writing the <a href="https://github.com/zenexity/Play-ReactiveMongo">Play2-ReactiveMongo module</a>. Besides Mongo facilities for Play2.1, this module provides <em>Json To/From BSON conversion typeclasses</em>.</p>
+
+<blockquote><p><strong>So it means you can manipulate JSON flows to and from DB directly without even converting into OO.</strong></p></blockquote>
+
+<h3><a name="new-players">JSON <em>coast-to-coast</em> design</a></h3>
+
+<p>Taking this into account, we can easily imagine the following:</p>
+
+<ul>
+<li>receive JSON,</li>
+<li>validate JSON,</li>
+<li>transform JSON to fit expected DB document structure,</li>
+<li>directly send JSON to DB (or somewhere else)</li>
+</ul>
+
+
+<p>This is exactly the same case when serving data from DB:</p>
+
+<ul>
+<li>extract some data from DB as JSON directly,</li>
+<li>filter/transform this JSON to send only mandatory data in the format expected by the client (for ex, you don&#8217;t want some secure info to go out),</li>
+<li>directly send JSON to the client</li>
+</ul>
+
+
+<p>In this context, we can easily imagine <strong>manipulating a flow of JSON data</strong> from client to DB and back without any (explicit) transformation in anything else than JSON.<br/>
+Naturally, when you plug this transformation flow on <strong>reactive infrastructure provided by Play2.1</strong>, it suddenly opens new horizons.</p>
+
+<blockquote><p>This is the so-called (by me) <strong>JSON coast-to-coast design</strong>:</p>
+
+<ul>
+<li>Don&#8217;t consider JSON data chunk by chunk but as a <strong>continuous flow of data from client to DB (or else) through server</strong>,</li>
+<li>Treat the <strong>JSON flow like a pipe that you connect to others pipes</strong> while applying modifications, transformations alongside,</li>
+<li>Treat the flow in a <strong>fully asynchronous/non-blocking</strong> way.</li>
+</ul>
+
+
+<p>This is also one of the reason of being of Play2.1 reactive architecture…<br/>
+I believe <strong>considering your app through the prism of flows of data changes drastically the way you design</strong> your web apps in general. It may also open new functional scopes that fit today&#8217;s webapps requirements quite better than classic architecture. Anyway, this is not the subject here ;)</p></blockquote>
+
+<p>So, as you have deduced by yourself, to be able to manipulate Json flows based on validation and transformation directly, we needed some new tools. JSON combinators were good candidates but they are a bit too generic.<br/>
+That&#8217;s why we have created some specialized combinators and API called <strong>JSON transformers</strong> to do that.</p>
+
+<br/>
+
+
+<br/>
+
+
+<h1><a name="json-transf-are-reads">JSON transformers are Reads[T &lt;: JsValue]</a></h1>
+
+<p>You may tell JSON transformers are just <code>f:JSON =&gt; JSON</code>.<br/>
+So a JSON transformer could be simply a <code>Writes[A &lt;: JsValue]</code>.<br/>
+But, a JSON transformer is not only a function: as we said, we also want to validate JSON while transforming it.<br/>
+As a consequence, a JSON transformer is a <code>Reads[A &lt;: Jsvalue]</code>.</p>
+
+<blockquote><p><strong>Keep in mind that a Reads[A &lt;: JsValue] is able to transform and not only to read/validate</strong></p></blockquote>
+
+<br/>
+
+
+<br/>
+
+
+<h1><a name="play2-syntax">Recent Play2 JSON syntax evolutions</a></h1>
+
+<p>As you know, Json API for Play2.1 was still draft and has evolved since I began writing article part 1/2.<br/>
+We have changed a few things since (nothing conceptual, just cosmetics).</p>
+
+<h3><a name="new-play2-syntax">Syntax clarification</a></h3>
+
+<h5><code>Reads[A] andThen Reads[B]</code> has been renamed <code>Reads[A] andKeep Reads[B]</code> (keep the right side result)</h5>
+
+<br/>
+
+
+<h5><code>Reads[A] provided Reads[B]</code> has been renamed <code>Reads[A] keepAnd Reads[B]</code> (keep the left side result and is symmetric with andKeep)</h5>
+
+<br/>
+
+
+<h3><a name="new-reads-feature">Remarkable new Reads[A] features</a></h3>
+
+<h5><code>Reads[A &lt;: JsValue] andThen Reads[B]</code></h5>
+
+<p><code>andThen</code> has the classic Scala semantic of function composition : it applies <code>Reads[A &lt;: JsValue]</code> on JSON retrieving a JsValue and then applies <code>Reads[B]</code> on this JsValue.</p>
+
+<br/>
+
+
+<h5><code>Reads[A &lt;: JsValue].map(f: A =&gt; B): Reads[B]</code></h5>
+
+<p><code>map</code> is the classic and always very useful Scala map function.</p>
+
+<br/>
+
+
+<h5><code>Reads[A &lt;: JsValue].flatMap(f: A =&gt; Reads[B]): Reads[B]</code></h5>
+
+<p><code>flatMap</code> is the classic Scala flatMap function.</p>
+
+<br/>
+
+
+<br/>
+
+
+<h1><a name="step-by-step">JSON transformers case by case</a></h1>
+
+<h2><a name="json-def">A few reminders</a></h2>
+
+<h3><a name="json-def">JSON new syntax</a></h3>
+
+<p>In code samples, we&#8217;ll use the following JSON.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+</pre></td><td class='code'><pre><code class='json'><span class='line'><span class="p">{</span>
+</span><span class='line'>  <span class="nt">&quot;key1&quot;</span> <span class="p">:</span> <span class="s2">&quot;value1&quot;</span><span class="p">,</span>
+</span><span class='line'>  <span class="nt">&quot;key2&quot;</span> <span class="p">:</span> <span class="p">{</span>
+</span><span class='line'>    <span class="nt">&quot;key21&quot;</span> <span class="p">:</span> <span class="mi">123</span><span class="p">,</span>
+</span><span class='line'>    <span class="nt">&quot;key22&quot;</span> <span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+</span><span class='line'>    <span class="nt">&quot;key23&quot;</span> <span class="p">:</span> <span class="p">[</span> <span class="s2">&quot;alpha&quot;</span><span class="p">,</span> <span class="s2">&quot;beta&quot;</span><span class="p">,</span> <span class="s2">&quot;gamma&quot;</span><span class="p">]</span>
+</span><span class='line'>    <span class="s2">&quot;key24&quot;</span> <span class="p">:</span> <span class="p">{</span>
+</span><span class='line'>      <span class="nt">&quot;key241&quot;</span> <span class="p">:</span> <span class="mi">234</span><span class="err">.</span><span class="mi">123</span><span class="p">,</span>
+</span><span class='line'>      <span class="nt">&quot;key242&quot;</span> <span class="p">:</span> <span class="s2">&quot;value242&quot;</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'>  <span class="p">},</span>
+</span><span class='line'>  <span class="nt">&quot;key3&quot;</span> <span class="p">:</span> <span class="mi">234</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Remind that, in Play2, you can write this JSON as following.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">json</span> <span class="k">=</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span>
+</span><span class='line'>  <span class="s">&quot;key1&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;value1&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;key2&quot;</span> <span class="o">-&gt;</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span>
+</span><span class='line'>    <span class="s">&quot;key21&quot;</span> <span class="o">-&gt;</span> <span class="mi">123</span><span class="o">,</span>
+</span><span class='line'>    <span class="s">&quot;key22&quot;</span> <span class="o">-&gt;</span> <span class="kc">true</span><span class="o">,</span>
+</span><span class='line'>    <span class="s">&quot;key23&quot;</span> <span class="o">-&gt;</span> <span class="nc">Json</span><span class="o">.</span><span class="n">arr</span><span class="o">(</span><span class="s">&quot;alpha&quot;</span><span class="o">,</span> <span class="s">&quot;beta&quot;</span><span class="o">,</span> <span class="s">&quot;gamma&quot;</span><span class="o">),</span>
+</span><span class='line'>    <span class="s">&quot;key24&quot;</span> <span class="o">-&gt;</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span>
+</span><span class='line'>      <span class="s">&quot;key241&quot;</span> <span class="o">-&gt;</span> <span class="mf">234.123</span><span class="o">,</span>
+</span><span class='line'>      <span class="s">&quot;key242&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;value242&quot;</span>
+</span><span class='line'>    <span class="o">)</span>
+</span><span class='line'>  <span class="o">),</span>
+</span><span class='line'>  <span class="s">&quot;key3&quot;</span> <span class="o">-&gt;</span> <span class="mi">234</span>
+</span><span class='line'><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3><a name="controller-def">Defining Play2 JSON action controller</a></h3>
+
+<p>Here is how you would write a Play2.1 action controller to receive and manipulate/validate JSON.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">object</span> <span class="nc">YourController</span> <span class="o">{</span>
+</span><span class='line'>  <span class="err">…</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// not implicit because I want to control which transformer I use</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">jsonTransformer</span><span class="k">:</span> <span class="kt">Reads</span><span class="o">[</span><span class="kt">JsValue</span><span class="o">]</span> <span class="k">=</span> <span class="err">…</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">def</span> <span class="n">doit</span> <span class="k">=</span> <span class="nc">Action</span><span class="o">(</span><span class="n">parse</span><span class="o">.</span><span class="n">json</span><span class="o">)</span> <span class="o">{</span> <span class="n">request</span> <span class="k">=&gt;</span>
+</span><span class='line'>      <span class="n">request</span><span class="o">.</span><span class="n">body</span><span class="o">.</span><span class="n">validate</span><span class="o">(</span><span class="n">jsonTransformer</span><span class="o">).</span><span class="n">map</span> <span class="o">{</span> <span class="n">js</span> <span class="k">=&gt;</span>
+</span><span class='line'>          <span class="c1">// do something</span>
+</span><span class='line'>          <span class="nc">Ok</span><span class="o">(...)</span>  
+</span><span class='line'>      <span class="o">}.</span><span class="n">recover</span> <span class="o">{</span> <span class="n">error</span> <span class="k">=&gt;</span>
+</span><span class='line'>          <span class="nc">BadRequest</span><span class="o">(</span><span class="err">…</span><span class="o">)</span>
+</span><span class='line'>          <span class="o">}</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>  
+</span><span class='line'>  <span class="err">…</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>Please note the <code>JsResult.map</code> and <code>JsResult.recover</code> functions allowing to compose result and deal with errors.</p></blockquote>
+
+<p>Now let&#8217;s describe JSON transformers with samples</p>
+
+<h2><a name="step-pick">Case 1: Pick JSON value in JsPath</a></h2>
+
+<h3><a name="step-pick-1">Pick value as JsValue</a></h3>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json._</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">jsonTransformer</span> <span class="k">=</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;key2</span> <span class="o">\</span> <span class="-Symbol">&#39;key23</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">pick</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="n">json</span><span class="o">.</span><span class="n">validate</span><span class="o">(</span><span class="n">jsonTransformer</span><span class="o">)</span>
+</span><span class='line'><span class="n">res9</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsResult</span><span class="o">[</span><span class="kt">play.api.libs.json.JsValue</span><span class="o">]</span> <span class="k">=</span>
+</span><span class='line'>  <span class="nc">JsSuccess</span><span class="o">(</span>
+</span><span class='line'>    <span class="o">[</span><span class="err">&quot;</span><span class="kt">alpha</span><span class="err">&quot;</span>,<span class="err">&quot;</span><span class="kt">beta</span><span class="err">&quot;</span>,<span class="err">&quot;</span><span class="kt">gamma</span><span class="err">&quot;</span><span class="o">],</span>
+</span><span class='line'>    <span class="o">/</span><span class="n">key2</span><span class="o">/</span><span class="n">key23</span>
+</span><span class='line'>  <span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h5><code>(__ \ 'key2 \ 'key23).json...</code></h5>
+
+<ul>
+<li>All JSON transformers are in <code>JsPath.json.</code></li>
+</ul>
+
+
+<h5><code>(__ \ 'key2 \ 'key23).json.pick</code></h5>
+
+<ul>
+<li><code>pick</code> is a <code>Reads[JsValue]</code> which picks the value <strong>IN</strong> the given JsPath. Here <code>["alpha","beta","gamma"]</code></li>
+</ul>
+
+
+<h5><code>JsSuccess(["alpha","beta","gamma"],/key2/key23)</code></h5>
+
+<ul>
+<li>This is a simply successful <code>JsResult</code></li>
+<li>For info, <code>/key2/key23</code> represents the JsPath where data were read but don&#8217;t care about it, it&#8217;s mainly used by Play API to compose JsResult(s))</li>
+<li><code>["alpha","beta","gamma"]</code> is just due to the fact that we have overriden <code>toString</code></li>
+</ul>
+
+
+<blockquote><p><strong>To Remember</strong> <code>jsPath.json.pick</code> gets ONLY the value inside the JsPath</p></blockquote>
+
+<br/>
+
+
+<h3><a name="step-pick-2">Pick value as Type</a></h3>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json._</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">jsonTransformer</span> <span class="k">=</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;key2</span> <span class="o">\</span> <span class="-Symbol">&#39;key23</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">pick</span><span class="o">[</span><span class="kt">JsArray</span><span class="o">]</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="n">json</span><span class="o">.</span><span class="n">validate</span><span class="o">(</span><span class="n">jsonTransformer</span><span class="o">)</span>
+</span><span class='line'><span class="n">res10</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsResult</span><span class="o">[</span><span class="kt">play.api.libs.json.JsArray</span><span class="o">]</span> <span class="k">=</span>
+</span><span class='line'>  <span class="nc">JsSuccess</span><span class="o">(</span>
+</span><span class='line'>    <span class="o">[</span><span class="err">&quot;</span><span class="kt">alpha</span><span class="err">&quot;</span>,<span class="err">&quot;</span><span class="kt">beta</span><span class="err">&quot;</span>,<span class="err">&quot;</span><span class="kt">gamma</span><span class="err">&quot;</span><span class="o">],</span>
+</span><span class='line'>    <span class="o">/</span><span class="n">key2</span><span class="o">/</span><span class="n">key23</span>
+</span><span class='line'>  <span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h5><code>(__ \ 'key2 \ 'key23).json.pick[JsArray]</code></h5>
+
+<ul>
+<li><code>pick[T]</code> is a <code>Reads[T &lt;: JsValue]</code> which picks the value (as a <code>JsArray</code> in our case) <strong>IN</strong> the given JsPath</li>
+</ul>
+
+
+<blockquote><p><strong>To Remember: <code>jsPath.json.pick[T &lt;: JsValue]</code> extracts ONLY the typed value inside the JsPath</strong></p></blockquote>
+
+<br/>
+
+
+<h2><a name="step-pickbranch">Case 2: Pick branch following JsPath</a></h2>
+
+<h3><a name="step-pickbranch-1">Pick branch as JsValue</a></h3>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json._</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">jsonTransformer</span> <span class="k">=</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;key2</span> <span class="o">\</span> <span class="-Symbol">&#39;key24</span> <span class="o">\</span> <span class="-Symbol">&#39;key241</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">pickBranch</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="n">json</span><span class="o">.</span><span class="n">validate</span><span class="o">(</span><span class="n">jsonTransformer</span><span class="o">)</span>
+</span><span class='line'><span class="n">res11</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsResult</span><span class="o">[</span><span class="kt">play.api.libs.json.JsObject</span><span class="o">]</span> <span class="k">=</span>
+</span><span class='line'>  <span class="nc">JsSuccess</span><span class="o">(</span>
+</span><span class='line'>  <span class="o">{</span>
+</span><span class='line'>    <span class="s">&quot;key2&quot;</span><span class="k">:</span> <span class="o">{</span>
+</span><span class='line'>      <span class="err">&quot;</span><span class="kt">key24</span><span class="err">&quot;</span><span class="kt">:</span><span class="o">{</span>
+</span><span class='line'>        <span class="err">&quot;</span><span class="kt">key241</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">234</span><span class="kt">.</span><span class="err">123</span>
+</span><span class='line'>      <span class="o">}</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>  <span class="o">},</span>
+</span><span class='line'>  <span class="o">/</span><span class="n">key2</span><span class="o">/</span><span class="n">key24</span><span class="o">/</span><span class="n">key241</span>
+</span><span class='line'>  <span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h5><code>(__ \ 'key2 \ 'key23).json.pickBranch</code></h5>
+
+<ul>
+<li><code>pickBranch</code> is a <code>Reads[JsValue]</code> which picks the branch from root to given JsPath</li>
+</ul>
+
+
+<h5><code>{"key2":{"key24":{"key242":"value242"}}}</code></h5>
+
+<ul>
+<li>The result is the branch from root to given JsPath including the JsValue in JsPath</li>
+</ul>
+
+
+<blockquote><p><strong>To Remember: <code>jsPath.json.pickBranch</code> extracts the single branch down to JsPath + the value inside JsPath</strong></p></blockquote>
+
+<br/>
+
+
+<h2><a name="step-copyfrom">Case 3: Copy a value from input JsPath into a new JsPath</a></h2>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json._</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">jsonTransformer</span> <span class="k">=</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;key25</span> <span class="o">\</span> <span class="-Symbol">&#39;key251</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">copyFrom</span><span class="o">(</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;key2</span> <span class="o">\</span> <span class="-Symbol">&#39;key21</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">pick</span> <span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="n">json</span><span class="o">.</span><span class="n">validate</span><span class="o">(</span><span class="n">jsonTransformer</span><span class="o">)</span>
+</span><span class='line'><span class="n">res12</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsResult</span><span class="o">[</span><span class="kt">play.api.libs.json.JsObject</span><span class="o">]</span>
+</span><span class='line'>  <span class="nc">JsSuccess</span><span class="o">(</span>
+</span><span class='line'>    <span class="o">{</span>
+</span><span class='line'>      <span class="s">&quot;key25&quot;</span><span class="k">:</span><span class="o">{</span>
+</span><span class='line'>        <span class="err">&quot;</span><span class="kt">key251</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">123</span>
+</span><span class='line'>      <span class="o">}</span>
+</span><span class='line'>    <span class="o">},</span>
+</span><span class='line'>    <span class="o">/</span><span class="n">key2</span><span class="o">/</span><span class="n">key21</span>
+</span><span class='line'>  <span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h5><code>(__ \ 'key25 \ 'key251).json.copyFrom( reads: Reads[A &lt;: JsValue] )</code></h5>
+
+<ul>
+<li><code>copyFrom</code> is a <code>Reads[JsValue]</code></li>
+<li><code>copyFrom</code> reads the JsValue from input JSON using provided Reads[A]</li>
+<li><code>copyFrom</code> copies this extracted JsValue as the leaf of a new branch corresponding to given JsPath</li>
+</ul>
+
+
+<h5><code>{"key25":{"key251":123}}</code></h5>
+
+<ul>
+<li><code>copyFrom</code> reads value <code>123</code></li>
+<li><code>copyFrom</code> copies this value into new branch <code>(__ \ 'key25 \ 'key251)</code></li>
+</ul>
+
+
+<blockquote><p><strong>To Remember: <code>jsPath.json.copyFrom(Reads[A &lt;: JsValue])</code> reads value from input JSON and creates a new branch with result as leaf</strong></p></blockquote>
+
+<br/>
+
+
+<h2><a name="step-update">Case 4: Copy full input Json &amp; update a branch</a></h2>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json._</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">jsonTransformer</span> <span class="k">=</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;key2</span> <span class="o">\</span> <span class="-Symbol">&#39;key24</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">update</span><span class="o">(</span>
+</span><span class='line'>  <span class="nc">__</span><span class="o">.</span><span class="n">read</span><span class="o">[</span><span class="kt">JsObject</span><span class="o">].</span><span class="n">map</span><span class="o">{</span> <span class="n">o</span> <span class="k">=&gt;</span> <span class="n">o</span> <span class="o">++</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span> <span class="s">&quot;field243&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;coucou&quot;</span> <span class="o">)</span> <span class="o">}</span>
+</span><span class='line'><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="n">json</span><span class="o">.</span><span class="n">validate</span><span class="o">(</span><span class="n">jsonTransformer</span><span class="o">)</span>
+</span><span class='line'><span class="n">res13</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsResult</span><span class="o">[</span><span class="kt">play.api.libs.json.JsObject</span><span class="o">]</span> <span class="k">=</span>
+</span><span class='line'>  <span class="nc">JsSuccess</span><span class="o">(</span>
+</span><span class='line'>    <span class="o">{</span>
+</span><span class='line'>      <span class="s">&quot;key1&quot;</span><span class="k">:</span><span class="err">&quot;</span><span class="kt">value1</span><span class="err">&quot;</span><span class="o">,</span>
+</span><span class='line'>      <span class="s">&quot;key2&quot;</span><span class="k">:</span><span class="o">{</span>
+</span><span class='line'>        <span class="err">&quot;</span><span class="kt">key21</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">123</span><span class="o">,</span>
+</span><span class='line'>        <span class="err">&quot;</span><span class="kt">key22</span><span class="err">&quot;</span><span class="kt">:true</span><span class="o">,</span>
+</span><span class='line'>        <span class="s">&quot;key23&quot;</span><span class="k">:</span><span class="err">[&quot;</span><span class="kt">alpha</span><span class="err">&quot;</span><span class="o">,</span><span class="s">&quot;beta&quot;</span><span class="o">,</span><span class="s">&quot;gamma&quot;</span><span class="err">]</span><span class="o">,</span>
+</span><span class='line'>        <span class="s">&quot;key24&quot;</span><span class="k">:</span><span class="o">{</span>
+</span><span class='line'>          <span class="err">&quot;</span><span class="kt">key241</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">234</span><span class="kt">.</span><span class="err">123</span><span class="o">,</span>
+</span><span class='line'>          <span class="err">&quot;</span><span class="kt">key242</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">value242</span><span class="err">&quot;</span><span class="o">,</span>
+</span><span class='line'>          <span class="s">&quot;field243&quot;</span><span class="k">:</span><span class="err">&quot;</span><span class="kt">coucou</span><span class="err">&quot;</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>      <span class="o">},</span>
+</span><span class='line'>      <span class="s">&quot;key3&quot;</span><span class="k">:</span><span class="err">234</span>
+</span><span class='line'>    <span class="o">},</span>
+</span><span class='line'>  <span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h5><code>(__ \ 'key2).json.update(reads: Reads[A &lt; JsValue])</code></h5>
+
+<ul>
+<li>is a <code>Reads[JsObject]</code></li>
+</ul>
+
+
+<h5><code>(__ \ 'key2 \ 'key24).json.update(reads)</code> does 3 things:</h5>
+
+<ul>
+<li>extracts value from input JSON at JsPath <code>(__ \ 'key2 \ 'key24)</code></li>
+<li>applies <code>reads</code> on this relative value and re-creates a branch <code>(__ \ 'key2 \ 'key24)</code> adding result of <code>reads</code> as leaf</li>
+<li>merges this branch with full input JSON replacing existing branch (so it works only with input JsObject and not other type of JsValue)</li>
+</ul>
+
+
+<h5><code>JsSuccess({…},)</code></h5>
+
+<ul>
+<li>Just for info, there is no JsPath as 2nd parameter there because the JSON manipulation was done from Root JsPath</li>
+</ul>
+
+
+<blockquote><p><strong>To Remember: <code>jsPath.json.update(Reads[A &lt;: JsValue])</code> only works for JsObject, copies full input <code>JsObject</code> and updates jsPath with provided <code>Reads[A &lt;: JsValue]</code></strong></p></blockquote>
+
+<br/>
+
+
+<h2><a name="step-put">Case 5: Put a given value in a new branch</a></h2>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json._</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">jsonTransformer</span> <span class="k">=</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;key24</span> <span class="o">\</span> <span class="-Symbol">&#39;key241</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">put</span><span class="o">(</span><span class="nc">JsNumber</span><span class="o">(</span><span class="mi">456</span><span class="o">))</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="n">json</span><span class="o">.</span><span class="n">validate</span><span class="o">(</span><span class="n">jsonTransformer</span><span class="o">)</span>
+</span><span class='line'><span class="n">res14</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsResult</span><span class="o">[</span><span class="kt">play.api.libs.json.JsObject</span><span class="o">]</span> <span class="k">=</span>
+</span><span class='line'>  <span class="nc">JsSuccess</span><span class="o">(</span>
+</span><span class='line'>    <span class="o">{</span>
+</span><span class='line'>      <span class="s">&quot;key24&quot;</span><span class="k">:</span><span class="o">{</span>
+</span><span class='line'>        <span class="err">&quot;</span><span class="kt">key241</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">456</span>
+</span><span class='line'>      <span class="o">}</span>
+</span><span class='line'>    <span class="o">},</span>
+</span><span class='line'>  <span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h5><code>(__ \ 'key24 \ 'key241).json.put( a: =&gt; JsValue )</code></h5>
+
+<ul>
+<li>is a Reads[JsObject]</li>
+</ul>
+
+
+<h5><code>(__ \ 'key24 \ 'key241).json.put( a: =&gt; JsValue )</code></h5>
+
+<ul>
+<li>creates a new branch <code>(__ \ 'key24 \ 'key241)</code></li>
+<li>puts <code>a</code> as leaf of this branch.</li>
+</ul>
+
+
+<h5><code>jsPath.json.put( a: =&gt; JsValue )</code></h5>
+
+<ul>
+<li>takes a JsValue argument passed by name allowing to pass even a closure to it.</li>
+</ul>
+
+
+<h5><code>jsPath.json.put</code></h5>
+
+<ul>
+<li>doesn&#8217;t care at all about input JSON</li>
+<li>simply replace input JSON by given value</li>
+</ul>
+
+
+<blockquote><p><strong>To Remember: <code>jsPath.json.put( a: =&gt; Jsvalue )</code> creates a new branch with a given value without taking into account input JSON</strong></p></blockquote>
+
+<br/>
+
+
+<h2><a name="step-prune">Case 6: Prune a branch from input JSON</a></h2>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json._</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">jsonTransformer</span> <span class="k">=</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;key2</span> <span class="o">\</span> <span class="-Symbol">&#39;key22</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">prune</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="n">json</span><span class="o">.</span><span class="n">validate</span><span class="o">(</span><span class="n">jsonTransformer</span><span class="o">)</span>
+</span><span class='line'><span class="n">res15</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsResult</span><span class="o">[</span><span class="kt">play.api.libs.json.JsObject</span><span class="o">]</span> <span class="k">=</span>
+</span><span class='line'>  <span class="nc">JsSuccess</span><span class="o">(</span>
+</span><span class='line'>    <span class="o">{</span>
+</span><span class='line'>      <span class="s">&quot;key1&quot;</span><span class="k">:</span><span class="err">&quot;</span><span class="kt">value1</span><span class="err">&quot;</span><span class="o">,</span>
+</span><span class='line'>      <span class="s">&quot;key3&quot;</span><span class="k">:</span><span class="err">234</span><span class="o">,</span>
+</span><span class='line'>      <span class="s">&quot;key2&quot;</span><span class="k">:</span><span class="o">{</span>
+</span><span class='line'>        <span class="err">&quot;</span><span class="kt">key21</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">123</span><span class="o">,</span>
+</span><span class='line'>        <span class="err">&quot;</span><span class="kt">key23</span><span class="err">&quot;</span><span class="kt">:</span><span class="o">[</span><span class="err">&quot;</span><span class="kt">alpha</span><span class="err">&quot;</span>,<span class="err">&quot;</span><span class="kt">beta</span><span class="err">&quot;</span>,<span class="err">&quot;</span><span class="kt">gamma</span><span class="err">&quot;</span><span class="o">],</span>
+</span><span class='line'>        <span class="s">&quot;key24&quot;</span><span class="k">:</span><span class="o">{</span>
+</span><span class='line'>          <span class="err">&quot;</span><span class="kt">key241</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">234</span><span class="kt">.</span><span class="err">123</span><span class="o">,</span>
+</span><span class='line'>          <span class="err">&quot;</span><span class="kt">key242</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">value242</span><span class="err">&quot;</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>      <span class="o">}</span>
+</span><span class='line'>    <span class="o">},</span>
+</span><span class='line'>    <span class="o">/</span><span class="n">key2</span><span class="o">/</span><span class="n">key22</span><span class="o">/</span><span class="n">key22</span>
+</span><span class='line'>  <span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h5><code>(__ \ 'key2 \ 'key22).json.prune</code></h5>
+
+<ul>
+<li>is a <code>Reads[JsObject]</code> that works only with JsObject</li>
+</ul>
+
+
+<h5><code>(__ \ 'key2 \ 'key22).json.prune</code></h5>
+
+<ul>
+<li>removes given JsPath from input JSON (<code>key22</code> has disappeared under <code>key2</code>)</li>
+</ul>
+
+
+<p>Please note the resulting JsObject hasn&#8217;t same keys order as input JsObject. This is due to the implementation of JsObject and to the merge mechanism. But this is not important since we have overriden <code>JsObject.equals</code> method to take this into account.</p>
+
+<blockquote><p><strong>To Remember: <code>jsPath.json.prune</code> only works with JsObject and removes given JsPath form input JSON)</strong>
+Please note that:</p>
+
+<ul>
+<li><code>prune</code> doesn&#8217;t work for recursive JsPath for the time being</li>
+<li>if <code>prune</code> doesn&#8217;t find any branch to delete, it doesn&#8217;t generate any error and returns unchanged JSON.</li>
+</ul>
+</blockquote>
+
+<h1><a name="more-complicated">More complicated cases</a></h1>
+
+<h2><a name="more-complicated-pick-update">Case 7: Pick a branch and update its content in 2 places</a></h2>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json.Reads._</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">jsonTransformer</span> <span class="k">=</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;key2</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">pickBranch</span><span class="o">(</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;key21</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">update</span><span class="o">(</span>
+</span><span class='line'>    <span class="n">of</span><span class="o">[</span><span class="kt">JsNumber</span><span class="o">].</span><span class="n">map</span><span class="o">{</span> <span class="k">case</span> <span class="nc">JsNumber</span><span class="o">(</span><span class="n">nb</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="nc">JsNumber</span><span class="o">(</span><span class="n">nb</span> <span class="o">+</span> <span class="mi">10</span><span class="o">)</span> <span class="o">}</span>
+</span><span class='line'>  <span class="o">)</span> <span class="n">andThen</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;key23</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">update</span><span class="o">(</span>
+</span><span class='line'>    <span class="n">of</span><span class="o">[</span><span class="kt">JsArray</span><span class="o">].</span><span class="n">map</span><span class="o">{</span> <span class="k">case</span> <span class="nc">JsArray</span><span class="o">(</span><span class="n">arr</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="nc">JsArray</span><span class="o">(</span><span class="n">arr</span> <span class="o">:+</span> <span class="nc">JsString</span><span class="o">(</span><span class="s">&quot;delta&quot;</span><span class="o">))</span> <span class="o">}</span>
+</span><span class='line'>  <span class="o">)</span>
+</span><span class='line'><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="n">json</span><span class="o">.</span><span class="n">validate</span><span class="o">(</span><span class="n">jsonTransformer</span><span class="o">)</span>
+</span><span class='line'><span class="n">res16</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsResult</span><span class="o">[</span><span class="kt">play.api.libs.json.JsObject</span><span class="o">]</span> <span class="k">=</span>
+</span><span class='line'>  <span class="nc">JsSuccess</span><span class="o">(</span>
+</span><span class='line'>    <span class="o">{</span>
+</span><span class='line'>      <span class="s">&quot;key2&quot;</span><span class="k">:</span><span class="o">{</span>
+</span><span class='line'>        <span class="err">&quot;</span><span class="kt">key21</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">133</span><span class="o">,</span>
+</span><span class='line'>        <span class="err">&quot;</span><span class="kt">key22</span><span class="err">&quot;</span><span class="kt">:true</span><span class="o">,</span>
+</span><span class='line'>        <span class="s">&quot;key23&quot;</span><span class="k">:</span><span class="err">[&quot;</span><span class="kt">alpha</span><span class="err">&quot;</span><span class="o">,</span><span class="s">&quot;beta&quot;</span><span class="o">,</span><span class="s">&quot;gamma&quot;</span><span class="o">,</span><span class="s">&quot;delta&quot;</span><span class="err">]</span><span class="o">,</span>
+</span><span class='line'>        <span class="s">&quot;key24&quot;</span><span class="k">:</span><span class="o">{</span>
+</span><span class='line'>          <span class="err">&quot;</span><span class="kt">key241</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">234</span><span class="kt">.</span><span class="err">123</span><span class="o">,</span>
+</span><span class='line'>          <span class="err">&quot;</span><span class="kt">key242</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">value242</span><span class="err">&quot;</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>      <span class="o">}</span>
+</span><span class='line'>    <span class="o">},</span>
+</span><span class='line'>    <span class="o">/</span><span class="n">key2</span>
+</span><span class='line'>  <span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h5><code>(__ \ 'key2).json.pickBranch(reads: Reads[A &lt;: JsValue])</code></h5>
+
+<ul>
+<li>extracts branch <code>__ \ 'key2</code> from input JSON and applies <code>reads</code> to the relative leaf of this branch (only to the content)</li>
+</ul>
+
+
+<h5><code>(__ \ 'key21).json.update(reads: Reads[A &lt;: JsValue])</code></h5>
+
+<ul>
+<li>updates <code>(__ \ 'key21)</code> branch</li>
+</ul>
+
+
+<h5><code>of[JsNumber]</code></h5>
+
+<ul>
+<li>is just a <code>Reads[JsNumber]</code></li>
+<li>extracts a JsNumber from <code>(__ \ 'key21)</code></li>
+</ul>
+
+
+<h5><code>of[JsNumber].map{ case JsNumber(nb) =&gt; JsNumber(nb + 10) }</code></h5>
+
+<ul>
+<li>reads a JsNumber (<em>value 123</em> in <code>__ \ 'key21</code>)</li>
+<li>uses <code>Reads[A].map</code> to increase it by <em>10</em> (in immutable way naturally)</li>
+</ul>
+
+
+<h5><code>andThen</code></h5>
+
+<ul>
+<li>is just the composition of 2 <code>Reads[A]</code></li>
+<li>first reads is applied and then result is piped to second reads</li>
+</ul>
+
+
+<h5><code>of[JsArray].map{ case JsArray(arr) =&gt; JsArray(arr :+ JsString("delta")</code></h5>
+
+<ul>
+<li>reads a JsArray (<em>value [alpha, beta, gamma] in <code>__ \ 'key23</code></em>)</li>
+<li>uses <code>Reads[A].map</code> to append <code>JsString("delta")</code> to it</li>
+</ul>
+
+
+<blockquote><p>Please note the result is just the <code>__ \ 'key2</code> branch since we picked only this branch</p></blockquote>
+
+<br/>
+
+
+<h2><a name="more-complicated-pick-prune">Case 8: Pick a branch and prune a sub-branch</a></h2>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json.Reads._</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">jsonTransformer</span> <span class="k">=</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;key2</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">pickBranch</span><span class="o">(</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;key23</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">prune</span>
+</span><span class='line'><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="n">json</span><span class="o">.</span><span class="n">validate</span><span class="o">(</span><span class="n">jsonTransformer</span><span class="o">)</span>
+</span><span class='line'><span class="n">res18</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsResult</span><span class="o">[</span><span class="kt">play.api.libs.json.JsObject</span><span class="o">]</span> <span class="k">=</span>
+</span><span class='line'>  <span class="nc">JsSuccess</span><span class="o">(</span>
+</span><span class='line'>    <span class="o">{</span>
+</span><span class='line'>      <span class="s">&quot;key2&quot;</span><span class="k">:</span><span class="o">{</span>
+</span><span class='line'>        <span class="err">&quot;</span><span class="kt">key21</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">123</span><span class="o">,</span>
+</span><span class='line'>        <span class="err">&quot;</span><span class="kt">key22</span><span class="err">&quot;</span><span class="kt">:true</span><span class="o">,</span>
+</span><span class='line'>        <span class="s">&quot;key24&quot;</span><span class="k">:</span><span class="o">{</span>
+</span><span class='line'>          <span class="err">&quot;</span><span class="kt">key241</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">234</span><span class="kt">.</span><span class="err">123</span><span class="o">,</span>
+</span><span class='line'>          <span class="err">&quot;</span><span class="kt">key242</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">value242</span><span class="err">&quot;</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>      <span class="o">}</span>
+</span><span class='line'>    <span class="o">},</span>
+</span><span class='line'>    <span class="o">/</span><span class="n">key2</span><span class="o">/</span><span class="n">key23</span>
+</span><span class='line'>  <span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h5><code>(__ \ 'key2).json.pickBranch(reads: Reads[A &lt;: JsValue])</code></h5>
+
+<ul>
+<li>extracts branch <code>__ \ 'key2</code> from input JSON and applies <code>reads</code> to the relative leaf of this branch (only to the content)</li>
+</ul>
+
+
+<h5><code>(__ \ 'key23).json.prune</code></h5>
+
+<ul>
+<li>removes branch <code>__ \ 'key23</code> from relative JSON</li>
+</ul>
+
+
+<blockquote><p>Please remark the result is just the <code>__ \ 'key2</code> branch without <code>key23</code> field.</p></blockquote>
+
+<h1><a name="combinators">What about combinators?</a></h1>
+
+<p>I stop there before it becomes boring (if not yet)…</p>
+
+<p>Just keep in mind that you have now a huge toolkit to create generic JSON transformers.<br/>
+You can compose, map, flatmap transformers together into other transformers. So possibilities are almost infinite.</p>
+
+<p>But there is a final point to treat: mixing those great new JSON transformers with previously presented Reads combinators.
+This is quite trivial as JSON transformers are just <code>Reads[A &lt;: JsValue]</code></p>
+
+<p>Let&#8217;s demonstrate by writing a <strong>Gizmo to Gremlin</strong> JSON transformer.</p>
+
+<p>Here is Gizmo:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">gizmo</span> <span class="k">=</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span>
+</span><span class='line'>  <span class="s">&quot;name&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;gizmo&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;description&quot;</span> <span class="o">-&gt;</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span>
+</span><span class='line'>      <span class="s">&quot;features&quot;</span> <span class="o">-&gt;</span> <span class="nc">Json</span><span class="o">.</span><span class="n">arr</span><span class="o">(</span> <span class="s">&quot;hairy&quot;</span><span class="o">,</span> <span class="s">&quot;cute&quot;</span><span class="o">,</span> <span class="s">&quot;gentle&quot;</span><span class="o">),</span>
+</span><span class='line'>      <span class="s">&quot;size&quot;</span> <span class="o">-&gt;</span> <span class="mi">10</span><span class="o">,</span>
+</span><span class='line'>      <span class="s">&quot;sex&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;undefined&quot;</span><span class="o">,</span>
+</span><span class='line'>      <span class="s">&quot;life_expectancy&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;very old&quot;</span><span class="o">,</span>
+</span><span class='line'>      <span class="s">&quot;danger&quot;</span> <span class="o">-&gt;</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span>
+</span><span class='line'>          <span class="s">&quot;wet&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;multiplies&quot;</span><span class="o">,</span>
+</span><span class='line'>          <span class="s">&quot;feed after midnight&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;becomes gremlin&quot;</span>
+</span><span class='line'>      <span class="o">)</span>
+</span><span class='line'>  <span class="o">),</span>
+</span><span class='line'>  <span class="s">&quot;loves&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;all&quot;</span>
+</span><span class='line'><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Here is Gremlin:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">gremlin</span> <span class="k">=</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span>
+</span><span class='line'>  <span class="s">&quot;name&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;gremlin&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;description&quot;</span> <span class="o">-&gt;</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span>
+</span><span class='line'>      <span class="s">&quot;features&quot;</span> <span class="o">-&gt;</span> <span class="nc">Json</span><span class="o">.</span><span class="n">arr</span><span class="o">(</span><span class="s">&quot;skinny&quot;</span><span class="o">,</span> <span class="s">&quot;ugly&quot;</span><span class="o">,</span> <span class="s">&quot;evil&quot;</span><span class="o">),</span>
+</span><span class='line'>      <span class="s">&quot;size&quot;</span> <span class="o">-&gt;</span> <span class="mi">30</span><span class="o">,</span>
+</span><span class='line'>      <span class="s">&quot;sex&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;undefined&quot;</span><span class="o">,</span>
+</span><span class='line'>      <span class="s">&quot;life_expectancy&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;very old&quot;</span><span class="o">,</span>
+</span><span class='line'>      <span class="s">&quot;danger&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;always&quot;</span>
+</span><span class='line'>  <span class="o">),</span>
+</span><span class='line'>  <span class="s">&quot;hates&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;all&quot;</span>
+</span><span class='line'><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Ok let&#8217;s write a JSON transformer to do this transformation</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json.Reads._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json.util._</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">gizmo2gremlin</span> <span class="k">=</span> <span class="o">(</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;name</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">put</span><span class="o">(</span><span class="nc">JsString</span><span class="o">(</span><span class="s">&quot;gremlin&quot;</span><span class="o">))</span> <span class="n">and</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;description</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">pickBranch</span><span class="o">(</span>
+</span><span class='line'>      <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;size</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">update</span><span class="o">(</span> <span class="n">of</span><span class="o">[</span><span class="kt">JsNumber</span><span class="o">].</span><span class="n">map</span><span class="o">{</span> <span class="k">case</span> <span class="nc">JsNumber</span><span class="o">(</span><span class="n">size</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="nc">JsNumber</span><span class="o">(</span><span class="n">size</span> <span class="o">*</span> <span class="mi">3</span><span class="o">)</span> <span class="o">}</span> <span class="o">)</span> <span class="n">and</span>
+</span><span class='line'>      <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;features</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">put</span><span class="o">(</span> <span class="nc">Json</span><span class="o">.</span><span class="n">arr</span><span class="o">(</span><span class="s">&quot;skinny&quot;</span><span class="o">,</span> <span class="s">&quot;ugly&quot;</span><span class="o">,</span> <span class="s">&quot;evil&quot;</span><span class="o">)</span> <span class="o">)</span> <span class="n">and</span>
+</span><span class='line'>      <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;danger</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">put</span><span class="o">(</span><span class="nc">JsString</span><span class="o">(</span><span class="s">&quot;always&quot;</span><span class="o">))</span>
+</span><span class='line'>      <span class="n">reduce</span>
+</span><span class='line'>  <span class="o">)</span> <span class="n">and</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;hates</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">copyFrom</span><span class="o">(</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;loves</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">pick</span> <span class="o">)</span>
+</span><span class='line'><span class="o">)</span> <span class="n">reduce</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="n">gizmo</span><span class="o">.</span><span class="n">validate</span><span class="o">(</span><span class="n">gizmo2gremlin</span><span class="o">)</span>
+</span><span class='line'><span class="n">res22</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsResult</span><span class="o">[</span><span class="kt">play.api.libs.json.JsObject</span><span class="o">]</span> <span class="k">=</span>
+</span><span class='line'>  <span class="nc">JsSuccess</span><span class="o">(</span>
+</span><span class='line'>    <span class="o">{</span>
+</span><span class='line'>      <span class="s">&quot;name&quot;</span><span class="k">:</span><span class="err">&quot;</span><span class="kt">gremlin</span><span class="err">&quot;</span><span class="o">,</span>
+</span><span class='line'>      <span class="s">&quot;description&quot;</span><span class="k">:</span><span class="o">{</span>
+</span><span class='line'>        <span class="err">&quot;</span><span class="kt">features</span><span class="err">&quot;</span><span class="kt">:</span><span class="o">[</span><span class="err">&quot;</span><span class="kt">skinny</span><span class="err">&quot;</span>,<span class="err">&quot;</span><span class="kt">ugly</span><span class="err">&quot;</span>,<span class="err">&quot;</span><span class="kt">evil</span><span class="err">&quot;</span><span class="o">],</span>
+</span><span class='line'>        <span class="s">&quot;size&quot;</span><span class="k">:</span><span class="err">30</span><span class="o">,</span>
+</span><span class='line'>        <span class="s">&quot;sex&quot;</span><span class="k">:</span><span class="err">&quot;</span><span class="kt">undefined</span><span class="err">&quot;</span><span class="o">,</span>
+</span><span class='line'>        <span class="s">&quot;life_expectancy&quot;</span><span class="k">:</span>
+</span><span class='line'>        <span class="err">&quot;</span><span class="kt">very</span> <span class="kt">old</span><span class="err">&quot;</span><span class="o">,</span><span class="s">&quot;danger&quot;</span><span class="k">:</span><span class="err">&quot;</span><span class="kt">always</span><span class="err">&quot;</span>
+</span><span class='line'>      <span class="o">},</span>
+</span><span class='line'>      <span class="s">&quot;hates&quot;</span><span class="k">:</span><span class="err">&quot;</span><span class="kt">all</span><span class="err">&quot;</span>
+</span><span class='line'>    <span class="o">},</span>
+</span><span class='line'>  <span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Here we are ;)<br/>
+I&#8217;m not going to explain all of this because you should be able to understand now.<br/>
+Just remark:</p>
+
+<h5><code>(__ \ 'features).json.put(…)</code> is after <code>(__ \ 'size).json.update</code> so that it overwrites original <code>(__ \ 'features)</code></h5>
+
+<br/>
+
+
+<h5><code>(Reads[JsObject] and Reads[JsObject]) reduce</code></h5>
+
+<ul>
+<li>It merges results of both <code>Reads[JsObject]</code> (JsObject ++ JsObject)</li>
+<li>It also applies the same JSON to both <code>Reads[JsObject]</code> unlike <code>andThen</code> which injects the result of the first reads into second one.</li>
+</ul>
+
+
+<br/>
+
+
+<br/>
+
+
+<h1><a name="conclusion">Conclusion</a></h1>
+
+<p>After 3 long articles, I think we have done a full 360° around new features brought by Play2.1 JSON API.<br/>
+I hope you glimpse the whole new world of possiblities it can bring to us.<br/>
+Personnally, I&#8217;ve begun using it in projects and I don&#8217;t yet see the limits of it and how I&#8217;ll end using it.</p>
+
+<p><strong>The only thing I can say is that it has changed my way of manipulating JSON data flows in general.</strong></p>
+
+<blockquote><p>Next article coming soon: an applied example of a webapp following <em>Json coast-to-coast design</em> with <a href="http://www.reactivemongo.org">ReactiveMongo</a></p></blockquote>
+
+<p>Have fun ;););)</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Pascal Voitot</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-10-29T11:10:00+01:00" pubdate data-updated="true">Oct 29<span>th</span>, 2012</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/applicative/'>applicative</a>, <a class='category' href='/blog/categories/combinators/'>combinators</a>, <a class='category' href='/blog/categories/json/'>json</a>, <a class='category' href='/blog/categories/play2-1/'>play2.1</a>, <a class='category' href='/blog/categories/playframework/'>playframework</a>, <a class='category' href='/blog/categories/serialization/'>serialization</a>, <a class='category' href='/blog/categories/validation/'>validation</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://www.mandubian.com/2012/10/29/unveiling-play-2-dot-1-json-api-part3-json-transformers/" data-via="mandubian" data-counturl="http://www.mandubian.com/2012/10/29/unveiling-play-2-dot-1-json-api-part3-json-transformers/" >Tweet</a>
+  
+  
+  <div class="g-plusone" data-size="medium"></div>
+  
+  
+</div>
+
+    
+    
+    <section>
+      <h1>Comments</h1>
+      <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+    </section>
+    
+    <ul class="pager">
+      
+      <li class="previous"><a class="basic-alignment left"
+        href="/2012/10/01/unveiling-play-2-dot-1-json-api-part2-writes-format-combinators/" title="Previous Post:
+        Unveiling Play 2.1 Json API - Part 2 : Writes/Format combinators">&laquo; Unveiling Play 2.1 Json API - Part 2 : Writes/Format combinators</a></li>
+      
+      <li><a href="/blog/archives">Blog Archives</a></li>
+      
+    </ul>
+  </footer>
+</article>
+
+<aside class="sidebar-nav span3">
+  
+    <section class="well">
+  <ul id="recent_posts" class="nav nav-list">
+    <li class="nav-header">Recent Posts</li>
+    
+      <li class="post">
+        <a href="/2012/10/29/unveiling-play-2-dot-1-json-api-part3-json-transformers/">Unveiling Play 2.1 Json API - Part 3 : JSON transformers</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2012/10/01/unveiling-play-2-dot-1-json-api-part2-writes-format-combinators/">Unveiling Play 2.1 Json API - Part 2 : Writes/Format combinators</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2012/09/08/unveiling-play-2-dot-1-json-api-part1-jspath-reads-combinators/">Unveiling Play 2.1 Json API - Part 1 : JsPath & Reads combinators</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2012/08/27/understanding-play2-iteratees-for-normal-humans/">Understanding Play2 Iteratees for Normal Humans</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2012/07/14/xmlsoap-ersatz/">xmlsoap-ersatz</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+<section class="well">
+  <ul id="gh_repos" data-user="mandubian" data-count="5" data-skip="true" class="nav">
+	<li class="nav-header">On GitHub</li>
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+  <a class="github-follow" href="https://github.com/mandubian">Follow @mandubian</a>
+  
+</section>
+
+
+
+<section class="well">
+  <ul id="tweets" class="nav" data-user="mandubian" data-count="4" data-replies="false">
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+    <a href="http://twitter.com/mandubian" class="twitter-follow-button" data-show-count="false">Follow @mandubian</a>
+  
+</section>
+
+
+
+
+
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo" class="page-footer"><hr>
+<p>
+  Copyright &copy; 2012 - Pascal Voitot -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'mandubian';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://www.mandubian.com/2012/10/29/unveiling-play-2-dot-1-json-api-part3-json-transformers/';
+        var disqus_url = 'http://www.mandubian.com/2012/10/29/unveiling-play-2-dot-1-json-api-part3-json-transformers/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+  <script type="text/javascript">
+    (function() {
+      var script = document.createElement('script'); script.type = 'text/javascript'; script.async = true;
+      script.src = 'https://apis.google.com/js/plusone.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(script, s);
+    })();
+  </script>
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = 'http://platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>
