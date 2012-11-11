@@ -109,6 +109,8 @@ As you may deduce by yourself, in order to ensure preceding code equivalence, we
 - to inspect `Person` caseclass, 
 - to extract the 3 fields and their types,
 - to resolve typeclasses implicits
+
+
 <br/>
 ####INJECTION??? Injjjjjectiiiiion….??? injectionnnnnnnn????
 No I stop you immediately…  
