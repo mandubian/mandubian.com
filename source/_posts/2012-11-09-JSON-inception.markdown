@@ -20,8 +20,7 @@ Remember how you write a `Reads[T]` for a case class.
 
 {% codeblock lang:json %}
 import play.api.libs.json._
-import play.api.libs.json.util._
-import play.api.libs.json.Reads._
+import play.api.libs.functional.syntax._
 
 case class Person(name: String, age: Int, lovesChocolate: Boolean)
 
@@ -55,8 +54,7 @@ As we are perfectionnist, now we propose a new way of writing the same code:
 
 {% codeblock lang:json %}
 import play.api.libs.json._
-import play.api.libs.json.util._
-import play.api.libs.json.Reads._
+import play.api.libs.functional.syntax._
 
 case class Person(name: String, age: Int, lovesChocolate: Boolean)
 
@@ -66,11 +64,11 @@ implicit val personReads = Json.reads[Person]
 1 line only.  
 Questions you may ask immediately:
 
-> Do you use runtime bytecode enhancement? -> NO
+> Does it use runtime bytecode enhancement? -> NO
 
-> Do you use runtime introspection? -> NO
+> Does it use runtime introspection? -> NO
 
-> Do you break type-safety? -> NO
+> Does it break type-safety? -> NO
 
 **So what???**
 
@@ -99,16 +97,17 @@ implicit val personReads = (
 Here is the equation describing the windy _Inception_ concept:
 
 {% codeblock lang:json %}
-CaseClass INSPECTION + Code INJECTION + COMPILE-Time = INCEPTION
+(Case Class INSPECTION) + (Code INJECTION) + (COMPILE Time) = INCEPTION
 {% endcodeblock %}	
 
 <br/>
-####Caseclass Inspection
+####Case Class Inspection
 As you may deduce by yourself, in order to ensure preceding code equivalence, we need :
 
-- to inspect `Person` caseclass, 
-- to extract the 3 fields and their types,
-- to resolve typeclasses implicits
+- to inspect `Person` case class, 
+- to extract the 3 fields `name`, `age`, `lovesChocolate` and their types,
+- to resolve typeclasses implicits,
+- to find `Person.apply`.
 
 
 <br/>
@@ -141,7 +140,7 @@ No runtime introspection.
 
 > As everything is resolved at compile-time, you will have a compile error if you did not import the required implicits for all the types of the fields.
 
-
+<br/>
 # <a name="scala-macros">Json inception is Scala 2.10 Macros</a>
 
 We needed a Scala feature enabling:
@@ -152,22 +151,35 @@ We needed a Scala feature enabling:
 
 This is enabled by a new experimental feature introduced in Scala 2.10: [Scala Macros](http://scalamacros.org/)  
 
-Scala macros is a very new feature (experimental) which real scope is not yet completely known.  
-Injecting code in the compile chain is **very powerful but also very tricky. So it must be considered very carefully and precisely.**  
+Scala macros is a new feature (still experimental) with a huge potential. You can :
 
-Just remark that:
+- introspect code at compile-time based on Scala reflection API, 
+- access all imports, implicits in the current compile context
+- create new code expressions, generate compiling errors and inject them into compile chain.
 
-- **We use those Macros because it corresponds exactly to our requirements not because it's hype.**
+Please note that:
+
+- **We use Scala Macros because it corresponds exactly to our requirements.**
 - **We use Scala macros as an enabler, not as an end in itself.**
-- **The macro is just a helper that generates the code you could write by yourself.**
-- **It doesn't add, hide unexpected code in your back.**
+- **The macro is a helper that generates the code you could write by yourself.**
+- **It doesn't add, hide unexpected code behind the curtain.**
 
-We don't want to use Macros to mimic runtime enhancements or runtime aspect programming at compile-time and re-create those bloated frameworks that hide your code behind layers and layers of code you don't control at all and don't even know what it does. In Java, this kind of design is mandatory as the language doesn't allow any other construction. But in Scala, we can do else!
+As you may discover, writing a macro is not a trivial process since your macro code executes in the compiler runtime (or universe).  
 
-This article is also a **good way to begin the reflection about the right way to use Scala Macros**.  
-I'll certainly write other articles about this aspect because there are lots of things to say.  
-I fear we could see coding horrors coded with Scala Macros so it's better to discuss immediately to define a few good manners without preventing people from inventing.
+    So you write macro code 
+      that is compiled and executed 
+      in a runtime that manipulates your code 
+         to be compiled and executed 
+         in a future runtime…           
+**That's also certainly why we called it *Inception* ;)**
 
+So it requires some mental exercises to follow exactly what you do. The API is also quite complex and not fully documented yet. Therefore, you must persevere when you begin using macros.
+
+I'll certainly write other articles about Scala macros because there are lots of things to say.  
+This article is also meant **to begin the reflection about the right way to use Scala Macros**.  
+Great power means greater responsabilities so it's better to discuss all together and establish a few good manners…
+
+<br/>
 # <a name="writes-format">Writes[T] & Format[T]</a>
 
 >Please remark that JSON inception just works for case class having `unapply/apply` functions.
@@ -178,14 +190,9 @@ Naturally, you can also _incept_ `Writes[T]`and `Format[T]`.
 
 {% codeblock lang:json %}
 import play.api.libs.json._
-import play.api.libs.json.util._
-import play.api.libs.json.Writes._
-
-implicit val personWrites = (
-	(__ \ 'name).writes[String] and
-	(__ \ 'age).writes[Int] and
-	(__ \ 'lovesChocolate).writes[Boolean]
-)(unlift(Person.unapply))
+import play.api.libs.functional.syntax._
+ 
+implicit val personWrites = Json.writes[Person]
 {% endcodeblock %}	
 
 ## <a name="format">Format[T]</a>
@@ -193,15 +200,9 @@ implicit val personWrites = (
 {% codeblock lang:json %}
 import play.api.libs.json._
 import play.api.libs.json.util._
-import play.api.libs.json.Reads._
-import play.api.libs.json.Writes._
-import play.api.libs.json.Format._
+import play.api.libs.functional.syntax._
 
-implicit val personWrites = (
-	(__ \ 'name).format[String] and
-	(__ \ 'age).format[Int] and
-	(__ \ 'lovesChocolate).format[Boolean]
-)(Person, unlift(Person.unapply))
+implicit val personWrites = Json.format[Person]
 {% endcodeblock %}	
 
 # <a name="conclusion">Conclusion</a>
