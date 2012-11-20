@@ -1,0 +1,629 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Unveiling Play 2.1 Json API - Bonus : JSON Inception (based on Scala 2.10 Macros) - Mandubian Blog</title>
+  <meta name="author" content="Pascal Voitot">
+
+  
+  <meta name="description" content="Unveiling Play 2.1 Json API - Bonus : JSON Inception (Based on Scala 2.10 Macros)
+    
+    
+      
+        
+
+
+
+
+
+
+
+
+  
+
+
+Nov 11th &hellip;">
+  <meta name="keywords" content="play 2.1, json, json serialization, json transform, json validation, json cumulative errors, play framework, combinators, applicative, scala macro">
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://www.mandubian.com/2012/11/11/JSON-inception">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/bootstrap/bootstrap.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/stylesheets/bootstrap/responsive.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/stylesheets/syntax/syntax.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <style type="text/css">
+    body {
+      padding-bottom: 40px;
+    }
+    h1 {
+      margin-bottom: 15px;
+    }
+    img {
+      max-width: 100%;
+    }
+    .sharing, .meta, .pager {
+      margin: 20px 0px 20px 0px;
+    }
+    .page-footer p {
+      text-align: center;
+    }
+
+    article {
+      margin-bottom: 50px;
+      border-top: #DDD solid 20px;
+    }
+ 
+  </style>
+  <script src="/javascripts/libs/jquery.js"></script>
+  <script src="/javascripts/libs/modernizr-2.0.js"></script>
+  <script src="/javascripts/libs/bootstrap.js"></script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <link href="/atom.xml" rel="alternate" title="Mandubian Blog" type="application/atom+xml">
+  
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-10417377-11']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   >
+  <nav role="navigation"><div class="navbar">
+  <div class="navbar-inner">
+    <div class="container">
+      <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </a>
+
+      <a class="brand" href="/">Mandubian Blog</a>
+
+      <div class="nav-collapse">
+        <ul class="nav">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+
+        <ul class="nav pull-right" data-subscription="rss">
+          <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+          
+        </ul>
+
+        
+          <form class="pull-right navbar-search" action="http://google.com/search" method="get">
+            <fieldset role="search">
+              <input type="hidden" name="q" value="site:www.mandubian.com" />
+              <input class="search-query" type="text" name="q" results="0" placeholder="Search"/>
+            </fieldset>
+          </form>
+        
+      </div>
+    </div>
+  </div>
+</div>
+</nav>
+  <div class="container">
+    <div class="row-fluid">
+      
+<article class="hentry span9" role="article">
+
+  
+  <header class="page-header">
+    
+      <h1 class="entry-title">Unveiling Play 2.1 Json API - Bonus : JSON Inception (Based on Scala 2.10 Macros)</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-11-11T11:10:00+01:00" pubdate data-updated="true">Nov 11<span>th</span>, 2012</time>
+        
+         | <a href="#disqus_thread">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><blockquote><p>A relatively short article, this time, to present an experimental feature developed by Sadek Drobi (<a href="http://www.twitter.com/sadache">@sadache</a>) &amp; I (<a href="http://www.twitter.com/mandubian">@mandubian</a>) and that we&#8217;ve decided to integrate into Play-2.1 because we think it&#8217;s really interesting and useful.</p></blockquote>
+
+<br/>
+
+
+<br/>
+
+
+<h1><a name="wtf-inception">WTF is JSON Inception???</a></h1>
+
+<h2><a name="wtf-inception-boring">Writing a default case class Reads/Writes/Format is so boring!!!</a></h2>
+
+<p>Remember how you write a <code>Reads[T]</code> for a case class.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='json'><span class='line'><span class="err">import</span> <span class="err">play.api.libs.json._</span>
+</span><span class='line'><span class="err">import</span> <span class="err">play.api.libs.functional.syntax._</span>
+</span><span class='line'>
+</span><span class='line'><span class="err">case</span> <span class="err">class</span> <span class="err">Person(name:</span> <span class="err">String,</span> <span class="err">age:</span> <span class="err">Int,</span> <span class="err">lovesChocolate:</span> <span class="err">Boolean)</span>
+</span><span class='line'>
+</span><span class='line'><span class="err">implicit</span> <span class="err">val</span> <span class="err">personReads</span> <span class="err">=</span> <span class="err">(</span>
+</span><span class='line'>  <span class="err">(__</span> <span class="err">\</span> <span class="err">&#39;name).reads</span><span class="p">[</span><span class="err">String</span><span class="p">]</span> <span class="err">and</span>
+</span><span class='line'>  <span class="err">(__</span> <span class="err">\</span> <span class="err">&#39;age).reads</span><span class="p">[</span><span class="err">Int</span><span class="p">]</span> <span class="err">and</span>
+</span><span class='line'>  <span class="err">(__</span> <span class="err">\</span> <span class="err">&#39;lovesChocolate).reads</span><span class="p">[</span><span class="err">Boolean</span><span class="p">]</span>
+</span><span class='line'><span class="err">)(Person)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>So you write 4 lines for this case class.<br/>
+You know what? We have had a few complaints from some people who think it&#8217;s not cool to write a <code>Reads[TheirClass]</code> because usually Java JSON frameworks like Jackson or Gson do it behind the curtain without writing anything.<br/>
+We argued that Play2.1 JSON serializers/deserializers are:</p>
+
+<ul>
+<li>completely typesafe,</li>
+<li>fully compiled,</li>
+<li>nothing was performed using introspection/reflection at runtime.</li>
+</ul>
+
+
+<p>But for some, this didn’t justify the extra lines of code for case classes.</p>
+
+<p>We believe this is a really good approach so we persisted and proposed:</p>
+
+<ul>
+<li>JSON simplified syntax</li>
+<li>JSON combinators</li>
+<li>JSON transformers</li>
+</ul>
+
+
+<p>Added power, but nothing changed for the additional 4 lines.</p>
+
+<h2><a name="wtf-inception-minimalist">Let&#8217;s be minimalist</a></h2>
+
+<p>As we are perfectionnist, now we propose a new way of writing the same code:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='json'><span class='line'><span class="err">import</span> <span class="err">play.api.libs.json._</span>
+</span><span class='line'><span class="err">import</span> <span class="err">play.api.libs.functional.syntax._</span>
+</span><span class='line'>
+</span><span class='line'><span class="err">case</span> <span class="err">class</span> <span class="err">Person(name:</span> <span class="err">String,</span> <span class="err">age:</span> <span class="err">Int,</span> <span class="err">lovesChocolate:</span> <span class="err">Boolean)</span>
+</span><span class='line'>
+</span><span class='line'><span class="err">implicit</span> <span class="err">val</span> <span class="err">personReads</span> <span class="err">=</span> <span class="err">Json.reads</span><span class="p">[</span><span class="err">Person</span><span class="p">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>1 line only.<br/>
+Questions you may ask immediately:</p>
+
+<blockquote><p>Does it use runtime bytecode enhancement? -> NO</p>
+
+<p>Does it use runtime introspection? -> NO</p>
+
+<p>Does it break type-safety? -> NO</p></blockquote>
+
+<p><strong>So what???</strong></p>
+
+<blockquote><p>As I&#8217;m currently in a mood of creating new expressions, after creating <strong>JSON coast-to-coast design</strong>, let&#8217;s call it <strong>JSON INCEPTION</strong> (cool word, quite puzzling isn&#8217;t it? ;)</p></blockquote>
+
+<br/>
+
+
+<br/>
+
+
+<h1><a name="json-incept">JSON Inception</a></h1>
+
+<h2><a name="json-incept-eq">Code Equivalence</a></h2>
+
+<p>As explained just before:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='json'><span class='line'><span class="err">implicit</span> <span class="err">val</span> <span class="err">personReads</span> <span class="err">=</span> <span class="err">Json.reads</span><span class="p">[</span><span class="err">Person</span><span class="p">]</span>
+</span><span class='line'>
+</span><span class='line'><span class="err">//</span> <span class="err">IS</span> <span class="err">STRICTLY</span> <span class="err">EQUIVALENT</span> <span class="err">TO</span> <span class="err">writing</span>
+</span><span class='line'>
+</span><span class='line'><span class="err">implicit</span> <span class="err">val</span> <span class="err">personReads</span> <span class="err">=</span> <span class="err">(</span>
+</span><span class='line'>  <span class="err">(__</span> <span class="err">\</span> <span class="err">&#39;name).reads</span><span class="p">[</span><span class="err">String</span><span class="p">]</span> <span class="err">and</span>
+</span><span class='line'>  <span class="err">(__</span> <span class="err">\</span> <span class="err">&#39;age).reads</span><span class="p">[</span><span class="err">Int</span><span class="p">]</span> <span class="err">and</span>
+</span><span class='line'>  <span class="err">(__</span> <span class="err">\</span> <span class="err">&#39;lovesChocolate).reads</span><span class="p">[</span><span class="err">Boolean</span><span class="p">]</span>
+</span><span class='line'><span class="err">)(Person)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2><a name="json-incept">Inception equation</a></h2>
+
+<p>Here is the equation describing the windy <em>Inception</em> concept:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='json'><span class='line'><span class="err">(Case</span> <span class="err">Class</span> <span class="err">INSPECTION)</span> <span class="err">+</span> <span class="err">(Code</span> <span class="err">INJECTION)</span> <span class="err">+</span> <span class="err">(COMPILE</span> <span class="err">Time)</span> <span class="err">=</span> <span class="err">INCEPTION</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<h4>Case Class Inspection</h4>
+
+<p>As you may deduce by yourself, in order to ensure preceding code equivalence, we need :</p>
+
+<ul>
+<li>to inspect <code>Person</code> case class,</li>
+<li>to extract the 3 fields <code>name</code>, <code>age</code>, <code>lovesChocolate</code> and their types,</li>
+<li>to resolve typeclasses implicits,</li>
+<li>to find <code>Person.apply</code>.</li>
+</ul>
+
+
+<br/>
+
+
+<h4>INJECTION??? Injjjjjectiiiiion….??? injectionnnnnnnn????</h4>
+
+<p>No I stop you immediately…</p>
+
+<blockquote><p><strong>Code injection is not dependency injection…</strong><br/>
+No Spring behind inception… No IOC, No DI… No No No ;)</p></blockquote>
+
+<p>I used this term on purpose because I know that injection is now linked immediately to IOC and Spring. But I&#8217;d like to re-establish this word with its real meaning.<br/>
+Here code injection just means that <strong>we inject code at compile-time into the compiled scala AST</strong> (Abstract Syntax Tree).</p>
+
+<p>So <code>Json.reads[Person]</code> is compiled and replaced in the compile AST by:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='json'><span class='line'><span class="err">(</span>
+</span><span class='line'>  <span class="err">(__</span> <span class="err">\</span> <span class="err">&#39;name).reads</span><span class="p">[</span><span class="err">String</span><span class="p">]</span> <span class="err">and</span>
+</span><span class='line'>  <span class="err">(__</span> <span class="err">\</span> <span class="err">&#39;age).reads</span><span class="p">[</span><span class="err">Int</span><span class="p">]</span> <span class="err">and</span>
+</span><span class='line'>  <span class="err">(__</span> <span class="err">\</span> <span class="err">&#39;lovesChocolate).reads</span><span class="p">[</span><span class="err">Boolean</span><span class="p">]</span>
+</span><span class='line'><span class="err">)(Person)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Nothing less, nothing more…</p>
+
+<br/>
+
+
+<h4>COMPILE-TIME</h4>
+
+<p>Yes everything is performed at compile-time.<br/>
+No runtime bytecode enhancement.<br/>
+No runtime introspection.</p>
+
+<blockquote><p>As everything is resolved at compile-time, you will have a compile error if you did not import the required implicits for all the types of the fields.</p></blockquote>
+
+<br/>
+
+
+<h1><a name="scala-macros">Json inception is Scala 2.10 Macros</a></h1>
+
+<p>We needed a Scala feature enabling:</p>
+
+<ul>
+<li>compile-time code enhancement</li>
+<li>compile-time class/implicits inspection</li>
+<li>compile-time code injection</li>
+</ul>
+
+
+<p>This is enabled by a new experimental feature introduced in Scala 2.10: <a href="http://scalamacros.org/">Scala Macros</a></p>
+
+<p>Scala macros is a new feature (still experimental) with a huge potential. You can :</p>
+
+<ul>
+<li>introspect code at compile-time based on Scala reflection API,</li>
+<li>access all imports, implicits in the current compile context</li>
+<li>create new code expressions, generate compiling errors and inject them into compile chain.</li>
+</ul>
+
+
+<p>Please note that:</p>
+
+<ul>
+<li><strong>We use Scala Macros because it corresponds exactly to our requirements.</strong></li>
+<li><strong>We use Scala macros as an enabler, not as an end in itself.</strong></li>
+<li><strong>The macro is a helper that generates the code you could write by yourself.</strong></li>
+<li><strong>It doesn&#8217;t add, hide unexpected code behind the curtain.</strong></li>
+<li><strong>We follow the <em>no-surprise</em> principle</strong></li>
+</ul>
+
+
+<p>As you may discover, writing a macro is not a trivial process since your macro code executes in the compiler runtime (or universe).</p>
+
+<pre><code>So you write macro code 
+  that is compiled and executed 
+  in a runtime that manipulates your code 
+     to be compiled and executed 
+     in a future runtime…           
+</code></pre>
+
+<p><strong>That&#8217;s also certainly why I called it <em>Inception</em> ;)</strong></p>
+
+<p>So it requires some mental exercises to follow exactly what you do. The API is also quite complex and not fully documented yet. Therefore, you must persevere when you begin using macros.</p>
+
+<p>I&#8217;ll certainly write other articles about Scala macros because there are lots of things to say.<br/>
+This article is also meant <strong>to begin the reflection about the right way to use Scala Macros</strong>.<br/>
+Great power means greater responsability so it&#8217;s better to discuss all together and establish a few good manners…</p>
+
+<br/>
+
+
+<h1><a name="writes-format">Writes[T] &amp; Format[T]</a></h1>
+
+<blockquote><p>Please remark that JSON inception just works for case class having <code>unapply/apply</code> functions.</p></blockquote>
+
+<p>Naturally, you can also <em>incept</em> <code>Writes[T]</code>and <code>Format[T]</code>.</p>
+
+<h2><a name="writes">Writes[T]</a></h2>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='json'><span class='line'><span class="err">import</span> <span class="err">play.api.libs.json._</span>
+</span><span class='line'><span class="err">import</span> <span class="err">play.api.libs.functional.syntax._</span>
+</span><span class='line'>
+</span><span class='line'><span class="err">implicit</span> <span class="err">val</span> <span class="err">personWrites</span> <span class="err">=</span> <span class="err">Json.writes</span><span class="p">[</span><span class="err">Person</span><span class="p">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2><a name="format">Format[T]</a></h2>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='json'><span class='line'><span class="err">import</span> <span class="err">play.api.libs.json._</span>
+</span><span class='line'><span class="err">import</span> <span class="err">play.api.libs.functional.syntax._</span>
+</span><span class='line'>
+</span><span class='line'><span class="err">implicit</span> <span class="err">val</span> <span class="err">personWrites</span> <span class="err">=</span> <span class="err">Json.format</span><span class="p">[</span><span class="err">Person</span><span class="p">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h1><a name="conclusion">Conclusion</a></h1>
+
+<blockquote><p>With the so-called <strong>JSON inception</strong>, we have added a <strong>helper</strong> providing a trivial way to define your <strong>default typesafe <code>Reads[T]/Writes[T]/Format[T]</code> for case classes</strong>.</p></blockquote>
+
+<p>If anyone tells me there is still 1 line to write, I think I might become unpolite ;)</p>
+
+<p>Have Macrofun ;););)</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Pascal Voitot</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-11-11T11:10:00+01:00" pubdate data-updated="true">Nov 11<span>th</span>, 2012</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/applicative/'>applicative</a>, <a class='category' href='/blog/categories/combinators/'>combinators</a>, <a class='category' href='/blog/categories/json/'>json</a>, <a class='category' href='/blog/categories/play2-1/'>play2.1</a>, <a class='category' href='/blog/categories/playframework/'>playframework</a>, <a class='category' href='/blog/categories/scala-macro/'>scala macro</a>, <a class='category' href='/blog/categories/serialization/'>serialization</a>, <a class='category' href='/blog/categories/validation/'>validation</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://www.mandubian.com/2012/11/11/JSON-inception/" data-via="mandubian" data-counturl="http://www.mandubian.com/2012/11/11/JSON-inception/" >Tweet</a>
+  
+  
+  <div class="g-plusone" data-size="medium"></div>
+  
+  
+</div>
+
+    
+    
+    <section>
+      <h1>Comments</h1>
+      <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+    </section>
+    
+    <ul class="pager">
+      
+      <li class="previous"><a class="basic-alignment left"
+        href="/2012/10/29/unveiling-play-2-dot-1-json-api-part3-json-transformers/" title="Previous Post:
+        Unveiling Play 2.1 Json API - Part 3 : JSON transformers">&laquo; Unveiling Play 2.1 Json API - Part 3 : JSON transformers</a></li>
+      
+      <li><a href="/blog/archives">Blog Archives</a></li>
+      
+    </ul>
+  </footer>
+</article>
+
+<aside class="sidebar-nav span3">
+  
+    <section class="well">
+  <ul id="recent_posts" class="nav nav-list">
+    <li class="nav-header">Recent Posts</li>
+    
+      <li class="post">
+        <a href="/2012/11/11/JSON-inception/">Unveiling Play 2.1 Json API - Bonus : JSON Inception (based on Scala 2.10 Macros)</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2012/10/29/unveiling-play-2-dot-1-json-api-part3-json-transformers/">Unveiling Play 2.1 Json API - Part 3 : JSON transformers</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2012/10/01/unveiling-play-2-dot-1-json-api-part2-writes-format-combinators/">Unveiling Play 2.1 Json API - Part 2 : Writes/Format combinators</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2012/09/08/unveiling-play-2-dot-1-json-api-part1-jspath-reads-combinators/">Unveiling Play 2.1 Json API - Part 1 : JsPath & Reads combinators</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2012/08/27/understanding-play2-iteratees-for-normal-humans/">Understanding Play2 Iteratees for Normal Humans</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+<section class="well">
+  <ul id="gh_repos" data-user="mandubian" data-count="5" data-skip="true" class="nav">
+	<li class="nav-header">On GitHub</li>
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+  <a class="github-follow" href="https://github.com/mandubian">Follow @mandubian</a>
+  
+</section>
+
+
+
+<section class="well">
+  <ul id="tweets" class="nav" data-user="mandubian" data-count="4" data-replies="false">
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+    <a href="http://twitter.com/mandubian" class="twitter-follow-button" data-show-count="false">Follow @mandubian</a>
+  
+</section>
+
+
+
+
+
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo" class="page-footer"><hr>
+<p>
+  Copyright &copy; 2012 - Pascal Voitot -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'mandubian';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://www.mandubian.com/2012/11/11/JSON-inception/';
+        var disqus_url = 'http://www.mandubian.com/2012/11/11/JSON-inception/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+  <script type="text/javascript">
+    (function() {
+      var script = document.createElement('script'); script.type = 'text/javascript'; script.async = true;
+      script.src = 'https://apis.google.com/js/plusone.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(script, s);
+    })();
+  </script>
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = 'http://platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>
