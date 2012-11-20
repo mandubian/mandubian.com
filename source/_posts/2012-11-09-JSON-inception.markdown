@@ -33,13 +33,13 @@ implicit val personReads = (
 
 So you write 4 lines for this case class.  
 You know what? We have had a few complaints from some people who think it's not cool to write a `Reads[TheirClass]` because usually Java JSON frameworks like Jackson or Gson do it behind the curtain without writing anything.  
-We tried to argue that Play2.1 JSON serializers/deserializers were:
+We argued that Play2.1 JSON serializers/deserializers are:
 
 - completely typesafe, 
 - fully compiled,
 - nothing was performed using introspection/reflection at runtime.  
 
-But it was not enough.
+But for some, this didn’t justify the extra lines of code for case classes.
 
 We believe this is a really good approach so we persisted and proposed:
 
@@ -47,7 +47,7 @@ We believe this is a really good approach so we persisted and proposed:
 - JSON combinators
 - JSON transformers
 
-But it was still not enough for those people because they still had to write those 4 lines.
+Added power, but nothing changed for the additional 4 lines.
 
 ## <a name="wtf-inception-minimalist">Let's be minimalist</a>
 As we are perfectionnist, now we propose a new way of writing the same code:
@@ -163,6 +163,7 @@ Please note that:
 - **We use Scala macros as an enabler, not as an end in itself.**
 - **The macro is a helper that generates the code you could write by yourself.**
 - **It doesn't add, hide unexpected code behind the curtain.**
+- **We follow the *no-surprise* principle**
 
 As you may discover, writing a macro is not a trivial process since your macro code executes in the compiler runtime (or universe).  
 
@@ -171,13 +172,13 @@ As you may discover, writing a macro is not a trivial process since your macro c
       in a runtime that manipulates your code 
          to be compiled and executed 
          in a future runtime…           
-**That's also certainly why we called it *Inception* ;)**
+**That's also certainly why I called it *Inception* ;)**
 
 So it requires some mental exercises to follow exactly what you do. The API is also quite complex and not fully documented yet. Therefore, you must persevere when you begin using macros.
 
 I'll certainly write other articles about Scala macros because there are lots of things to say.  
 This article is also meant **to begin the reflection about the right way to use Scala Macros**.  
-Great power means greater responsabilities so it's better to discuss all together and establish a few good manners…
+Great power means greater responsability so it's better to discuss all together and establish a few good manners…
 
 <br/>
 # <a name="writes-format">Writes[T] & Format[T]</a>
@@ -199,7 +200,6 @@ implicit val personWrites = Json.writes[Person]
 
 {% codeblock lang:json %}
 import play.api.libs.json._
-import play.api.libs.json.util._
 import play.api.libs.functional.syntax._
 
 implicit val personWrites = Json.format[Person]
