@@ -50,7 +50,7 @@ We believe this is a really good approach so we persisted and proposed:
 Added power, but nothing changed for the additional 4 lines.
 
 ## <a name="wtf-inception-minimalist">Let's be minimalist</a>
-As we are perfectionnist, now we propose a new way of writing the same code:
+As we are perfectionist, now we propose a new way of writing the same code:
 
 {% codeblock lang:json %}
 import play.api.libs.json._
