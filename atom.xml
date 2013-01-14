@@ -4,7 +4,7 @@
   <title><![CDATA[Mandubian Blog]]></title>
   <link href="http://www.mandubian.com/atom.xml" rel="self"/>
   <link href="http://www.mandubian.com/"/>
-  <updated>2013-01-14T12:49:02+01:00</updated>
+  <updated>2013-01-14T18:49:08+01:00</updated>
   <id>http://www.mandubian.com/</id>
   <author>
     <name><![CDATA[Pascal Voitot]]></name>
@@ -1127,6 +1127,8 @@ So we just have to convert Json extended notation for <code>created</code> field
 
 <p>Play controller is the place to do that and we can write one action per REST action.</p>
 
+<blockquote><p>Please note that the whole code is in a single Controller in the sample to make it compact. But a good manner would be to put transformers outside the controller to be able to share them between controllers.</p></blockquote>
+
 <p>In the following samples, please notice the way we compose all Json transformers described previously as if we were piping them.</p>
 
 <h3><a name="action-insert">Insert Person</a></h3>
@@ -1177,7 +1179,7 @@ So we just have to convert Json extended notation for <code>created</code> field
 </span><span class='line'>        <span class="c1">// removes extended JSON to ouput generated _id</span>
 </span><span class='line'>        <span class="nc">Ok</span><span class="o">(</span> <span class="n">resOK</span><span class="o">(</span><span class="n">jsobj</span><span class="o">.</span><span class="n">transform</span><span class="o">(</span><span class="n">fromObjectId</span><span class="o">).</span><span class="n">get</span><span class="o">)</span> <span class="o">)</span>
 </span><span class='line'>      <span class="o">}.</span><span class="n">recover</span><span class="o">{</span> <span class="k">case</span> <span class="n">e</span> <span class="k">=&gt;</span>
-</span><span class='line'>        <span class="nc">BadRequest</span><span class="o">(</span> <span class="n">resKO</span><span class="o">(</span><span class="nc">JsString</span><span class="o">(</span><span class="s">&quot;exception %s&quot;</span><span class="o">.</span><span class="n">format</span><span class="o">(</span><span class="n">e</span><span class="o">.</span><span class="n">getMessage</span><span class="o">)))</span> <span class="o">)</span>
+</span><span class='line'>        <span class="nc">InternalServerError</span><span class="o">(</span> <span class="n">resKO</span><span class="o">(</span><span class="nc">JsString</span><span class="o">(</span><span class="s">&quot;exception %s&quot;</span><span class="o">.</span><span class="n">format</span><span class="o">(</span><span class="n">e</span><span class="o">.</span><span class="n">getMessage</span><span class="o">)))</span> <span class="o">)</span>
 </span><span class='line'>      <span class="o">}</span>
 </span><span class='line'>    <span class="o">}</span>
 </span><span class='line'>  <span class="o">}.</span><span class="n">recoverTotal</span><span class="o">{</span> <span class="n">err</span> <span class="k">=&gt;</span>
@@ -1227,12 +1229,12 @@ Here is the Json <code>Writes[String]</code> that creates the extended JSON nota
 </span><span class='line'>  <span class="k">val</span> <span class="n">q</span> <span class="k">=</span> <span class="nc">QueryBuilder</span><span class="o">().</span><span class="n">query</span><span class="o">(</span><span class="n">toObjectId</span><span class="o">.</span><span class="n">writes</span><span class="o">(</span><span class="n">id</span><span class="o">))</span>
 </span><span class='line'>  <span class="nc">Async</span> <span class="o">{</span>
 </span><span class='line'>    <span class="n">persons</span><span class="o">.</span><span class="n">find</span><span class="o">[</span><span class="kt">JsValue</span><span class="o">](</span><span class="n">q</span><span class="o">).</span><span class="n">headOption</span><span class="o">.</span><span class="n">map</span><span class="o">{</span>
-</span><span class='line'>      <span class="k">case</span> <span class="nc">None</span> <span class="k">=&gt;</span> <span class="nc">Ok</span><span class="o">(</span><span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span><span class="s">&quot;res&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;KO&quot;</span><span class="o">,</span> <span class="s">&quot;error&quot;</span> <span class="o">-&gt;</span> <span class="n">s</span><span class="s">&quot;person with ID $id not found&quot;</span><span class="o">))</span>
+</span><span class='line'>      <span class="k">case</span> <span class="nc">None</span> <span class="k">=&gt;</span> <span class="nc">NotFound</span><span class="o">(</span><span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span><span class="s">&quot;res&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;KO&quot;</span><span class="o">,</span> <span class="s">&quot;error&quot;</span> <span class="o">-&gt;</span> <span class="n">s</span><span class="s">&quot;person with ID $id not found&quot;</span><span class="o">))</span>
 </span><span class='line'>      <span class="k">case</span> <span class="nc">Some</span><span class="o">(</span><span class="n">p</span><span class="o">)</span> <span class="k">=&gt;</span>
 </span><span class='line'>        <span class="n">p</span><span class="o">.</span><span class="n">transform</span><span class="o">(</span><span class="n">outputPerson</span><span class="o">).</span><span class="n">map</span><span class="o">{</span> <span class="n">jsonp</span> <span class="k">=&gt;</span>
 </span><span class='line'>          <span class="nc">Ok</span><span class="o">(</span> <span class="n">resOK</span><span class="o">(</span><span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span><span class="s">&quot;person&quot;</span> <span class="o">-&gt;</span> <span class="n">jsonp</span><span class="o">))</span> <span class="o">)</span>
 </span><span class='line'>        <span class="o">}.</span><span class="n">recoverTotal</span><span class="o">{</span> <span class="n">e</span> <span class="k">=&gt;</span>
-</span><span class='line'>          <span class="nc">Ok</span><span class="o">(</span> <span class="n">resKO</span><span class="o">(</span><span class="nc">JsError</span><span class="o">.</span><span class="n">toFlatJson</span><span class="o">(</span><span class="n">e</span><span class="o">))</span> <span class="o">)</span>
+</span><span class='line'>          <span class="nc">BadRequest</span><span class="o">(</span> <span class="n">resKO</span><span class="o">(</span><span class="nc">JsError</span><span class="o">.</span><span class="n">toFlatJson</span><span class="o">(</span><span class="n">e</span><span class="o">))</span> <span class="o">)</span>
 </span><span class='line'>        <span class="o">}</span>
 </span><span class='line'>    <span class="o">}</span>
 </span><span class='line'>  <span class="o">}</span>
@@ -1269,7 +1271,7 @@ So let&#8217;s give directly the <code>deletePerson</code>code:</p>
 </span><span class='line'>      <span class="k">if</span><span class="o">(</span><span class="n">lastError</span><span class="o">.</span><span class="n">ok</span><span class="o">)</span>
 </span><span class='line'>        <span class="nc">Ok</span><span class="o">(</span> <span class="n">resOK</span><span class="o">(</span><span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span><span class="s">&quot;msg&quot;</span> <span class="o">-&gt;</span> <span class="n">s</span><span class="s">&quot;person $id deleted&quot;</span><span class="o">))</span> <span class="o">)</span>
 </span><span class='line'>      <span class="k">else</span>
-</span><span class='line'>        <span class="nc">BadRequest</span><span class="o">(</span> <span class="n">resKO</span><span class="o">(</span><span class="nc">JsString</span><span class="o">(</span><span class="s">&quot;error %s&quot;</span><span class="o">.</span><span class="n">format</span><span class="o">(</span><span class="n">lastError</span><span class="o">.</span><span class="n">stringify</span><span class="o">)))</span> <span class="o">)</span>
+</span><span class='line'>        <span class="nc">InternalServerError</span><span class="o">(</span> <span class="n">resKO</span><span class="o">(</span><span class="nc">JsString</span><span class="o">(</span><span class="s">&quot;error %s&quot;</span><span class="o">.</span><span class="n">format</span><span class="o">(</span><span class="n">lastError</span><span class="o">.</span><span class="n">stringify</span><span class="o">)))</span> <span class="o">)</span>
 </span><span class='line'>    <span class="o">}</span>
 </span><span class='line'>  <span class="o">}</span>
 </span><span class='line'><span class="o">}</span>
@@ -1372,7 +1374,7 @@ So let&#8217;s give directly the <code>deletePerson</code>code:</p>
 </span><span class='line'>          <span class="k">if</span><span class="o">(</span><span class="n">lastError</span><span class="o">.</span><span class="n">ok</span><span class="o">)</span>
 </span><span class='line'>            <span class="nc">Ok</span><span class="o">(</span> <span class="n">resOK</span><span class="o">(</span><span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span><span class="s">&quot;msg&quot;</span> <span class="o">-&gt;</span> <span class="n">s</span><span class="s">&quot;person $id updated&quot;</span><span class="o">))</span> <span class="o">)</span>
 </span><span class='line'>          <span class="k">else</span>
-</span><span class='line'>            <span class="nc">BadRequest</span><span class="o">(</span> <span class="n">resKO</span><span class="o">(</span><span class="nc">JsString</span><span class="o">(</span><span class="s">&quot;error %s&quot;</span><span class="o">.</span><span class="n">format</span><span class="o">(</span><span class="n">lastError</span><span class="o">.</span><span class="n">stringify</span><span class="o">)))</span> <span class="o">)</span>
+</span><span class='line'>            <span class="nc">InternalServerError</span><span class="o">(</span> <span class="n">resKO</span><span class="o">(</span><span class="nc">JsString</span><span class="o">(</span><span class="s">&quot;error %s&quot;</span><span class="o">.</span><span class="n">format</span><span class="o">(</span><span class="n">lastError</span><span class="o">.</span><span class="n">stringify</span><span class="o">)))</span> <span class="o">)</span>
 </span><span class='line'>        <span class="o">}</span>
 </span><span class='line'>      <span class="o">}</span>
 </span><span class='line'>    <span class="o">}</span>
@@ -1419,7 +1421,7 @@ So let&#8217;s give directly the <code>deletePerson</code>code:</p>
 </span><span class='line'>          <span class="k">if</span><span class="o">(</span><span class="n">lastError</span><span class="o">.</span><span class="n">ok</span><span class="o">)</span>
 </span><span class='line'>            <span class="nc">Ok</span><span class="o">(</span> <span class="n">resOK</span><span class="o">(</span><span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span><span class="s">&quot;msg&quot;</span> <span class="o">-&gt;</span> <span class="n">s</span><span class="s">&quot;person $id updated&quot;</span><span class="o">))</span> <span class="o">)</span>
 </span><span class='line'>          <span class="k">else</span>
-</span><span class='line'>            <span class="nc">BadRequest</span><span class="o">(</span> <span class="n">resKO</span><span class="o">(</span><span class="nc">JsString</span><span class="o">(</span><span class="s">&quot;error %s&quot;</span><span class="o">.</span><span class="n">format</span><span class="o">(</span><span class="n">lastError</span><span class="o">.</span><span class="n">stringify</span><span class="o">)))</span> <span class="o">)</span>
+</span><span class='line'>            <span class="nc">InternalServerError</span><span class="o">(</span> <span class="n">resKO</span><span class="o">(</span><span class="nc">JsString</span><span class="o">(</span><span class="s">&quot;error %s&quot;</span><span class="o">.</span><span class="n">format</span><span class="o">(</span><span class="n">lastError</span><span class="o">.</span><span class="n">stringify</span><span class="o">)))</span> <span class="o">)</span>
 </span><span class='line'>        <span class="o">}</span>
 </span><span class='line'>      <span class="o">}</span>
 </span><span class='line'>    <span class="o">}</span>
