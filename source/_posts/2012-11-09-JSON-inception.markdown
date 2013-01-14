@@ -211,4 +211,4 @@ implicit val personWrites = Json.format[Person]
 
 If anyone tells me there is still 1 line to write, I think I might become unpolite ;)
 
-Have Macrofun ;););)
+Have Macrofun!
