@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Play 2.1 & ReactiveMongo<br/><br/>From Data-Centric approach to JSON Coast-to-Coast design"
+title: "From Data-Centric approach to JSON Coast-to-Coast design with Play-2.1 & ReactiveMongo"
 date: 2013-01-13 12:12
 comments: true
 external-url: 
