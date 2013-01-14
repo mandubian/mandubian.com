@@ -4,7 +4,7 @@
   <title><![CDATA[Mandubian Blog]]></title>
   <link href="http://www.mandubian.com/atom.xml" rel="self"/>
   <link href="http://www.mandubian.com/"/>
-  <updated>2012-11-20T23:40:41+01:00</updated>
+  <updated>2013-01-14T12:47:10+01:00</updated>
   <id>http://www.mandubian.com/</id>
   <author>
     <name><![CDATA[Pascal Voitot]]></name>
@@ -12,6 +12,1466 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Play 2.1 & ReactiveMongo<br/><br/>From Data-Centric approach to JSON Coast-to-Coast design]]></title>
+    <link href="http://www.mandubian.com/2013/01/13/JSON-Coast-to-Coast/"/>
+    <updated>2013-01-13T12:12:00+01:00</updated>
+    <id>http://www.mandubian.com/2013/01/13/JSON-Coast-to-Coast</id>
+    <content type="html"><![CDATA[<p>Today, let&#8217;s talk a bit more about the <strong>JSON <em>coast-to-coast</em> design</strong> I had introduced as a buzz word in a previous article about <a href="http://mandubian.com/2012/09/08/unveiling-play-2-dot-1-json-api-part1-jspath-reads-combinators/">Play2.1 Json combinators</a>.</p>
+
+<p><em>Sorry this is a very long article with tens of >140-chars strings: I wanted to put a few ideas on paper to present my approach before writing any line of code…</em></p>
+
+<div class="well">
+<h3>Direct access</h3>
+<ul>
+<li><a href="#philosophy">Philosophical Considerations</a></li>
+<li><a href="#sample">Json Coast-to-Coast</a></li>
+<li><a href="#code">Json Coast-to-Coast sample on Github</a></li>
+<li><a href="#conclusion">Conclusion</a></li>
+</ul>
+</div>
+
+
+<blockquote><h3>Original idea</h3>
+
+<p><strong>1) Manipulate pure data structure (JSON) from client to DB without any <em>static model</em></strong><br/>
+<strong>2) Focus on the idea of pure data manipulation and data-flow management</strong><br/>
+<br/>
+The underlying idea is more global than just questioning the fact that we generally serialize JSON data to static OO models. I really want to discuss how we manipulate data  between frontend/backend(s). I&#8217;d also like to reconsider the whole data flow from a pure functional point of view and not through the lens of technical constraints such as &#8220;OO languages implies static OO models&#8221;.</p></blockquote>
+
+<p>In the <a href="#code">code sample</a>, we&#8217;ll use <a href="http://www.reactivemongo.org">ReactiveMongo</a> and <a href="http://www.playframework.org">Play2.1-RC2</a> and explain why those frameworks fit our demonstation.</p>
+
+<br/>
+
+
+<br/>
+
+
+<h1><a name="philosophy">Philosophical Considerations</a></h1>
+
+<h2><a name="data-centric">Data-centric approach</a></h2>
+
+<p>Recent evolutions in backend architecture tend to push (again) UI to the frontend (the client side). As a consequence, <strong>backends concentrate more and more on data serving</strong>, manipulation, transformation, aggregation, distribution and naturally some business logic. I must admit that I&#8217;ve always considered <strong>backend are very good data provider and not so good UI provider</strong>. So I won&#8217;t say it&#8217;s a bad thing.</p>
+
+<p>From this point of view, the backend focuses on:</p>
+
+<ul>
+<li>getting/serving data from/to clients</li>
+<li>retrieving/distributing data from/to other backends</li>
+<li>storing data in DB/cache/files/whatever locally/remotely</li>
+<li>doing some business logic (outside data manipulation)… sometimes but not so often.</li>
+</ul>
+
+
+<p>I consider data management is the reason of being of backend and also the finality of it.</p>
+
+<blockquote><p>The word <em>&#8220;data&#8221;</em> is everywhere and that&#8217;s why I use the term <strong>&#8220;data-centric approach&#8221;</strong> (even if I would prefer that we speak about <em>&#8220;information&#8221;</em> more than data but this is another discussion…)</p></blockquote>
+
+<br/>
+
+
+<br/>
+
+
+<h2><a name="chain-link">Backend system is a chain-link in global data-flow</a></h2>
+
+<p><strong>Data-centric doesn&#8217;t mean <em>centralized data</em></strong></p>
+
+<ul>
+<li>With Internet and global mobility, data tend to be gathered, re-distributed, scattered and re-shared logically and geographically</li>
+<li>When you develop your server, you can receive data from many different sources and you can exchange data with many actors.</li>
+</ul>
+
+
+<p>In this context, <strong>backend is often just a chain link participating to a whole data flow</strong>. So you must consider the relations existing with other actors of this system.</p>
+
+<p><img src="http://www.mandubian.com/images/mandubian/backend_flow.png" alt="Data flow" /></p>
+
+<p>Besides the simple <em>&#8220;what does my backend receive, transmit or answer?&#8221;</em>, it has become <strong>more important to consider the relative role of the backend in the whole data flow</strong> and not only locally. Basically, knowing your exact role in the data flow really impacts your technical design:</p>
+
+<ul>
+<li>if your server must aggregate data from one backend which can respond immediately and another one which will respond tomorrow, do you use a runtime stateful framework without persistence for that?</li>
+<li>if your server is just there to validate data before sending it to a DB for storage, do you need to build a full generic &amp; static model for that?</li>
+<li>if your server is responsible for streaming data in realtime to hundreds of clients, do you want to use a blocking framework ?</li>
+<li>if your server takes part to a high-speed realtime transactional system, is it reasonable to choose ultra heavyweight frameworks ?</li>
+<li>&#8230;</li>
+</ul>
+
+
+<br/>
+
+
+<br/>
+
+
+<h2><a name="temporal-polymorphic-data-flow">Rise of temporal &amp; polymorphic data flows</a></h2>
+
+<p>In the past, we often used to model our data to be used by a single backend or a restricted system. Data model weren&#8217;t evolving too much for a few years. So you could choose a very strict data model using normalization in RDBMS for ex.</p>
+
+<p>But since a few years, nature of data and their usage has changed a lot:</p>
+
+<ul>
+<li>same data are shared with lots of different solutions,</li>
+<li>same data are used in very different application domains,</li>
+<li>unstructured data storage have increased</li>
+<li>formats of data evolve much faster than before</li>
+<li>global quantity of data has increased exponentially</li>
+<li>…</li>
+</ul>
+
+
+<p>The temporal nature of data has changed drastically also with:</p>
+
+<ul>
+<li>realtime data streaming</li>
+<li>on fhe fly distributed data updates</li>
+<li>very long-time persistence</li>
+<li>immutable data keeping all updates without losing anything</li>
+<li>…</li>
+</ul>
+
+
+<br/>
+
+
+<div class="well"><blockquote>
+<p>Nothing tremendous until now, isn&#8217;t it?</p>  
+<p>This is exactly what you already know or do every day…</p>
+<p>I wanted to remind that a backend system is often only an element of a more global system and a chain link in a more global data flow.</p><br/>
+<p>Now let&#8217;s try to consider the data flow through a backend system taking all those modern aspects into account!</p><br/>
+<p><b>In the rest of this article, I&#8217;ll focus on a specific domain: the very classic case of backend-to-DB interaction</b>.</p><br/>
+<p>For last 10 years, in all widespread enterprise platforms based on OO languages, we have all used those well-known ORM frameworks to manage our data from/to RDBMS. We have discovered their advantages and also their drawbacks. Let&#8217;s consider a bit how those ORM have changed our way of manipulating data.</p>
+</blockquote></div>
+
+
+
+
+<br/>
+
+
+<br/>
+
+
+<h2><a name="orm-prism-distortion">The ORM prism of distortion</a></h2>
+
+<p>After coding with a few different backend platforms, I tend to think we have been kind-of <strong>mesmerized into thinking it&#8217;s non-sense to talk to a DB from an OO language without going through a static language structure</strong> such as a class. ORM frameworks are the best witnesses of this tendency.</p>
+
+<p>ORM frameworks lead us to:</p>
+
+<ul>
+<li>Get some data (from client for ex) in a pure data format such as JSON <em>(this format will be used in all samples because it&#8217;s very representative)</em></li>
+<li>Convert JSON to OO structure such as class instance</li>
+<li>Transmit class instance to ORM framework that translates/transmits it to the DB mystery limbo.</li>
+</ul>
+
+
+<p><img src="http://www.mandubian.com/images/mandubian/all-model.png" alt="All-Model Approach" /></p>
+
+<h3>Pros</h3>
+
+<h4>Classes are OO natural structure</h4>
+
+<p>Classes are the native structures in OO languages so it seems quite natural to use them</p>
+
+<h4>Classes imply structural validations</h4>
+
+<p>Conversion into classes also implies type constraint validations (and more specific constraints with annotations or config) in order to verify data do not corrupt the DB</p>
+
+<h4>Boundaries isolation</h4>
+
+<p>By performing the conversion in OO, the client format is completely decorrelated from DB format making them separated layers. Moreover, by manipulating OO structure in code, the DB can be abstracted almost completely and one can imagine changing DB later. This seems a good manner in theory.</p>
+
+<h4>Business logic compliant</h4>
+
+<p>Once converted, class instances can be manipulated in business logic without taking care about the DB.</p>
+
+<br/>
+
+
+<h3>Cons</h3>
+
+<h4>Requirement for Business Logic is not the most frequent case</h4>
+
+<p>In many cases (CRUD being the 1st of all), once you get class instance, business logic is simply non-existing. You just pass the class to the ORM, that&#8217;s all. So you simply serialize to a class instance to be able to speak to ORM which is a pity.</p>
+
+<h4>ORM forces to speak OO because they can&#8217;t speak anything else</h4>
+
+<p>In many cases, the only needed thing is data validation with precise (and potentially complex) constraints. A class is just a type validator but it doesn&#8217;t validate anything else. If the String should be an email, your class sees it as a String. So, frameworks have provided constraint validators based on annotations or external configurations.</p>
+
+<h4>Classes are not made to manipulate/validate dynamic forms of data</h4>
+
+<p>Classes are static structure which can&#8217;t evolve so easily because the whole code depends on those classes and modifying a model class can imply lots of code refactoring. If data format is not clear and can evolve, classes are not very good. If data are polymorphic and can be seen using different views, it generally ends into multiplying the number of classes making your code hard to maintain.</p>
+
+<h4>Hiding DB more than abstracting it</h4>
+
+<p>ORM approach is just a pure OO view of relational data. It states that outside OO, nothing exists and no data can be modelled with something else than an OO structure.<br/>
+So ORMs haven&#8217;t tried bringing DB structures to OO language but <em>kind-of</em> pushing OO to the DB and abstracting the DB data structure almost completely. So you don&#8217;t manipulate DB data anymore but you manipulate OO &#8220;mimicing&#8221; more or less DB structures.</p>
+
+<h4>Was OO really a so good choice against relational approach???</h4>
+
+<p>It seemed a good idea to map DB data to OO structures. But we all know the problems brought by ORM to our solutions:</p>
+
+<ul>
+<li>How DB structures are mapped to OO?</li>
+<li>How relations are managed by ORM?</li>
+<li>How updates are managed in time? (the famous cache issues)</li>
+<li>How transactions are delimited in a OO world?</li>
+<li>How full compatibility between all RDBMS can be ensured?</li>
+<li>etc&#8230;</li>
+</ul>
+
+
+<br/>
+
+
+<blockquote><p>I think ORM just moved the problems:</p>
+
+<p>Before ORM, you had problems of SQL<br/>
+After ORM, you had problems of ORM</p></blockquote>
+
+<p>Now the difference is that issues appear on the abstraction layer (ie the ORM) which you don&#8217;t control at all and not anymore at the lower-level DB layer. SQL is a bit painful sometimes but it is the DB native language so when you have an error, it&#8217;s generally far easier to find why and how to work around.</p>
+
+<blockquote><p>My aim here is not to tell ORM are bad (and there aren&#8217;t so bad in a few cases).<br/>
+<strong>I just want to point the OO deviation introduced by ORM in our way of modelling our data.</strong><br/>
+I&#8217;ll let you discover the subject by yourself and make your own mind and you don&#8217;t have to agree with me. As a very beginning, you can go to wikipedia <a href="http://en.wikipedia.org/wiki/Object-relational_impedance_mismatch#Data_type_differences">there</a>.</p></blockquote>
+
+<br/>
+
+
+<br/>
+
+
+<h2><a name="all-model-world">The All-Model world</a></h2>
+
+<p>What interests me more is the fact that ORM brought a very systematic way of manipulating the data flowing through backend systems. ORM dictates that whatever data you manipulate, you must convert it to a OO structure before doing anything else for more or less good reasons. OO are very useful when you absolutely want to manipulate static typed structures. But in other cases, isn&#8217;t it better to use a List or a Map or more versatile pure data structure such as Json tree?</p>
+
+<blockquote><p>Let&#8217;s call it the <strong>All-Model Approach : no data can be manipulated without a static model and underlying abstraction/serialization mechanism</strong>.</p></blockquote>
+
+<p>The first move into the <strong>All-Model</strong> direction was quite logical in reaction to the difficulty of SQL integration with OO languages. Hibernate idea, for ex, was to abstract completely the relational DB models with OO structures so that people don&#8217;t care anymore with SQL.</p>
+
+<p>As we all know, in software industry, when an idea becomes a standard of fact, as became ORMs, balance is rarely reached between 2 positions. As a consequence, lots of people decided to completely trash SQL in favor of ORM. That&#8217;s why we have seen this litany of ORM frameworks around hibernate, JPA, Toplink and almost nobody could escape from this global move.</p>
+
+<br/>
+
+
+<br/>
+
+
+<h2><a name="changing-world">Living in a changing world</a></h2>
+
+<p>After a few years of suffering more or less with ORM, some people have begun to re-consider this position seeing the difficulty they had to use ORM. <strong>The real change of mind was linked to the evolution of the whole data ecosystem</strong> linked to internet, distribution of data and mobility of clients also.</p>
+
+<h4><a name="nosql-emergence">NoSQL emergence</a></h4>
+
+<p>First, the move concerned the underlying layer: the DB.<br/>
+RDBMS are really good to model very consistent data and provide robust transactions but not so good for managing high scalability, data distribution, massive updates, data streaming and very huge amount of data. That&#8217;s why we have seen these NoSQL <em>new kids on the block</em> initiated by Internet companies mainly.</p>
+
+<p>Once again, the balance was upsetted: after the <em>&#8220;SQL is evil&#8221;</em> movement, there have been a funny <em>&#8220;RDBMS is evil&#8221;</em> movement. Extremist positions are not worth globally, what&#8217;s interesting is the result of NoSQL initiative. It allowed to re-consider the way we modelled our data: 100% normalized schema with full ACID transactions were no more the only possibility. NoSQL broke the rules: why not model your data as key/values, documents, graphs using redundancy, without full consistency if it fits better your needs?</p>
+
+<blockquote><p>I really think NoSQL breaking the holy RDBMS rule brought the important subject on the front stage: <strong>we care about the data, the way we manipulate them</strong>. We don&#8217;t need a single DB ruling them all but DB that answer to our requirements and not the other way… Data-Centric as I said before…</p></blockquote>
+
+<h4><a name="why-orm-nosql">Why ORM again for NoQSL?</a></h4>
+
+<p>NoSQL DBs bring their own native API in general providing data representation fitting their own DB model. For ex, MongoDB is document oriented and a record is stored as a binary treemap.</p>
+
+<p>But once again, we have seen ORM-kind API appear on top of those low-level API, as if we couldn&#8217;t think anymore in terms of pure data and not in terms of OO structures.</p>
+
+<p>But the holy rule had been broken and next change would necessarily target ORM. So people rediscovered SQL could be used from modern languages (even OO) using simple mapping mechanism, simpler data structure (tuples, list, map, trees) and query facilities. Microsoft LINQ was a really interesting initiative… Modern languages such as Scala also bring interesting API based on the functional power of the language (cf Slick, Squeryl, Anorm etc…).</p>
+
+<p>I know some people will tell replacing Class models by HashMaps makes the code harder to maintain and the lack of contract imposed by static typed classes results in code mess. I could answer I&#8217;ve seen exactly the same in projects having tens of classes to model all data views and it was also a mess impossible to maintain.</p>
+
+<blockquote><p><strong>The question is not to forget static models but to use them only when required</strong> and keep simple and dynamic structures as much as possible.<br/>
+ORM are still used widely but we can at least openly question their usefulness. Dictatorship is over and diversity is always better!</p></blockquote>
+
+<h4><a name="layer-genericity-talisman">Layered genericity as a talisman</a></h4>
+
+<p>I want to question another fact in the way we model data:</p>
+
+<ul>
+<li>we write generic OO model to have very strong static model and be independent of the DB.</li>
+<li>we interact with those models using DAO providing all sorts of access functions.</li>
+<li>we encapsulate all of that in abstract DB service layers to completely isolate from the DB.</li>
+</ul>
+
+
+<p>Why?<br/>
+<em>&#8220;Maybe I&#8217;ll change the DB and I&#8217;ll be able to do it…&#8221; <br/>
+&#8220;Maybe I&#8217;ll need to re-use those DAO somewhere else…&#8221;<br/>
+&#8220;Maybe Maybe Maybe…&#8221;</em></p>
+
+<p>It works almost like superstition, as if making everything generic with strict isolated layers was the only way to protect us against failure and that it will make it work and be reused forever…</p>
+
+<p><em>Do you change DB very often without re-considering the whole model to fit DB specific features?<br/>
+Do you reuse code so often without re-considering the whole design?</em></p>
+
+<blockquote><p>I don&#8217;t say layered design and boundaries isolation is bad once again. I just say it has a cost and consequences that we don&#8217;t really consider anymore.</p></blockquote>
+
+<p><strong>By trying to hide the DB completely, we don&#8217;t use the real power that DB can provide</strong> to us and we forget their specific capacities. There are so many DB types (sql, nosql, key/value, transactional, graph, column etc…) on the market and choosing the right one according to your data requirements is really important…</p>
+
+<blockquote><p><strong>DB diversity gives us more control on our data so why hiding them behind too generic layers?</strong></p></blockquote>
+
+<br/>
+
+
+<br/>
+
+
+<h2><a name="no-model-approach">The Data-Centric or No-Model approach</a></h2>
+
+<blockquote><p>Let&#8217;s go back to our data-centric approach and try to manipulate data flow going through our backend system to the DB without OO (de)serialization in the majority of cases.</p></blockquote>
+
+<p>What I really need when I manipulate the data flow is:</p>
+
+<ul>
+<li>being able to manipulate data directly</li>
+<li>validating the data structure and format according to different constraints</li>
+<li>transforming/aggregating data coming from different sources</li>
+</ul>
+
+
+<blockquote><p>I call it the <strong>Data-centric or No-Model approach</strong>. It doesn&#8217;t mean my data aren&#8217;t structured but that I manipulate the data as directly as possible without going through an OO model when I don&#8217;t need it.</p></blockquote>
+
+<p><img src="http://www.mandubian.com/images/mandubian/no-model.png" alt="No-Model Approach" /></p>
+
+<br/>
+
+
+<br/>
+
+
+<h2><a name="trash-all-model">Should I trash the all-model approach?</a></h2>
+
+<blockquote><p>Answer : NO… You must find the right balance.</p></blockquote>
+
+<p>As explained before, using the same design for everything seems a good idea because homogeneity and standardization is a good principle in general.</p>
+
+<p><strong>But &#8220;in general&#8221; is not &#8220;always&#8221; and we often confound homogeneity with uniformity in its bad meaning i.e. diversity loss.</strong></p>
+
+<p>That&#8217;s why I prefer speaking about &#8220;Data-Centric approach&#8221; than &#8220;No-Model&#8221;: the important is to ponder your requirements with respect to your data flow and to choose the right tool:</p>
+
+<ul>
+<li>If you need to perform business logic with your data, it&#8217;s often better to work with static OO structures so using a model might be better</li>
+<li>If you just need to validate and transform your data, then why going through a model which is completely artificial.</li>
+<li>If you just need to manipulate a real-time data flow, then manipulate the flow directly and forget models.</li>
+</ul>
+
+
+<blockquote><p>Now stop philosophizing and go to practice with a very basic sample as a beginning : let&#8217;s manipulate a flow of JSON data in very simple case of CRUD.<br/>
+Hey this is the famous &#8220;Json coast-to-coast&#8221; approach ;)</p></blockquote>
+
+<br/>
+
+
+<br/>
+
+
+<h1><a name="sample">Json Coast-to-Coast sample</a></h1>
+
+<p>To illustrate this data-centric approach manipulating a pure data flow without OO serialization, let&#8217;s focus on a pure CRUD sample based on JSON. I won&#8217;t speak about the client side to make it shorter but don&#8217;t forget the JSON data flow doesn&#8217;t begin or end at backend boundaries.</p>
+
+<p>I also don&#8217;t focus on real-time flow here because this is worth another discussion. Play2.1 provides us with one of the best platform for real-time web applications. First get accustomed with data-centric design and then consider real-time data management…</p>
+
+<p>The CRUD case is a very good one for our subject:</p>
+
+<ul>
+<li><p><strong>CRUD implies no backend business logic at all</strong><br/>
+Backend receives data corresponding to entity, validates their format and directly transmit the data to the DB to be stored.</p></li>
+<li><p><strong>CRUD targets pure data resources and JSON is good to represent pure data in Web world.</strong></p></li>
+<li><p><strong>CRUD is compliant to REST approach</strong><br/>
+REST is very interesting because it implies that every resource is reachable through a single URL and a HTTP verb from the Web. This is also another discussion about how we access or link data…</p></li>
+</ul>
+
+
+<br/>
+
+
+<br/>
+
+
+<h2><a name="data-flow-input-output">Thinking data flow in terms of Input/Output</a></h2>
+
+<p>The CRUD sample is not really the right example to consider the impact of relative place in data flow on design. In CRUD, there are no temporal or dynamic requirements. But let&#8217;s stay simple for a beginning.</p>
+
+<p>As there is no business logic in the CRUD caser, we can focus on backend boundaries:</p>
+
+<ul>
+<li>Backend/Client</li>
+<li>Backend/DB</li>
+</ul>
+
+
+<p>We can just consider the data received at previous boundaries:</p>
+
+<ul>
+<li>What Input data is received from client or DB?</li>
+<li>What Output data should be sent to DB or client?</li>
+</ul>
+
+
+<p>In a summary, we can really consider the data-flow just in terms of inputs/outputs:</p>
+
+<ul>
+<li>Backend/Client input/output</li>
+<li>Backend/DB input/output</li>
+</ul>
+
+
+<p><img src="http://www.mandubian.com/images/mandubian/inputoutput.png" alt="No-Model Approach" /></p>
+
+<br/>
+
+
+<br/>
+
+
+<h2><a name="reactivemongo">Why ReactiveMongo enables Json flow manipulation?</a></h2>
+
+<p>MongoDB provides a very versatile document-oriented data storage platform. MongoDB is not meant to model relational data but data structured as trees. So when you retrieve a document from Mongo, you also get all related data at once. In Mongo, normalized model is not really the main target and redundancy is not necessarily bad as long as you know what you do.<br/>
+Mongo document are stored using BSON <em>Binary JSON</em> format which is simply inspired by JSON and optimized for binary storage.</p>
+
+<blockquote><p>Imagine you could get JSON (after validation) directly to or from Mongo without going through any superficial structure, wouldn&#8217;t it be really practical?<br/>
+Please remark that serializing a JSON tree to a case-class and from a case class to a BSON document is just useless if you don&#8217;t have any business logic to fulfill with the case-class.</p></blockquote>
+
+<p>Play2.1 provides a very good JSON transformation API from/to any data structure. Converting JSON to BSON is not really an issue.
+But now remember that we also want to be able to manage realtime data flow, to stream data from or to the DB (using Mongo capped collections for ex). Play2.x has been designed to be fully asynchronous/non-blocking. but unfortunately, default Java Mongo driver and its Scala counterpart (<a href="https://github.com/mongodb/casbah">Casbah</a>), despite their qualities, provide synchronous and blocking API.</p>
+
+<p>But we are lucky since <a href="http://www.twitter.com/sgodbillong">Stephane Godbillon</a> decided to develop <a href="http://www.reactivemongo.org">ReactiveMongo</a> a full async/non-blocking Scala driver based on Akka and Play Iteratees (but independent of Play framework) and we worked together to develop a Play2.1/ReactiveMongo module providing all the tooling we need for JSON/BSON conversions in the context of Play2.1/Scala.</p>
+
+<p><strong>With Play/ReactiveMongo, you can simply send/receive JSON to/from Mongo and it&#8217;s transparently translated into BSON and vis versa.</strong></p>
+
+<br/>
+
+
+<br/>
+
+
+<h2><a name="data-format">Sample Data format</A></h2>
+
+<p>Let&#8217;s try to manipulate a flow of data containing the following representation of a Person in JSON (or BSON)…</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='json'><span class='line'><span class="p">{</span>
+</span><span class='line'>  <span class="err">_id:</span> <span class="err">PERSON_ID,</span>
+</span><span class='line'>  <span class="err">name:</span> <span class="nt">&quot;Mike Dirolf&quot;</span><span class="p">,</span>
+</span><span class='line'>  <span class="err">pw:</span> <span class="nt">&quot;Some Hashed Password&quot;</span><span class="p">,</span>
+</span><span class='line'>  <span class="err">addresses:</span> <span class="err">[</span><span class="nt">&quot;mike@corp.fiesta.cc&quot;</span><span class="p">,</span> <span class="nt">&quot;mike@dirolf.com&quot;</span><span class="p">,</span> <span class="err">...],</span>
+</span><span class='line'>  <span class="err">memberships:</span> <span class="err">[{</span>
+</span><span class='line'>    <span class="err">address:</span> <span class="nt">&quot;mike@corp.fiesta.cc&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="err">group_name:</span> <span class="nt">&quot;family&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="err">group:</span> <span class="err">GROUP_ID</span>
+</span><span class='line'>  <span class="p">}</span><span class="err">,</span> <span class="err">...],</span>
+</span><span class='line'>  <span class="err">created:</span> <span class="mi">123456789</span>
+</span><span class='line'><span class="err">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>A person consists in:</p>
+
+<ul>
+<li>a unique technical ID</li>
+<li>a name</li>
+<li>a hashed password which shouldn&#8217;t be transmitted outside anyway</li>
+<li>zero or more email addresses</li>
+<li>zero or more group memberships</li>
+<li>a creation date</li>
+</ul>
+
+
+<p>A group membership consists in:</p>
+
+<ul>
+<li>the group email</li>
+<li>the group name</li>
+<li>the group ID</li>
+</ul>
+
+
+<br/>
+
+
+<br/>
+
+
+<h2><a name="data-flow-desc">Data flow description</A></h2>
+
+<p>We will consider the following 4 CRUD actions:</p>
+
+<ul>
+<li> Create</li>
+<li> Get</li>
+<li> Delete</li>
+<li> Full/Restricted Update (Full document at once or a part of it)</li>
+</ul>
+
+
+<h3><a name="create">CREATE</a></h3>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='plain'><span class='line'>PUT http://xxx/person/ID</span></code></pre></td></tr></table></div></figure>
+
+
+<h4><a name="create-input">Input</a></h4>
+
+<p>Backend receives the whole Person minus <code>_id</code> and <code>created</code> which is not yet known till insertion in DB.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='json'><span class='line'><span class="p">{</span>
+</span><span class='line'>  <span class="err">name:</span> <span class="nt">&quot;Mike Dirolf&quot;</span><span class="p">,</span>
+</span><span class='line'>  <span class="err">pw:</span> <span class="nt">&quot;password&quot;</span><span class="p">,</span>
+</span><span class='line'>  <span class="err">addresses:</span> <span class="err">[</span><span class="nt">&quot;mike@corp.fiesta.cc&quot;</span><span class="p">,</span> <span class="nt">&quot;mike@dirolf.com&quot;</span><span class="p">,</span> <span class="err">...],</span>
+</span><span class='line'>  <span class="err">memberships:</span> <span class="err">[{</span>
+</span><span class='line'>    <span class="err">address:</span> <span class="nt">&quot;mike@corp.fiesta.cc&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="err">group_name:</span> <span class="nt">&quot;family&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="err">group:</span> <span class="err">GROUP_ID</span>
+</span><span class='line'>  <span class="p">}</span><span class="err">,</span> <span class="err">...]</span>
+</span><span class='line'><span class="err">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h4><a name="create-output">output</a></h4>
+
+<p>Backend sends the generated ID in a JSON object for ex.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='json'><span class='line'><span class="p">{</span>
+</span><span class='line'>  <span class="err">_id:</span> <span class="nt">&quot;123456789123456789&quot;</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<br/>
+
+
+<h3><a name="get">GET</a></h3>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='plain'><span class='line'>GET http://xxx/person/ID</span></code></pre></td></tr></table></div></figure>
+
+
+<h4><a name="get-input">Input</a></h4>
+
+<p>Backend just receives the ID in the URL:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='plain'><span class='line'>http://xxx/person/ID</span></code></pre></td></tr></table></div></figure>
+
+
+<h4><a name="get-output">Output</a></h4>
+
+<p>The whole person plus ID is sent back in JSON but for the demo, let&#8217;s remove a few fields we don&#8217;t want to send back:</p>
+
+<ul>
+<li><code>_id</code> which is not needed as the client knows it</li>
+<li><code>pw</code> because this is a password even if hashed and we want it to stay in the server</li>
+</ul>
+
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='json'><span class='line'><span class="p">{</span>
+</span><span class='line'>  <span class="err">name:</span> <span class="nt">&quot;Mike Dirolf&quot;</span><span class="p">,</span>
+</span><span class='line'>  <span class="err">addresses:</span> <span class="err">[</span><span class="nt">&quot;mike@corp.fiesta.cc&quot;</span><span class="p">,</span> <span class="nt">&quot;mike@dirolf.com&quot;</span><span class="p">,</span> <span class="err">...],</span>
+</span><span class='line'>  <span class="err">memberships:</span> <span class="err">[{</span>
+</span><span class='line'>    <span class="err">address:</span> <span class="nt">&quot;mike@corp.fiesta.cc&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="err">group_name:</span> <span class="nt">&quot;family&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="err">group:</span> <span class="err">GROUP_ID</span>
+</span><span class='line'>  <span class="p">}</span><span class="err">,</span> <span class="err">…],</span>
+</span><span class='line'>  <span class="err">created:</span> <span class="mi">123456789</span>
+</span><span class='line'><span class="err">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<br/>
+
+
+<h3><a name="delete">DELETE</a></h3>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='plain'><span class='line'>DELETE http://xxx/person/ID</span></code></pre></td></tr></table></div></figure>
+
+
+<h4><a name="delete-inptu">Input</a></h4>
+
+<p>Backend just receives the ID in the URL:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='plain'><span class='line'>http://xxx/ID</span></code></pre></td></tr></table></div></figure>
+
+
+<h4><a name="delete-output">Output</a></h4>
+
+<p>Nothing very interesting. Use a &#8220;200 OK&#8221; to stay simple</p>
+
+<br/>
+
+
+<br/>
+
+
+<h3><a name="update">Full UPDATE</a></h3>
+
+<p>Macro update is meant to update a whole person document.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='plain'><span class='line'>POST http://xxx/person/ID</span></code></pre></td></tr></table></div></figure>
+
+
+<h4><a name="update-input">Input</a></h4>
+
+<p>Backend just receives the ID in the URL:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='plain'><span class='line'>http://xxx/ID</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Updated person document is in the Post body:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='json'><span class='line'><span class="p">{</span>
+</span><span class='line'>  <span class="err">name:</span> <span class="nt">&quot;Mike Dirolf&quot;</span><span class="p">,</span>
+</span><span class='line'>  <span class="err">pw:</span> <span class="nt">&quot;new_password&quot;</span><span class="p">,</span>
+</span><span class='line'>  <span class="err">addresses:</span> <span class="err">[</span><span class="nt">&quot;mike@corp.fiesta.cc&quot;</span><span class="p">,</span> <span class="nt">&quot;mike@dirolf.com&quot;</span><span class="p">,</span> <span class="err">...],</span>
+</span><span class='line'>  <span class="err">memberships:</span> <span class="err">[{</span>
+</span><span class='line'>    <span class="err">address:</span> <span class="nt">&quot;mike@corp.fiesta.cc&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="err">group_name:</span> <span class="nt">&quot;family&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="err">group:</span> <span class="err">GROUP_ID</span>
+</span><span class='line'>  <span class="p">}</span><span class="err">,</span> <span class="err">...]</span>
+</span><span class='line'><span class="err">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h4><a name="update-output">Output</a></h4>
+
+<p>Nothing very interesting. Use a &#8220;200 OK&#8221; to stay simple</p>
+
+<br/>
+
+
+<br/>
+
+
+<h3><a name="update-restricted">Restricted UPDATE</a></h3>
+
+<p>Restricted update is meant to update just a part of a person document.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='plain'><span class='line'>POST http://xxx/person/ID/spec</span></code></pre></td></tr></table></div></figure>
+
+
+<h4><a name="update-restricted-input">Input</a></h4>
+
+<p>Backend just receives the ID in the URL:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='plain'><span class='line'>http://xxx/ID/spec</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Updated person document is in the Post body:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='json'><span class='line'><span class="p">{</span>
+</span><span class='line'>  <span class="err">addresses:</span> <span class="err">[</span><span class="nt">&quot;mike@corp.fiesta.cc&quot;</span><span class="p">,</span> <span class="nt">&quot;mike@dirolf.com&quot;</span><span class="p">,</span> <span class="err">...],</span>
+</span><span class='line'>  <span class="err">memberships:</span> <span class="err">[{</span>
+</span><span class='line'>    <span class="err">address:</span> <span class="nt">&quot;mike@corp.fiesta.cc&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="err">group_name:</span> <span class="nt">&quot;family&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="err">group:</span> <span class="err">GROUP_ID</span>
+</span><span class='line'>  <span class="p">}</span><span class="err">,</span> <span class="err">...]</span>
+</span><span class='line'><span class="err">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>or</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='json'><span class='line'><span class="p">{</span>
+</span><span class='line'>  <span class="err">memberships:</span> <span class="err">[{</span>
+</span><span class='line'>    <span class="err">address:</span> <span class="nt">&quot;mike@corp.fiesta.cc&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="err">group_name:</span> <span class="nt">&quot;family&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="err">group:</span> <span class="err">GROUP_ID</span>
+</span><span class='line'>  <span class="p">}</span><span class="err">,</span> <span class="err">...]</span>
+</span><span class='line'><span class="err">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>or</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='json'><span class='line'><span class="p">{</span>
+</span><span class='line'>  <span class="err">addresses:</span> <span class="err">[</span><span class="nt">&quot;mike@corp.fiesta.cc&quot;</span><span class="p">,</span> <span class="nt">&quot;mike@dirolf.com&quot;</span><span class="p">,</span> <span class="err">...],</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h4><a name="update-restricted-output">Output</a></h4>
+
+<p>Nothing very interesting. Use a &#8220;200 OK&#8221; to stay simple</p>
+
+<br/>
+
+
+<br/>
+
+
+<h2><a name="client">Backend/Client boundary</A></h2>
+
+<p>Now that we know input/output data on our boundaries, we can describe how to validate these data and transform them within our backend system.</p>
+
+<h3><a name="client-input">Input data from client (CREATE/ UPDATE)</A></h3>
+
+<h4><a name="client-input-person-full">Full person validation</A></h4>
+
+<p>When receiving JSON from client for <code>Create</code> and <code>Update</code> actions, we must be able to validate the Person structure without ID which will be generated at insertion:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='json'><span class='line'><span class="p">{</span>
+</span><span class='line'>  <span class="err">name:</span> <span class="nt">&quot;Mike Dirolf&quot;</span><span class="p">,</span>
+</span><span class='line'>  <span class="err">pw:</span> <span class="nt">&quot;password&quot;</span><span class="p">,</span>
+</span><span class='line'>  <span class="err">addresses:</span> <span class="err">[</span><span class="nt">&quot;mike@corp.fiesta.cc&quot;</span><span class="p">,</span> <span class="nt">&quot;mike@dirolf.com&quot;</span><span class="p">,</span> <span class="err">...],</span>
+</span><span class='line'>  <span class="err">memberships:</span> <span class="err">[{</span>
+</span><span class='line'>    <span class="err">address:</span> <span class="nt">&quot;mike@corp.fiesta.cc&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="err">group_name:</span> <span class="nt">&quot;family&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="err">group:</span> <span class="err">GROUP_ID</span>
+</span><span class='line'>  <span class="p">}</span><span class="err">,</span> <span class="err">...]</span>
+</span><span class='line'><span class="err">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Using Play2.1 JSON transformers (see my other article about it), you would validate this structure as following:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="cm">/** Full Person validator */</span>
+</span><span class='line'><span class="k">val</span> <span class="n">validatePerson</span><span class="k">:</span> <span class="kt">Reads</span><span class="o">[</span><span class="kt">JsObject</span><span class="o">]</span> <span class="k">=</span> <span class="o">(</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;name</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">pickBranch</span> <span class="n">and</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;pw</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">pickBranch</span> <span class="n">and</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;addresses</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">copyFrom</span><span class="o">(</span><span class="n">addressesOrEmptyArray</span><span class="o">)</span> <span class="n">and</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;memberships</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">copyFrom</span><span class="o">(</span><span class="n">membershipsOrEmptyArray</span><span class="o">)</span>
+</span><span class='line'><span class="o">).</span><span class="n">reduce</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h5><code>addressesOrEmptyArray</code></h5>
+
+<p>It&#8217;s a transformer validating an array of email strings and if not found it returns an empty array.<br/>
+Here is how you can write this:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="cm">/** Addresses validators */</span>
+</span><span class='line'><span class="c1">// if array is not empty, it validates each element as an email string</span>
+</span><span class='line'><span class="k">val</span> <span class="n">validateAddresses</span> <span class="k">=</span> <span class="nc">Reads</span><span class="o">.</span><span class="n">verifyingIf</span><span class="o">(</span> <span class="o">(</span><span class="n">arr</span><span class="k">:</span> <span class="kt">JsArray</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="o">!</span><span class="n">arr</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">isEmpty</span> <span class="o">)(</span> <span class="nc">Reads</span><span class="o">.</span><span class="n">list</span><span class="o">[</span><span class="kt">String</span><span class="o">](</span><span class="nc">Reads</span><span class="o">.</span><span class="n">email</span><span class="o">)</span> <span class="o">)</span>
+</span><span class='line'><span class="c1">// extracts &quot;addresses&quot; field or returns an empty array and then validates all addresses</span>
+</span><span class='line'><span class="k">val</span> <span class="n">addressesOrEmptyArray</span> <span class="k">=</span> <span class="o">((</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;addresses</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">pick</span><span class="o">[</span><span class="kt">JsArray</span><span class="o">]</span> <span class="n">orElse</span> <span class="nc">Reads</span><span class="o">.</span><span class="n">pure</span><span class="o">(</span><span class="nc">Json</span><span class="o">.</span><span class="n">arr</span><span class="o">()))</span> <span class="n">andThen</span> <span class="n">validateAddresses</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h5><code>membershipsOrEmptyArray</code></h5>
+
+<p>It is a transformer validating an array of memberships and if not found it returns an empty array.<br/>
+First, let&#8217;s write a <code>Membership</code> validator searching for <code>address</code> which must be an email, <code>group_name</code> and a <code>group_id</code>.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">membership</span> <span class="k">=</span> <span class="o">(</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;address</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">pickBranch</span><span class="o">(</span> <span class="nc">Reads</span><span class="o">.</span><span class="n">of</span><span class="o">[</span><span class="kt">JsString</span><span class="o">]</span> <span class="n">keepAnd</span> <span class="nc">Reads</span><span class="o">.</span><span class="n">email</span> <span class="o">)</span> <span class="n">and</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;group_name</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">pickBranch</span> <span class="n">and</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;group</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">pickBranch</span>
+</span><span class='line'><span class="o">).</span><span class="n">reduce</span>  <span class="c1">// reduce merges all branches in a single JsObject</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Now, use it to validate the membership list.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// if array is not empty, it validates each element as a membership</span>
+</span><span class='line'><span class="k">val</span> <span class="n">validateMemberships</span> <span class="k">=</span> <span class="nc">Reads</span><span class="o">.</span><span class="n">verifyingIf</span><span class="o">(</span> <span class="o">(</span><span class="n">arr</span><span class="k">:</span> <span class="kt">JsArray</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="o">!</span><span class="n">arr</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">isEmpty</span> <span class="o">)(</span> <span class="nc">Reads</span><span class="o">.</span><span class="n">list</span><span class="o">(</span><span class="n">membership</span><span class="o">)</span> <span class="o">)</span>
+</span><span class='line'><span class="c1">// extracts &quot;memberchips&quot; field or returns an empty array and then validates all memberships</span>
+</span><span class='line'><span class="k">val</span> <span class="n">membershipsOrEmptyArray</span> <span class="k">=</span> <span class="o">((</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;memberships</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">pick</span><span class="o">[</span><span class="kt">JsArray</span><span class="o">]</span> <span class="n">orElse</span> <span class="nc">Reads</span><span class="o">.</span><span class="n">pure</span><span class="o">(</span><span class="nc">Json</span><span class="o">.</span><span class="n">arr</span><span class="o">()))</span> <span class="n">andThen</span> <span class="n">validateMemberships</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h4><a name="client-input-person-restricted">Restricted person validation</A></h4>
+
+<p>For restricted update, the client sends just the part that should be updated in the document and not all the document.
+Yet the validator must accept only authorized fields.</p>
+
+<p>Here is how you can write it:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="cm">/** Person validator for restricted update */</span>
+</span><span class='line'><span class="c1">// creates an empty JsObject whatever Json is provided</span>
+</span><span class='line'><span class="k">val</span> <span class="n">emptyObj</span> <span class="k">=</span> <span class="nc">__</span><span class="o">.</span><span class="n">json</span><span class="o">.</span><span class="n">put</span><span class="o">(</span><span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">())</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// for each field, if not found, it simply writes an empty JsObject</span>
+</span><span class='line'><span class="k">val</span> <span class="n">validatePerson4RestrictedUpdate</span><span class="k">:</span> <span class="kt">Reads</span><span class="o">[</span><span class="kt">JsObject</span><span class="o">]</span> <span class="k">=</span> <span class="o">(</span>
+</span><span class='line'>  <span class="o">((</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;name</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">pickBranch</span> <span class="n">or</span> <span class="n">emptyObj</span><span class="o">)</span> <span class="n">and</span>
+</span><span class='line'>  <span class="o">((</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;pw</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">pickBranch</span> <span class="n">or</span> <span class="n">emptyObj</span><span class="o">)</span> <span class="n">and</span>
+</span><span class='line'>  <span class="o">((</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;addresses</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">copyFrom</span><span class="o">(</span><span class="n">addresses</span><span class="o">)</span> <span class="n">or</span> <span class="n">emptyObj</span><span class="o">)</span> <span class="n">and</span>
+</span><span class='line'>  <span class="o">((</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;memberships</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">copyFrom</span><span class="o">(</span><span class="n">memberships</span><span class="o">)</span> <span class="n">or</span> <span class="n">emptyObj</span><span class="o">)</span>
+</span><span class='line'><span class="o">).</span><span class="n">reduce</span> <span class="c1">// merges all results</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h5><code>addresses</code></h5>
+
+<p>This is the same as <code>addressesOrEmptyArray</code> but it doesn&#8217;t return an empty array if <code>addresses</code> are not found.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">addresses</span> <span class="k">=</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;addresses</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">pick</span><span class="o">[</span><span class="kt">JsArray</span><span class="o">]</span> <span class="n">andThen</span> <span class="n">validateAddresses</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h5><code>memberships</code></h5>
+
+<p>This is the same as <code>membershipsOrEmptyArray</code> but it doesn&#8217;t return an empty array if <code>memberships</code> are not found.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">memberships</span> <span class="k">=</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;memberships</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">pick</span><span class="o">[</span><span class="kt">JsArray</span><span class="o">]</span> <span class="n">andThen</span> <span class="n">validateMemberships</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3><a name="client-output">Output data to Client (GET/DELETE)</A></h3>
+
+<p>When a person document is retrieved from DB, this is the whole document and you may need to transform it before sending it to the output. In our case, let&#8217;s modify it as following:</p>
+
+<ul>
+<li>prune the password (even if hashed)</li>
+<li>prune the _id (because client already knows it if it requested it)</li>
+</ul>
+
+
+<p>This can be done with the following JSON transformer:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="cm">/** prunes _id </span>
+</span><span class='line'><span class="cm">  * and then prunes pw</span>
+</span><span class='line'><span class="cm">  */</span>
+</span><span class='line'><span class="k">val</span> <span class="n">outputPerson</span> <span class="k">=</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;_id</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">prune</span> <span class="n">andThen</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;pw</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">prune</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Please note we don&#8217;t write it as following:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">outputPerson</span> <span class="k">=</span> <span class="o">(</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;_id</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">prune</span> <span class="n">and</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;pw</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">prune</span>
+</span><span class='line'><span class="o">).</span><span class="n">reduce</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Why? Because <code>reduce</code> merges results of both Reads[JsObject] so:</p>
+
+<ul>
+<li><code>(__ \ '_id).json.prune</code> removes <code>_id</code> field but keeps <code>pw</code></li>
+<li><code>(__ \ 'pw).json.prune</code> removes <code>pw</code> field but keeps <code>_id</code></li>
+</ul>
+
+
+<p>When <code>reduce</code> merges both results, it would return a Json with both <code>_id</code> and <code>pw</code> which is not exactly what we expect.</p>
+
+<br/>
+
+
+<br/>
+
+
+<h2><a name="mongo">Backend/MongoDB boundary</a></h2>
+
+<h3><a name="mong-output">Output to MongoDB</a></h3>
+
+<p>Now we can validate a received JSON as a Person structure.<br/>
+But we need to write it to Mongo and Mongo has a few specificities.</p>
+
+<h4><a name="mongo-output-id">ID in Mongo is a <code>BsonObjectID</code></a></h4>
+
+<p>Instead of waiting for Mongo to generate the ID, you can generate it using ReactiveMongo API <code>BSONObjectID.generate</code> before inserting it into Mongo.<br/>
+So before sending JSON to Mongo, let&#8217;s add field <code>"_id" : "GENERATED_ID"</code> to validated JSON.<br/>
+Here is the JSON transformer generating an ID:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">generateId</span> <span class="k">=</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;_id</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">put</span><span class="o">(</span> <span class="nc">BSONObjectID</span><span class="o">.</span><span class="n">generate</span><span class="o">.</span><span class="n">stringify</span> <span class="o">)</span> <span class="c1">// this generates a new ID and adds it to your JSON</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<h4><a name="mongo-output-id-ext"><code>BsonObjectID</code> using JSON extended notation</a></h4>
+
+<p>In JSON, <code>BsonObjectID</code> is represented as a String but to inform Mongo that it&#8217;s an ID and not a simple String, we use the following extended JSON notation:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='json'><span class='line'><span class="p">{</span>
+</span><span class='line'>  <span class="nt">&quot;_id&quot;</span> <span class="p">:</span> <span class="s2">&quot;123456789123456789&quot;</span>
+</span><span class='line'><span class="p">}</span>
+</span><span class='line'><span class="err">//</span> <span class="err">becomes</span>
+</span><span class='line'><span class="p">{</span>
+</span><span class='line'>  <span class="nt">&quot;_id&quot;</span> <span class="p">:</span> <span class="p">{</span>
+</span><span class='line'>    <span class="nt">&quot;$oid&quot;</span> <span class="p">:</span> <span class="s2">&quot;123456789123456789&quot;</span>
+</span><span class='line'>  <span class="p">}</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Here is the JSON transformer to generate an ID using extended JSON notation:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">generateId</span> <span class="k">=</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;_id</span> <span class="o">\</span> <span class="-Symbol">&#39;$oid</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">put</span><span class="o">(</span> <span class="nc">BSONObjectID</span><span class="o">.</span><span class="n">generate</span><span class="o">.</span><span class="n">stringify</span> <span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<h4><a name="mongo-output-date"><code>Date</code> Extended JSON</A></h4>
+
+<p><code>created</code> field is a <code>Date</code> represented as a <code>JsNumber</code> (a long) in JSON. When passing it to Mongo, we use the following extended JSON notation:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='json'><span class='line'><span class="p">{</span>
+</span><span class='line'>  <span class="nt">&quot;creation&quot;</span> <span class="p">:</span> <span class="mi">123456789123456789</span>
+</span><span class='line'><span class="p">}</span>
+</span><span class='line'><span class="err">//</span> <span class="err">becomes</span>
+</span><span class='line'><span class="p">{</span>
+</span><span class='line'>  <span class="nt">&quot;creation&quot;</span> <span class="p">:</span> <span class="p">{</span>
+</span><span class='line'>     <span class="nt">&quot;$date&quot;</span> <span class="p">:</span> <span class="mi">123456789123456789</span>
+</span><span class='line'>  <span class="p">}</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Here is the final JSON transformer to generate a date using extended JSON notation:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">generateCreated</span> <span class="k">=</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;created</span> <span class="o">\</span> <span class="-Symbol">&#39;$date</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">put</span><span class="o">(</span> <span class="k">new</span> <span class="n">java</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="nc">Date</span> <span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<h3><a name="mongo-input">Input from Mongo</A></h3>
+
+<p>As explained, using Play/ReactiveMongo, you don&#8217;t have to care about BSON because it deals with BSON/JSON conversion behind the curtain.<br/>
+We could transform data received from Mongo in case we don&#8217;t really trust them.<br/>
+But in my case, I trust Mongo as all inserted data are mine so no use to transform those input data from Mongo.</p>
+
+<p>We just need to remove all JSON extended notation for <code>_id</code> or <code>created</code> when sending to the output.<br/>
+The <code>_id</code> is pruned so no need to convert it.
+So we just have to convert Json extended notation for <code>created</code> field. Here is the transformer:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// update duplicates full JSON and replaces &quot;created&quot; field by removing &quot;$date&quot; level</span>
+</span><span class='line'><span class="k">val</span> <span class="n">fromCreated</span> <span class="k">=</span> <span class="nc">__</span><span class="o">.</span><span class="n">json</span><span class="o">.</span><span class="n">update</span><span class="o">((</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;created</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">copyFrom</span><span class="o">(</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;created</span> <span class="o">\</span> <span class="-Symbol">&#39;$date</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">pick</span> <span class="o">))</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<br/>
+
+
+<h2><a name="controller">Play2.1 controller as pipe plug</a></h2>
+
+<p>Now, we can:</p>
+
+<ul>
+<li>validate input JSON received from client,</li>
+<li>transform into Mongo format</li>
+<li>transform from Mongo format to output</li>
+</ul>
+
+
+<p>Let&#8217;s plug the pipes all together:</p>
+
+<ul>
+<li>client inputs to Mongo outputs</li>
+<li>Mongo inputs to client outputs</li>
+</ul>
+
+
+<p>Play controller is the place to do that and we can write one action per REST action.</p>
+
+<p>In the following samples, please notice the way we compose all Json transformers described previously as if we were piping them.</p>
+
+<h3><a name="action-insert">Insert Person</a></h3>
+
+<p>When a Person document is created, there are 2 steps:</p>
+
+<ul>
+<li>validate the JSON using <code>validatePerson</code></li>
+<li>transform JSON to fit Mongo format by:
+
+<ul>
+<li>adding a generated <code>BSONObjectID</code> field using <code>generateId</code></li>
+<li>adding a generated <code>created</code> date field using <code>generateCreated</code></li>
+</ul>
+</li>
+</ul>
+
+
+<p>Here is the JSON transformer to transform into Mongo format:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="cm">/** Updates Json by adding both ID and date */</span>
+</span><span class='line'><span class="k">val</span> <span class="n">addMongoIdAndDate</span><span class="k">:</span> <span class="kt">Reads</span><span class="o">[</span><span class="kt">JsObject</span><span class="o">]</span> <span class="k">=</span> <span class="nc">__</span><span class="o">.</span><span class="n">json</span><span class="o">.</span><span class="n">update</span><span class="o">(</span> <span class="o">(</span><span class="n">generateId</span> <span class="n">and</span> <span class="n">generateCreated</span><span class="o">).</span><span class="n">reduce</span> <span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Finally the insert action could be coded as:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">def</span> <span class="n">insertPerson</span> <span class="k">=</span> <span class="nc">Action</span><span class="o">(</span><span class="n">parse</span><span class="o">.</span><span class="n">json</span><span class="o">){</span> <span class="n">request</span> <span class="k">=&gt;</span>
+</span><span class='line'>  <span class="n">request</span><span class="o">.</span><span class="n">body</span><span class="o">.</span><span class="n">transform</span><span class="o">(</span><span class="n">validatePerson</span> <span class="n">andThen</span> <span class="n">addMongoIdAndDate</span><span class="o">).</span><span class="n">map</span><span class="o">{</span> <span class="n">jsobj</span> <span class="k">=&gt;</span>
+</span><span class='line'>    <span class="nc">Async</span><span class="o">{</span>
+</span><span class='line'>      <span class="n">persons</span><span class="o">.</span><span class="n">insert</span><span class="o">(</span><span class="n">jsobj</span><span class="o">).</span><span class="n">map</span><span class="o">{</span> <span class="n">p</span> <span class="k">=&gt;</span>
+</span><span class='line'>        <span class="c1">// removes extended JSON to ouput generated _id</span>
+</span><span class='line'>        <span class="nc">Ok</span><span class="o">(</span> <span class="n">resOK</span><span class="o">(</span><span class="n">jsobj</span><span class="o">.</span><span class="n">transform</span><span class="o">(</span><span class="n">fromObjectId</span><span class="o">).</span><span class="n">get</span><span class="o">)</span> <span class="o">)</span>
+</span><span class='line'>      <span class="o">}.</span><span class="n">recover</span><span class="o">{</span> <span class="k">case</span> <span class="n">e</span> <span class="k">=&gt;</span>
+</span><span class='line'>        <span class="nc">BadRequest</span><span class="o">(</span> <span class="n">resKO</span><span class="o">(</span><span class="nc">JsString</span><span class="o">(</span><span class="s">&quot;exception %s&quot;</span><span class="o">.</span><span class="n">format</span><span class="o">(</span><span class="n">e</span><span class="o">.</span><span class="n">getMessage</span><span class="o">)))</span> <span class="o">)</span>
+</span><span class='line'>      <span class="o">}</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>  <span class="o">}.</span><span class="n">recoverTotal</span><span class="o">{</span> <span class="n">err</span> <span class="k">=&gt;</span>
+</span><span class='line'>    <span class="nc">BadRequest</span><span class="o">(</span> <span class="n">resKO</span><span class="o">(</span><span class="nc">JsError</span><span class="o">.</span><span class="n">toFlatJson</span><span class="o">(</span><span class="n">err</span><span class="o">))</span> <span class="o">)</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>resOK</code> and <code>resKO</code> are just function building JSON result with response status. Have a look at code for more info.</p>
+
+<br/>
+
+
+<br/>
+
+
+<h3><a name="action-get">Get Person</a></h3>
+
+<p>The action receives the ID of the person as a String and we only need to generate the right Mongo JSON format to retrieve the document.
+Here is the Json <code>Writes[String]</code> that creates the extended JSON notation from ID:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">toObjectId</span> <span class="k">=</span> <span class="nc">OWrites</span><span class="o">[</span><span class="kt">String</span><span class="o">]{</span> <span class="n">s</span> <span class="k">=&gt;</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span><span class="s">&quot;_id&quot;</span> <span class="o">-&gt;</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span><span class="s">&quot;$oid&quot;</span> <span class="o">-&gt;</span> <span class="n">s</span><span class="o">))</span> <span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Now the <code>getPerson</code> action code:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">def</span> <span class="n">getPerson</span><span class="o">(</span><span class="n">id</span><span class="k">:</span> <span class="kt">String</span><span class="o">)</span> <span class="k">=</span> <span class="nc">Action</span><span class="o">{</span>
+</span><span class='line'>  <span class="c1">// builds a query from ID</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">q</span> <span class="k">=</span> <span class="nc">QueryBuilder</span><span class="o">().</span><span class="n">query</span><span class="o">(</span><span class="n">toObjectId</span><span class="o">.</span><span class="n">writes</span><span class="o">(</span><span class="n">id</span><span class="o">))</span>
+</span><span class='line'>  <span class="nc">Async</span> <span class="o">{</span>
+</span><span class='line'>    <span class="n">persons</span><span class="o">.</span><span class="n">find</span><span class="o">[</span><span class="kt">JsValue</span><span class="o">](</span><span class="n">q</span><span class="o">).</span><span class="n">headOption</span><span class="o">.</span><span class="n">map</span><span class="o">{</span>
+</span><span class='line'>      <span class="k">case</span> <span class="nc">None</span> <span class="k">=&gt;</span> <span class="nc">Ok</span><span class="o">(</span><span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span><span class="s">&quot;res&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;KO&quot;</span><span class="o">,</span> <span class="s">&quot;error&quot;</span> <span class="o">-&gt;</span> <span class="n">s</span><span class="s">&quot;person with ID $id not found&quot;</span><span class="o">))</span>
+</span><span class='line'>      <span class="k">case</span> <span class="nc">Some</span><span class="o">(</span><span class="n">p</span><span class="o">)</span> <span class="k">=&gt;</span>
+</span><span class='line'>        <span class="n">p</span><span class="o">.</span><span class="n">transform</span><span class="o">(</span><span class="n">outputPerson</span><span class="o">).</span><span class="n">map</span><span class="o">{</span> <span class="n">jsonp</span> <span class="k">=&gt;</span>
+</span><span class='line'>          <span class="nc">Ok</span><span class="o">(</span> <span class="n">resOK</span><span class="o">(</span><span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span><span class="s">&quot;person&quot;</span> <span class="o">-&gt;</span> <span class="n">jsonp</span><span class="o">))</span> <span class="o">)</span>
+</span><span class='line'>        <span class="o">}.</span><span class="n">recoverTotal</span><span class="o">{</span> <span class="n">e</span> <span class="k">=&gt;</span>
+</span><span class='line'>          <span class="nc">Ok</span><span class="o">(</span> <span class="n">resKO</span><span class="o">(</span><span class="nc">JsError</span><span class="o">.</span><span class="n">toFlatJson</span><span class="o">(</span><span class="n">e</span><span class="o">))</span> <span class="o">)</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<br/>
+
+
+<h3><a name="action-delete">Delete Person</a></h3>
+
+<p><code>Delete</code> is exactly the same as <code>Get</code> in terms of input and it doesn&#8217;t require any output except to inform about success or failure.<br/>
+So let&#8217;s give directly the <code>deletePerson</code>code:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">def</span> <span class="n">deletePerson</span><span class="o">(</span><span class="n">id</span><span class="k">:</span> <span class="kt">String</span><span class="o">)</span> <span class="k">=</span> <span class="nc">Action</span><span class="o">{</span>
+</span><span class='line'>  <span class="nc">Async</span> <span class="o">{</span>
+</span><span class='line'>    <span class="n">persons</span><span class="o">.</span><span class="n">remove</span><span class="o">[</span><span class="kt">JsValue</span><span class="o">](</span><span class="n">toObjectId</span><span class="o">.</span><span class="n">writes</span><span class="o">(</span><span class="n">id</span><span class="o">)).</span><span class="n">map</span><span class="o">{</span> <span class="n">lastError</span> <span class="k">=&gt;</span>
+</span><span class='line'>      <span class="k">if</span><span class="o">(</span><span class="n">lastError</span><span class="o">.</span><span class="n">ok</span><span class="o">)</span>
+</span><span class='line'>        <span class="nc">Ok</span><span class="o">(</span> <span class="n">resOK</span><span class="o">(</span><span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span><span class="s">&quot;msg&quot;</span> <span class="o">-&gt;</span> <span class="n">s</span><span class="s">&quot;person $id deleted&quot;</span><span class="o">))</span> <span class="o">)</span>
+</span><span class='line'>      <span class="k">else</span>
+</span><span class='line'>        <span class="nc">BadRequest</span><span class="o">(</span> <span class="n">resKO</span><span class="o">(</span><span class="nc">JsString</span><span class="o">(</span><span class="s">&quot;error %s&quot;</span><span class="o">.</span><span class="n">format</span><span class="o">(</span><span class="n">lastError</span><span class="o">.</span><span class="n">stringify</span><span class="o">)))</span> <span class="o">)</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<br/>
+
+
+<h3><a name="action-update">Update Full Person</a></h3>
+
+<p>When updating a full person:</p>
+
+<ul>
+<li>we receive the ID in the URL</li>
+<li>we receive the new Json representing the person in the body</li>
+<li>we need to update the corresponding document in DB.</li>
+</ul>
+
+
+<p>So we must do the following:</p>
+
+<ul>
+<li>validate input JSON using <code>validatePerson</code></li>
+<li>transform the ID into MongoID JSON extended notation using <code>toObjectId</code> described previously</li>
+<li>transform json into Update Json extended notation:</li>
+</ul>
+
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='json'><span class='line'><span class="p">{</span>
+</span><span class='line'>  <span class="nt">&quot;$set&quot;</span> <span class="p">:</span> <span class="p">{</span>
+</span><span class='line'>    <span class="err">name:</span> <span class="nt">&quot;Mike Dirolf&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="err">pw:</span> <span class="nt">&quot;password&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="err">addresses:</span> <span class="err">[</span><span class="nt">&quot;mike@corp.fiesta.cc&quot;</span><span class="p">,</span> <span class="nt">&quot;mike@dirolf.com&quot;</span><span class="p">,</span> <span class="err">...],</span>
+</span><span class='line'>    <span class="err">memberships:</span> <span class="err">[{</span>
+</span><span class='line'>      <span class="err">address:</span> <span class="nt">&quot;mike@corp.fiesta.cc&quot;</span><span class="p">,</span>
+</span><span class='line'>      <span class="err">group_name:</span> <span class="nt">&quot;family&quot;</span><span class="p">,</span>
+</span><span class='line'>      <span class="err">group:</span> <span class="err">GROUP_ID</span>
+</span><span class='line'>    <span class="p">},</span> <span class="err">...]</span>
+</span><span class='line'>  <span class="p">}</span>
+</span><span class='line'><span class="err">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Here is the JSON transformer for update notation:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="cm">/** Converts JSON into Mongo update selector by just copying whole object in $set field */</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">toMongoUpdate</span> <span class="k">=</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;$set</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">copyFrom</span><span class="o">(</span> <span class="nc">__</span><span class="o">.</span><span class="n">json</span><span class="o">.</span><span class="n">pick</span> <span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Finally here is the corresponding <code>updatePerson</code> action code</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">def</span> <span class="n">updatePerson</span><span class="o">(</span><span class="n">id</span><span class="k">:</span> <span class="kt">String</span><span class="o">)</span> <span class="k">=</span> <span class="nc">Action</span><span class="o">(</span><span class="n">parse</span><span class="o">.</span><span class="n">json</span><span class="o">){</span> <span class="n">request</span> <span class="k">=&gt;</span>
+</span><span class='line'>  <span class="n">request</span><span class="o">.</span><span class="n">body</span><span class="o">.</span><span class="n">transform</span><span class="o">(</span><span class="n">validatePerson</span><span class="o">).</span><span class="n">flatMap</span><span class="o">{</span> <span class="n">jsobj</span> <span class="k">=&gt;</span>
+</span><span class='line'>    <span class="n">jsobj</span><span class="o">.</span><span class="n">transform</span><span class="o">(</span><span class="n">toMongoUpdate</span><span class="o">).</span><span class="n">map</span><span class="o">{</span> <span class="n">updateSelector</span> <span class="k">=&gt;</span>
+</span><span class='line'>      <span class="nc">Async</span><span class="o">{</span>
+</span><span class='line'>        <span class="n">persons</span><span class="o">.</span><span class="n">update</span><span class="o">(</span>
+</span><span class='line'>          <span class="n">toObjectId</span><span class="o">.</span><span class="n">writes</span><span class="o">(</span><span class="n">id</span><span class="o">),</span>
+</span><span class='line'>          <span class="n">updateSelector</span>
+</span><span class='line'>        <span class="o">).</span><span class="n">map</span><span class="o">{</span> <span class="n">lastError</span> <span class="k">=&gt;</span>
+</span><span class='line'>          <span class="k">if</span><span class="o">(</span><span class="n">lastError</span><span class="o">.</span><span class="n">ok</span><span class="o">)</span>
+</span><span class='line'>            <span class="nc">Ok</span><span class="o">(</span> <span class="n">resOK</span><span class="o">(</span><span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span><span class="s">&quot;msg&quot;</span> <span class="o">-&gt;</span> <span class="n">s</span><span class="s">&quot;person $id updated&quot;</span><span class="o">))</span> <span class="o">)</span>
+</span><span class='line'>          <span class="k">else</span>
+</span><span class='line'>            <span class="nc">BadRequest</span><span class="o">(</span> <span class="n">resKO</span><span class="o">(</span><span class="nc">JsString</span><span class="o">(</span><span class="s">&quot;error %s&quot;</span><span class="o">.</span><span class="n">format</span><span class="o">(</span><span class="n">lastError</span><span class="o">.</span><span class="n">stringify</span><span class="o">)))</span> <span class="o">)</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>      <span class="o">}</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>  <span class="o">}.</span><span class="n">recoverTotal</span><span class="o">{</span> <span class="n">e</span> <span class="k">=&gt;</span>
+</span><span class='line'>    <span class="nc">BadRequest</span><span class="o">(</span> <span class="n">resKO</span><span class="o">(</span><span class="nc">JsError</span><span class="o">.</span><span class="n">toFlatJson</span><span class="o">(</span><span class="n">e</span><span class="o">))</span> <span class="o">)</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3><a name="action-update-restricted">Update Restricted Person</a></h3>
+
+<p>Restricted update is exactly the same as Full update except it validates the input JSON using <code>validatePerson4RestrictedUpdate</code> instead of <code>validatePerson</code></p>
+
+<p>So here is the <code>updatePersonRestricted</code> action code:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">def</span> <span class="n">updatePersonRestricted</span><span class="o">(</span><span class="n">id</span><span class="k">:</span> <span class="kt">String</span><span class="o">)</span> <span class="k">=</span> <span class="nc">Action</span><span class="o">(</span><span class="n">parse</span><span class="o">.</span><span class="n">json</span><span class="o">){</span> <span class="n">request</span> <span class="k">=&gt;</span>
+</span><span class='line'>  <span class="n">request</span><span class="o">.</span><span class="n">body</span><span class="o">.</span><span class="n">transform</span><span class="o">(</span><span class="n">validatePerson4RestrictedUpdate</span><span class="o">).</span><span class="n">flatMap</span><span class="o">{</span> <span class="n">jsobj</span> <span class="k">=&gt;</span>
+</span><span class='line'>    <span class="n">jsobj</span><span class="o">.</span><span class="n">transform</span><span class="o">(</span><span class="n">toMongoUpdate</span><span class="o">).</span><span class="n">map</span><span class="o">{</span> <span class="n">updateSelector</span> <span class="k">=&gt;</span>
+</span><span class='line'>      <span class="nc">Async</span><span class="o">{</span>
+</span><span class='line'>        <span class="n">persons</span><span class="o">.</span><span class="n">update</span><span class="o">(</span>
+</span><span class='line'>          <span class="n">toObjectId</span><span class="o">.</span><span class="n">writes</span><span class="o">(</span><span class="n">id</span><span class="o">),</span>
+</span><span class='line'>         <span class="n">updateSelector</span>
+</span><span class='line'>        <span class="o">).</span><span class="n">map</span><span class="o">{</span> <span class="n">lastError</span> <span class="k">=&gt;</span>
+</span><span class='line'>          <span class="k">if</span><span class="o">(</span><span class="n">lastError</span><span class="o">.</span><span class="n">ok</span><span class="o">)</span>
+</span><span class='line'>            <span class="nc">Ok</span><span class="o">(</span> <span class="n">resOK</span><span class="o">(</span><span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span><span class="s">&quot;msg&quot;</span> <span class="o">-&gt;</span> <span class="n">s</span><span class="s">&quot;person $id updated&quot;</span><span class="o">))</span> <span class="o">)</span>
+</span><span class='line'>          <span class="k">else</span>
+</span><span class='line'>            <span class="nc">BadRequest</span><span class="o">(</span> <span class="n">resKO</span><span class="o">(</span><span class="nc">JsString</span><span class="o">(</span><span class="s">&quot;error %s&quot;</span><span class="o">.</span><span class="n">format</span><span class="o">(</span><span class="n">lastError</span><span class="o">.</span><span class="n">stringify</span><span class="o">)))</span> <span class="o">)</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>      <span class="o">}</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>  <span class="o">}.</span><span class="n">recoverTotal</span><span class="o">{</span> <span class="n">e</span> <span class="k">=&gt;</span>
+</span><span class='line'>    <span class="nc">BadRequest</span><span class="o">(</span> <span class="n">resKO</span><span class="o">(</span><span class="nc">JsError</span><span class="o">.</span><span class="n">toFlatJson</span><span class="o">(</span><span class="n">e</span><span class="o">))</span> <span class="o">)</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<br/>
+
+
+<h1><a name="code">Full Code</a></h1>
+
+<blockquote><p>The whole sample can be found on Github <a href="https://github.com/mandubian/play2-json-demo/tree/master/json-coast-to-coast">json-coast-to-coast sample</a>
+To test it, use a Rest client such as Postman or whatever.</p></blockquote>
+
+<br/>
+
+
+<br/>
+
+
+<h1><a name="conclusion">Conclusion</a></h1>
+
+<p>Many things in this article… Maybe too many…<br/>
+Anyway, the subject is huge and deserves it.</p>
+
+<p>This sample demonstrates it&#8217;s possible to transmit a JSON data-flow from client to DB without going through any static model. That&#8217;s why I speak about <em>JSON coast-to-coast</em> and I find it&#8217;s a very good pattern in many cases in our <em>every-day-as-backend-designer</em> life.</p>
+
+<p>Just remind 3 things maybe:</p>
+
+<ul>
+<li>data flow direct manipulation is possible, practical and useful.</li>
+<li>pure data manipulation doesn&#8217;t lessen type-safety or data structuring as you control everything at the boundaries of your backend system.</li>
+<li>static model is useful sometimes but not always so before writing generic classes, DAO everywhere, think about your real needs.</li>
+</ul>
+
+
+<p>In the code sample, I don&#8217;t take into account the temporal behavior of data and the dynamic requirements of interactions with other elements of the data flow. But don&#8217;t forget this aspect in your backend design.</p>
+
+<blockquote><p>Finally, as you could see, <strong>ReactiveMongo</strong> mixed with <strong>Play2.1 JSON API</strong> provides us with a really good toolbox for data-centric approach. It also allows to deal with realtime data flow to design so-called reactive applications (which is also the reason of being of Play2 framework).</p></blockquote>
+
+<p>Have flowfun!</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Unveiling Play 2.1 Json API - Bonus : JSON Inception (based on Scala 2.10 Macros)]]></title>
@@ -305,7 +1765,7 @@ Great power means greater responsability so it&#8217;s better to discuss all tog
 
 <p>If anyone tells me there is still 1 line to write, I think I might become unpolite ;)</p>
 
-<p>Have Macrofun ;););)</p>
+<p>Have Macrofun!</p>
 ]]></content>
   </entry>
   
