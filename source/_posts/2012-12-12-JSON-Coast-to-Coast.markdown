@@ -784,6 +784,8 @@ Let's plug the pipes all together:
 
 Play controller is the place to do that and we can write one action per REST action.
 
+>Please note that the whole code is in a single Controller in the sample to make it compact. But a good manner would be to put transformers outside the controller to be able to share them between controllers.
+
 In the following samples, please notice the way we compose all Json transformers described previously as if we were piping them.
 
 ### <a name="action-insert">Insert Person</a>
@@ -812,7 +814,7 @@ def insertPerson = Action(parse.json){ request =>
         // removes extended JSON to ouput generated _id
         Ok( resOK(jsobj.transform(fromObjectId).get) )
       }.recover{ case e => 
-        BadRequest( resKO(JsString("exception %s".format(e.getMessage))) )
+        InternalServerError( resKO(JsString("exception %s".format(e.getMessage))) )
       }
     }
   }.recoverTotal{ err => 
@@ -842,12 +844,12 @@ def getPerson(id: String) = Action{
   val q = QueryBuilder().query(toObjectId.writes(id))
   Async {
     persons.find[JsValue](q).headOption.map{ 
-      case None => Ok(Json.obj("res" -> "KO", "error" -> s"person with ID $id not found"))
+      case None => NotFound(Json.obj("res" -> "KO", "error" -> s"person with ID $id not found"))
       case Some(p) => 
         p.transform(outputPerson).map{ jsonp =>
           Ok( resOK(Json.obj("person" -> jsonp)) )    
         }.recoverTotal{ e =>
-          Ok( resKO(JsError.toFlatJson(e)) )    
+          BadRequest( resKO(JsError.toFlatJson(e)) )    
         }
     }
   }
@@ -868,7 +870,7 @@ def deletePerson(id: String) = Action{
       if(lastError.ok)
         Ok( resOK(Json.obj("msg" -> s"person $id deleted")) )
       else     
-        BadRequest( resKO(JsString("error %s".format(lastError.stringify))) )
+        InternalServerError( resKO(JsString("error %s".format(lastError.stringify))) )
     }
   }
 }
@@ -925,7 +927,7 @@ def updatePerson(id: String) = Action(parse.json){ request =>
           if(lastError.ok)
             Ok( resOK(Json.obj("msg" -> s"person $id updated")) )
           else     
-            BadRequest( resKO(JsString("error %s".format(lastError.stringify))) )
+            InternalServerError( resKO(JsString("error %s".format(lastError.stringify))) )
         }
       }
     }
@@ -955,7 +957,7 @@ So here is the `updatePersonRestricted` action code:
           if(lastError.ok)
             Ok( resOK(Json.obj("msg" -> s"person $id updated")) )
           else     
-            BadRequest( resKO(JsString("error %s".format(lastError.stringify))) )
+            InternalServerError( resKO(JsString("error %s".format(lastError.stringify))) )
         }
       }
     }
