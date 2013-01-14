@@ -4,7 +4,7 @@
   <title><![CDATA[Mandubian Blog]]></title>
   <link href="http://www.mandubian.com/atom.xml" rel="self"/>
   <link href="http://www.mandubian.com/"/>
-  <updated>2013-01-14T12:47:10+01:00</updated>
+  <updated>2013-01-14T12:49:02+01:00</updated>
   <id>http://www.mandubian.com/</id>
   <author>
     <name><![CDATA[Pascal Voitot]]></name>
@@ -14,7 +14,7 @@
 
   
   <entry>
-    <title type="html"><![CDATA[Play 2.1 & ReactiveMongo<br/><br/>From Data-Centric approach to JSON Coast-to-Coast design]]></title>
+    <title type="html"><![CDATA[From Data-Centric approach to JSON Coast-to-Coast design with Play-2.1 & ReactiveMongo]]></title>
     <link href="http://www.mandubian.com/2013/01/13/JSON-Coast-to-Coast/"/>
     <updated>2013-01-13T12:12:00+01:00</updated>
     <id>http://www.mandubian.com/2013/01/13/JSON-Coast-to-Coast</id>
