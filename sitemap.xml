@@ -2,46 +2,50 @@
 <urlset xmlns='http://www.sitemaps.org/schemas/sitemap/0.9'>
     <url>
         <loc>http://www.mandubian.com/2012/07/14/xmlsoap-ersatz/</loc>
-        <lastmod>2012-07-17T01:30:20+02:00</lastmod>
+        <lastmod>2013-02-01T12:53:42+01:00</lastmod>
     </url>
     <url>
         <loc>
             http://www.mandubian.com/2012/08/27/understanding-play2-iteratees-for-normal-humans/
         </loc>
-        <lastmod>2012-09-15T22:45:39+02:00</lastmod>
+        <lastmod>2013-02-01T12:53:42+01:00</lastmod>
     </url>
     <url>
         <loc>
             http://www.mandubian.com/2012/09/08/unveiling-play-2-dot-1-json-api-part1-jspath-reads-combinators/
         </loc>
-        <lastmod>2012-10-31T12:21:28+01:00</lastmod>
+        <lastmod>2013-02-01T12:53:42+01:00</lastmod>
     </url>
     <url>
         <loc>
             http://www.mandubian.com/2012/10/01/unveiling-play-2-dot-1-json-api-part2-writes-format-combinators/
         </loc>
-        <lastmod>2012-10-31T12:16:39+01:00</lastmod>
+        <lastmod>2013-02-01T12:53:42+01:00</lastmod>
     </url>
     <url>
         <loc>
             http://www.mandubian.com/2012/10/29/unveiling-play-2-dot-1-json-api-part3-json-transformers/
         </loc>
-        <lastmod>2012-10-31T12:13:50+01:00</lastmod>
+        <lastmod>2013-02-01T12:53:42+01:00</lastmod>
     </url>
     <url>
         <loc>http://www.mandubian.com/2012/11/11/JSON-inception/</loc>
-        <lastmod>2012-11-20T23:41:21+01:00</lastmod>
+        <lastmod>2013-02-01T12:53:42+01:00</lastmod>
     </url>
     <url>
         <loc>http://www.mandubian.com/2013/01/13/JSON-Coast-to-Coast/</loc>
-        <lastmod>2013-01-14T18:48:10+01:00</lastmod>
+        <lastmod>2013-02-01T12:53:42+01:00</lastmod>
+    </url>
+    <url>
+        <loc>http://www.mandubian.com/2013/01/30/maquereau-patamorphism/</loc>
+        <lastmod>2013-02-03T19:51:45+01:00</lastmod>
     </url>
     <url>
         <loc>http://www.mandubian.com/blog/archives/</loc>
-        <lastmod>2013-01-14T18:48:10+01:00</lastmod>
+        <lastmod>2013-02-03T19:51:45+01:00</lastmod>
     </url>
     <url>
         <loc>http://www.mandubian.com/</loc>
-        <lastmod>2013-01-14T18:48:10+01:00</lastmod>
+        <lastmod>2013-02-03T19:51:45+01:00</lastmod>
     </url>
 </urlset>
