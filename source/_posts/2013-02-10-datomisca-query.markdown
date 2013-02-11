@@ -68,7 +68,7 @@ When executing this query, you must provide the right number of input parameters
 So now, how do you write the same query in Datomisca?
 
 {% codeblock lang:scala %}
-var q  = Query("""
+val q  = Query("""
 [ :find ?e
   :in $ ?name
   :where [ ?e :person/name ?name ] 
@@ -95,7 +95,7 @@ But in Scala we can do a bit better using new Scala 2.10 features : Scala macros
 scala> import datomisca._
 import datomisca._
 
-scala> var q  = Query("""
+scala> val q  = Query("""
      [ :find ?e
        :in $ ?name
        :where [ ?e :person/name ?name ] 
