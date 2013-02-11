@@ -107,8 +107,8 @@ Without going in deep details, here you can see that the compiled version of `q`
 
 `TypedQueryAuto2[DatomicData, DatomicData, DatomicData]` means you have: 
 
-    - 2 input parameters `$ ?name` of type `DatomicData` and `DatomicData`
-    - Last type parameter represents output parameter `?e` of type `DatomicData`
+- 2 input parameters `$ ?name` of type `DatomicData` and `DatomicData`
+- Last type parameter represents output parameter `?e` of type `DatomicData`
     
 > Remark : `DatomicData` is explained in next paragraph.
     
