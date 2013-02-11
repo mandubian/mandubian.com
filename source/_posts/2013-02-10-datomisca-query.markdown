@@ -11,7 +11,7 @@ keywords: datomic,datomisca,datalog,scala,scala-macro
 
 Last week, we have launched [Datomisca](http://pellucidanalytics.github.com/datomisca/index.html), our opensource Scala API trying to enhance [Datomic](http://www.datomic.com) experience for Scala developers. 
 
-Datomic is great in Clojure because it is thought for it. Yet, we believe Scala can provide a very good platform for Datomic too because the functional concepts found in Clojure are also in Scala except that Scala is a compiled and statically typed language whereas Clojure is dynamic. Scala could also bring a few features on top of Clojure based on its specificities such as static typing, typeclasses, macros…
+Datomic is great in Clojure because it is was made for it. Yet, we believe Scala can provide a very good platform for Datomic too because the functional concepts found in Clojure are also in Scala except that Scala is a compiled and statically typed language whereas Clojure is dynamic. Scala could also bring a few features on top of Clojure based on its features such as static typing, typeclasses, macros…
 
 This article is the first of a serie of articles aiming at describing as shortly as possible specific features provided by Datomisca.
 Today, let's present how Datomisca enhances Datomic queries.
@@ -110,7 +110,7 @@ Without going in deep details, here you can see that the compiled version of `q`
 - 2 input parameters `$ ?name` of type `DatomicData` and `DatomicData`
 - Last type parameter represents output parameter `?e` of type `DatomicData`
     
-> Remark : `DatomicData` is explained in next paragraph.
+*Note : `DatomicData` is explained in next paragraph.*
     
 <br/>
 ### Example OK with several outputs
