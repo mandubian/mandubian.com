@@ -142,7 +142,7 @@
 
   <div class="entry-content"><p>Last week, we have launched <a href="http://pellucidanalytics.github.com/datomisca/index.html">Datomisca</a>, our opensource Scala API trying to enhance <a href="http://www.datomic.com">Datomic</a> experience for Scala developers.</p>
 
-<p>Datomic is great in Clojure because it is thought for it. Yet, we believe Scala can provide a very good platform for Datomic too because the functional concepts found in Clojure are also in Scala except that Scala is a compiled and statically typed language whereas Clojure is dynamic. Scala could also bring a few features on top of Clojure based on its specificities such as static typing, typeclasses, macros…</p>
+<p>Datomic is great in Clojure because it is was made for it. Yet, we believe Scala can provide a very good platform for Datomic too because the functional concepts found in Clojure are also in Scala except that Scala is a compiled and statically typed language whereas Clojure is dynamic. Scala could also bring a few features on top of Clojure based on its features such as static typing, typeclasses, macros…</p>
 
 <p>This article is the first of a serie of articles aiming at describing as shortly as possible specific features provided by Datomisca.
 Today, let&#8217;s present how Datomisca enhances Datomic queries.</p>
@@ -277,11 +277,13 @@ Like that…</p>
 
 <p><code>TypedQueryAuto2[DatomicData, DatomicData, DatomicData]</code> means you have:</p>
 
-<pre><code>- 2 input parameters `$ ?name` of type `DatomicData` and `DatomicData`
-- Last type parameter represents output parameter `?e` of type `DatomicData`
-</code></pre>
+<ul>
+<li>2 input parameters <code>$ ?name</code> of type <code>DatomicData</code> and <code>DatomicData</code></li>
+<li>Last type parameter represents output parameter <code>?e</code> of type <code>DatomicData</code></li>
+</ul>
 
-<blockquote><p>Remark : <code>DatomicData</code> is explained in next paragraph.</p></blockquote>
+
+<p><em>Note : <code>DatomicData</code> is explained in next paragraph.</em></p>
 
 <br/>
 
