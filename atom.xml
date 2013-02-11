@@ -4,7 +4,7 @@
   <title><![CDATA[Mandubian Blog]]></title>
   <link href="http://www.mandubian.com/atom.xml" rel="self"/>
   <link href="http://www.mandubian.com/"/>
-  <updated>2013-02-11T18:06:17+01:00</updated>
+  <updated>2013-02-11T18:10:14+01:00</updated>
   <id>http://www.mandubian.com/</id>
   <author>
     <name><![CDATA[Pascal Voitot]]></name>
@@ -181,7 +181,7 @@ Like that…</p>
 </pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">import</span> <span class="nn">datomisca._</span>
 </span><span class='line'><span class="k">import</span> <span class="nn">datomisca._</span>
 </span><span class='line'>
-</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">var</span> <span class="n">q</span>  <span class="k">=</span> <span class="nc">Query</span><span class="o">(</span><span class="s">&quot;&quot;&quot;</span>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">q</span>  <span class="k">=</span> <span class="nc">Query</span><span class="o">(</span><span class="s">&quot;&quot;&quot;</span>
 </span><span class='line'><span class="s">     [ :find ?e ?age</span>
 </span><span class='line'><span class="s">       :in $ ?name</span>
 </span><span class='line'><span class="s">       :where [ ?e :person/name ?name ] </span>
@@ -227,7 +227,7 @@ Like that…</p>
 </pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">import</span> <span class="nn">datomisca._</span>
 </span><span class='line'><span class="k">import</span> <span class="nn">datomisca._</span>
 </span><span class='line'>
-</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">var</span> <span class="n">q</span>  <span class="k">=</span> <span class="nc">Query</span><span class="o">(</span><span class="s">&quot;&quot;&quot;</span>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">q</span>  <span class="k">=</span> <span class="nc">Query</span><span class="o">(</span><span class="s">&quot;&quot;&quot;</span>
 </span><span class='line'><span class="s">     [ :find ?e</span>
 </span><span class='line'><span class="s">       :in $ ?name</span>
 </span><span class='line'><span class="s">       :where [ ?e :person/name ?name </span>
@@ -236,7 +236,7 @@ Like that…</p>
 </span><span class='line'><span class="kt">     ]&quot;&quot;&quot;)</span>
 </span><span class='line'><span class="kt">      ^</span>
 </span><span class='line'>
-</span><span class='line'><span class="kt">scala&gt; var q  = Query(&quot;&quot;&quot;</span>
+</span><span class='line'><span class="kt">scala&gt; val q  = Query(&quot;&quot;&quot;</span>
 </span><span class='line'><span class="kt">     [ :find ?e</span>
 </span><span class='line'><span class="kt">       :in $ ?name</span>
 </span><span class='line'><span class="kt">       :where [ ?e person/name ?name ]</span>
@@ -345,7 +345,7 @@ But you need an implicit <code>DatomicConnection</code> in your scope to execute
 </span><span class='line'><span class="k">implicit</span> <span class="k">lazy</span> <span class="k">val</span> <span class="n">conn</span> <span class="k">=</span> <span class="nc">Datomic</span><span class="o">.</span><span class="n">connect</span><span class="o">(</span><span class="n">uri</span><span class="o">)</span>
 </span><span class='line'>
 </span><span class='line'><span class="c1">// Creates the query</span>
-</span><span class='line'><span class="k">var</span> <span class="n">queryFindByName</span> <span class="k">=</span> <span class="nc">Query</span><span class="o">(</span><span class="s">&quot;&quot;&quot;</span>
+</span><span class='line'><span class="k">val</span> <span class="n">queryFindByName</span> <span class="k">=</span> <span class="nc">Query</span><span class="o">(</span><span class="s">&quot;&quot;&quot;</span>
 </span><span class='line'><span class="s">[ :find ?e ?birth</span>
 </span><span class='line'><span class="s">  :in $ ?name</span>
 </span><span class='line'><span class="s">  :where [ ?e :person/name ?name ]</span>
