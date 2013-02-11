@@ -119,7 +119,7 @@ Without going in deep details, here you can see that the compiled version of `q`
 scala> import datomisca._
 import datomisca._
 
-scala> var q  = Query("""
+scala> val q  = Query("""
      [ :find ?e ?age
        :in $ ?name
        :where [ ?e :person/name ?name ] 
@@ -140,7 +140,7 @@ q: datomisca.TypedQueryAuto2[datomisca.DatomicData,datomisca.DatomicData,(datomi
 scala> import datomisca._
 import datomisca._
 
-scala> var q  = Query("""
+scala> val q  = Query("""
      [ :find ?e
        :in $ ?name
        :where [ ?e :person/name ?name 
@@ -149,7 +149,7 @@ scala> var q  = Query("""
      ]""")
       ^
 
-scala> var q  = Query("""
+scala> val q  = Query("""
      [ :find ?e
        :in $ ?name
        :where [ ?e person/name ?name ]
@@ -221,7 +221,7 @@ val uri = "…"
 implicit lazy val conn = Datomic.connect(uri)
 
 // Creates the query
-var queryFindByName = Query("""
+val queryFindByName = Query("""
 [ :find ?e ?birth
   :in $ ?name
   :where [ ?e :person/name ?name ]
