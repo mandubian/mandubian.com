@@ -4,7 +4,7 @@
   <title><![CDATA[Mandubian Blog]]></title>
   <link href="http://www.mandubian.com/atom.xml" rel="self"/>
   <link href="http://www.mandubian.com/"/>
-  <updated>2013-02-03T20:31:08+01:00</updated>
+  <updated>2013-02-11T15:37:12+01:00</updated>
   <id>http://www.mandubian.com/</id>
   <author>
     <name><![CDATA[Pascal Voitot]]></name>
@@ -12,6 +12,544 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Datomisca Delicatessen - Datomic queries coated in a thin layer of Scala]]></title>
+    <link href="http://www.mandubian.com/2013/02/10/datomisca-query/"/>
+    <updated>2013-02-10T13:13:00+01:00</updated>
+    <id>http://www.mandubian.com/2013/02/10/datomisca-query</id>
+    <content type="html"><![CDATA[<p>Last week, we have launched <a href="http://pellucidanalytics.github.com/datomisca/index.html">Datomisca</a>, our opensource Scala API trying to enhance <a href="http://www.datomic.com">Datomic</a> experience for Scala developers.</p>
+
+<p>Datomic is great in Clojure because it is thought for it. Yet, we believe Scala can provide a very good platform for Datomic too because the functional concepts found in Clojure are also in Scala except that Scala is a compiled and statically typed language whereas Clojure is dynamic. Scala could also bring a few features on top of Clojure based on its specificities such as static typing, typeclasses, macros…</p>
+
+<p>This article is the first of a serie of articles aiming at describing as shortly as possible specific features provided by Datomisca.
+Today, let&#8217;s present how Datomisca enhances Datomic queries.</p>
+
+<br/>
+
+
+<h1><a name="datomic-query">Query in Datomic?</a></h1>
+
+<p>Let&#8217;s take the same old example of a Person having :</p>
+
+<ul>
+<li>a name <code>String</code></li>
+<li>a age <code>Long</code></li>
+<li>a birth <code>Date</code></li>
+</ul>
+
+
+<p>So, how do you write a query in Datomic searching a person by its name?
+Like that…</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="o">(</span><span class="k">def</span> <span class="n">q</span> <span class="o">[</span> <span class="kt">:find</span> <span class="kt">?e</span>
+</span><span class='line'>  <span class="kt">:in</span> <span class="kt">$</span> <span class="kt">?name</span>
+</span><span class='line'>  <span class="kt">:where</span> <span class="o">[</span> <span class="kt">?e</span> <span class="kt">:person/name</span> <span class="kt">?name</span> <span class="o">]</span>
+</span><span class='line'><span class="o">])</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>As you can see, this is Clojure using Datalog rules.</p>
+
+<p>In a summary, this query:</p>
+
+<ul>
+<li>accepts 2 inputs parameters:
+
+<ul>
+<li>a datasource <code>$</code></li>
+<li>a name parameter <code>?name</code></li>
+</ul>
+</li>
+<li>searches facts respecting datalog rule <code>[ ?e :person/name ?name ]</code>: a fact having attribute <code>:person/name</code> with value <code>?name</code></li>
+<li>returns the ID of the found facts <code>?e</code></li>
+</ul>
+
+
+<br/>
+
+
+<h2><a name="datomic-query-reminders">Reminders about Datomic queries</a></h2>
+
+<h3>Query is a static data structure</h3>
+
+<p>An important aspect of queries to understand in Datomic is that a query is purely a static data structure and not something functional. We could compare it to a prepared statement in SQL: build it once and reuse it as much as you need.</p>
+
+<h3>Query has input/ouput parameters</h3>
+
+<p>In previous example:</p>
+
+<ul>
+<li><code>:in</code> enumerates input parameters</li>
+<li><code>:find</code> enumerates output parameters</li>
+</ul>
+
+
+<p>When executing this query, you must provide the right number of input parameters and you will retrieve the given number of output parameters.</p>
+
+<br/>
+
+
+<h1><a name="datomisca-query">Query in Datomisca?</a></h1>
+
+<p>So now, how do you write the same query in Datomisca?</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">var</span> <span class="n">q</span>  <span class="k">=</span> <span class="nc">Query</span><span class="o">(</span><span class="s">&quot;&quot;&quot;</span>
+</span><span class='line'><span class="s">[ :find ?e</span>
+</span><span class='line'><span class="s">  :in $ ?name</span>
+</span><span class='line'><span class="s">  :where [ ?e :person/name ?name ] </span>
+</span><span class='line'><span class="s">]&quot;&quot;&quot;</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>I see you&#8217;re a bit disappointed: a query as a string whereas in Clojure, it&#8217;s a real data structure…</p>
+
+<p>This is actually the way the Java API sends query for now. Moreover, using strings like implies potential bad practices such as building queries by concatenating strings which are often the origin of risks of code injection in SQL for example…</p>
+
+<p>But in Scala we can do a bit better using new Scala 2.10 features : Scala macros.</p>
+
+<p><strong>So, using Datomisca, when you write this code, in fact, the query string is parsed by a Scala macro:</strong></p>
+
+<ul>
+<li><strong>If there are any error, the compilation breaks showing where the error was detected.</strong></li>
+<li><strong>If the query seems valid (with respect to our parser), the String is actually replaced by a AST representing this query as a data structure.</strong></li>
+<li><strong>The input/output parameters are infered to determine their numbers.</strong></li>
+</ul>
+
+
+<blockquote><p>Please note that the compiled query is a simple immutable AST which could be manipulated as a Clojure query and re-used as many times as you want.</p></blockquote>
+
+<h3>Example OK with single output</h3>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">import</span> <span class="nn">datomisca._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">datomisca._</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">var</span> <span class="n">q</span>  <span class="k">=</span> <span class="nc">Query</span><span class="o">(</span><span class="s">&quot;&quot;&quot;</span>
+</span><span class='line'><span class="s">     [ :find ?e</span>
+</span><span class='line'><span class="s">       :in $ ?name</span>
+</span><span class='line'><span class="s">       :where [ ?e :person/name ?name ] </span>
+</span><span class='line'><span class="s">     ]&quot;&quot;&quot;</span><span class="o">)</span>
+</span><span class='line'><span class="n">q</span><span class="k">:</span> <span class="kt">datomisca.TypedQueryAuto2</span><span class="o">[</span><span class="kt">datomisca.DatomicData</span>,<span class="kt">datomisca.DatomicData</span>,<span class="kt">datomisca.DatomicData</span><span class="o">]</span> <span class="k">=</span> <span class="o">[</span> <span class="kt">:find</span> <span class="kt">?e</span> <span class="kt">:in</span> <span class="kt">$</span> <span class="kt">?name</span> <span class="kt">:where</span> <span class="o">[</span><span class="kt">?e</span> <span class="kt">:person/name</span> <span class="kt">?name</span><span class="o">]</span> <span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Without going in deep details, here you can see that the compiled version of <code>q</code> isn&#8217;t a <code>Query[String]</code> but a <code>TypedQueryAuto2[DatomicData, DatomicData, DatomicData]</code> being an AST representing the query.</p>
+
+<p><code>TypedQueryAuto2[DatomicData, DatomicData, DatomicData]</code> means you have:</p>
+
+<pre><code>- 2 input parameters `$ ?name` of type `DatomicData` and `DatomicData`
+- Last type parameter represents output parameter `?e` of type `DatomicData`
+</code></pre>
+
+<blockquote><p>Remark : <code>DatomicData</code> is explained in next paragraph.</p></blockquote>
+
+<br/>
+
+
+<h3>Example OK with several outputs</h3>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">import</span> <span class="nn">datomisca._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">datomisca._</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">var</span> <span class="n">q</span>  <span class="k">=</span> <span class="nc">Query</span><span class="o">(</span><span class="s">&quot;&quot;&quot;</span>
+</span><span class='line'><span class="s">     [ :find ?e ?age</span>
+</span><span class='line'><span class="s">       :in $ ?name</span>
+</span><span class='line'><span class="s">       :where [ ?e :person/name ?name ] </span>
+</span><span class='line'><span class="s">              [ ?e :person/age ?age ]  </span>
+</span><span class='line'><span class="s">     ]&quot;&quot;&quot;</span><span class="o">)</span>
+</span><span class='line'><span class="n">q</span><span class="k">:</span> <span class="kt">datomisca.TypedQueryAuto2</span><span class="o">[</span><span class="kt">datomisca.DatomicData</span>,<span class="kt">datomisca.DatomicData</span>,<span class="o">(</span><span class="kt">datomisca.DatomicData</span>, <span class="kt">datomisca.DatomicData</span><span class="o">)]</span> <span class="k">=</span> <span class="o">[</span> <span class="kt">:find</span> <span class="kt">?e</span> <span class="kt">?age</span> <span class="kt">:in</span> <span class="kt">$</span> <span class="kt">?name</span> <span class="kt">:where</span> <span class="o">[</span><span class="kt">?e</span> <span class="kt">:person/name</span> <span class="kt">?name</span><span class="o">]</span> <span class="o">[</span><span class="kt">?e</span> <span class="kt">:person/age</span> <span class="kt">?age</span><span class="o">]</span> <span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>TypedQueryAuto2[DatomicData,DatomicData,(DatomicData, DatomicData)]</code> means you have:</p>
+
+<ul>
+<li>2 input parameters <code>$ ?name</code> of type <code>DatomicData</code></li>
+<li>last tupled type parameter represents the 2 output parameters <code>?e ?age</code> of type <code>DatomicData</code></li>
+</ul>
+
+
+<br/>
+
+
+<h3>Examples with syntax-error</h3>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">import</span> <span class="nn">datomisca._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">datomisca._</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">var</span> <span class="n">q</span>  <span class="k">=</span> <span class="nc">Query</span><span class="o">(</span><span class="s">&quot;&quot;&quot;</span>
+</span><span class='line'><span class="s">     [ :find ?e</span>
+</span><span class='line'><span class="s">       :in $ ?name</span>
+</span><span class='line'><span class="s">       :where [ ?e :person/name ?name </span>
+</span><span class='line'><span class="s">     ]&quot;&quot;&quot;</span><span class="o">)</span>
+</span><span class='line'><span class="o">&lt;</span><span class="n">console</span><span class="k">&gt;:</span><span class="mi">14</span><span class="k">:</span> <span class="kt">error:</span> <span class="kt">`]&#39; expected but end of source found</span>
+</span><span class='line'><span class="kt">     ]&quot;&quot;&quot;)</span>
+</span><span class='line'><span class="kt">      ^</span>
+</span><span class='line'>
+</span><span class='line'><span class="kt">scala&gt; var q  = Query(&quot;&quot;&quot;</span>
+</span><span class='line'><span class="kt">     [ :find ?e</span>
+</span><span class='line'><span class="kt">       :in $ ?name</span>
+</span><span class='line'><span class="kt">       :where [ ?e person/name ?name ]</span>
+</span><span class='line'><span class="kt">     ]&quot;&quot;&quot;)</span>
+</span><span class='line'><span class="kt">&lt;console&gt;:13: error: `</span><span class="err">]&#39;</span> <span class="kt">expected</span> <span class="kt">but</span> <span class="err">`</span><span class="kt">p</span><span class="err">&#39;</span> <span class="kt">found</span>
+</span><span class='line'>       <span class="k">:</span><span class="kt">where</span> <span class="o">[</span> <span class="kt">?e</span> <span class="kt">person/name</span> <span class="kt">?name</span> <span class="o">]</span>
+</span><span class='line'>                   <span class="o">^</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Here is see that the compiler will tell you where it detects syntax errors.</p>
+
+<p><em>The query compiler is not yet complete so don&#8217;t hesitate to report us when you discover issues.</em></p>
+
+<br/>
+
+
+<h2><a name="datomicdata">What&#8217;s <code>DatomicData</code> ?</a></h2>
+
+<p>Datomisca wraps completely Datomic API and types. So Datomisca doesn&#8217;t let any Datomic/Clojure types perspirating into its domain and wraps them all in the so-called <code>DatomicData</code> which is the abstract parent trait of all Datomic types seen from Datomisca. For each Datomic type, you have the corresponding specific <code>DatomicData</code>:</p>
+
+<ul>
+<li>DString for String</li>
+<li>DLong for Long</li>
+<li>DatomicFloat for Float</li>
+<li>DSet for Set</li>
+<li>DInstant for Instant</li>
+<li>&#8230;</li>
+</ul>
+
+
+<h3>Why not using Pure Scala types directly?</h3>
+
+<p>Firstly, because type correspondence is not exact between Datomic types and Scala. The best sample is <code>Instant</code>: is it a <code>java.util.Date</code> or a <code>jodatime.DateTime</code>?</p>
+
+<p>Secondly, we wanted to keep the possibility of converting Datomic types into different Scala types depending on our needs so we have abstracted those types.</p>
+
+<p>This abstraction also isolates us and we can decide exactly how we want to map Datomic types to Scala. The trade-off is naturally that, if new types appear in Datomic, we must wrap them.</p>
+
+<br/>
+
+
+<h3>Keep in mind that Datomisca queries accept and return <code>DatomicData</code></h3>
+
+<p>All query data used as input and output paremeters shall be <code>DatomicData</code>. When getting results, you can convert those generic <code>DatomicData</code> into one of the previous specific types (<code>DString</code>, <code>DLong</code>, … ).</p>
+
+<p>From <code>DatomicData</code>, you can also convert to Scala pure types based on implicit typeclasses:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="nc">DatomicData</span><span class="o">.</span><span class="n">as</span><span class="o">[</span><span class="kt">T</span><span class="o">](</span><span class="k">implicit</span> <span class="n">rd</span><span class="k">:</span> <span class="kt">DDReader</span><span class="o">[</span><span class="kt">DatomicData</span>, <span class="kt">T</span><span class="o">])</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="nc">DString</span><span class="o">(</span><span class="s">&quot;toto&quot;</span><span class="o">).</span><span class="n">as</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span>
+</span><span class='line'><span class="n">res0</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=</span> <span class="n">toto</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="nc">DString</span><span class="o">(</span><span class="s">&quot;toto&quot;</span><span class="o">).</span><span class="n">as</span><span class="o">[</span><span class="kt">Long</span><span class="o">]</span>
+</span><span class='line'><span class="n">java</span><span class="o">.</span><span class="n">lang</span><span class="o">.</span><span class="nc">ClassCastException</span><span class="k">:</span> <span class="kt">datomisca.DString</span> <span class="kt">cannot</span> <span class="kt">be</span> <span class="kt">cast</span> <span class="kt">to</span> <span class="kt">datomisca.DLong</span>
+</span><span class='line'><span class="o">...</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><em>Note 1 : that current Scala query compiler is a bit restricted to the specific domain of Datomic queries and doesn&#8217;t support all Clojure syntax which might create a few limitations when calling Clojure functions in queries. Anyway, a full Clojure syntax Scala compiler is in the TODO list so these limitations will disappear once it&#8217;s implemented…</em></p>
+
+<br/>
+
+
+<p><em>Note 2 : Current macro just infers the number of input/output parameters but, using Schema typed attributes that we will present in a future article, we will provide some deeper features such as parameter type inference.</em></p>
+
+<br/>
+
+
+<h1><a name="execute">Execute the query</a></h1>
+
+<p>You can create queries independently of any connection to Datomic.
+But you need an implicit <code>DatomicConnection</code> in your scope to execute it.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">datomisca._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">Datomic._</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Creates an implicit connection</span>
+</span><span class='line'><span class="k">val</span> <span class="n">uri</span> <span class="k">=</span> <span class="s">&quot;…&quot;</span>
+</span><span class='line'><span class="k">implicit</span> <span class="k">lazy</span> <span class="k">val</span> <span class="n">conn</span> <span class="k">=</span> <span class="nc">Datomic</span><span class="o">.</span><span class="n">connect</span><span class="o">(</span><span class="n">uri</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Creates the query</span>
+</span><span class='line'><span class="k">var</span> <span class="n">queryFindByName</span> <span class="k">=</span> <span class="nc">Query</span><span class="o">(</span><span class="s">&quot;&quot;&quot;</span>
+</span><span class='line'><span class="s">[ :find ?e ?birth</span>
+</span><span class='line'><span class="s">  :in $ ?name</span>
+</span><span class='line'><span class="s">  :where [ ?e :person/name ?name ]</span>
+</span><span class='line'><span class="s">         [ ?e :person/birth ?birth ]        </span>
+</span><span class='line'><span class="s">]&quot;&quot;&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Executes the query     </span>
+</span><span class='line'><span class="k">val</span> <span class="n">results</span><span class="k">:</span> <span class="kt">List</span><span class="o">[(</span><span class="kt">DatomicData</span>, <span class="kt">DatomicData</span><span class="o">]</span> <span class="kt">=</span> <span class="kt">Datomic.q</span><span class="o">(</span><span class="kt">queryFindByName</span>, <span class="kt">database</span>, <span class="kt">DString</span><span class="o">(</span><span class="err">&quot;</span><span class="kt">John</span><span class="err">&quot;</span><span class="o">))</span>
+</span><span class='line'><span class="kt">//</span> <span class="kt">Results</span> <span class="k">type</span> <span class="kt">is</span> <span class="kt">precised</span> <span class="kt">for</span> <span class="kt">the</span> <span class="kt">example</span> <span class="kt">but</span> <span class="kt">not</span> <span class="kt">required</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><em>Please note we made the <code>database</code> input parameter mandatory even if it&#8217;s implicit in when importing <code>Datomic._</code> because in Clojure, it&#8217;s also required and we wanted to stick to it.</em></p>
+
+<h3>Compile-error if wrong number of inputs</h3>
+
+<p>If you don&#8217;t provide 2 input parameters, you will get a compile error because the query expects 2 input parameters.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// Following would not compile because query expects 2 input parameters</span>
+</span><span class='line'><span class="k">val</span> <span class="n">results</span><span class="k">:</span> <span class="kt">List</span><span class="o">[(</span><span class="kt">DatomicData</span>, <span class="kt">DatomicData</span><span class="o">]</span> <span class="kt">=</span> <span class="kt">Datomic.q</span><span class="o">(</span><span class="kt">queryFindByName</span>, <span class="kt">DString</span><span class="o">(</span><span class="err">&quot;</span><span class="kt">John</span><span class="err">&quot;</span><span class="o">))</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">[</span><span class="kt">info</span><span class="o">]</span> <span class="kt">Compiling</span> <span class="err">1</span> <span class="kt">Scala</span> <span class="kt">source</span> <span class="kt">to</span> <span class="kt">/Users/pvo/zenexity/workspaces/workspace_pellucid/datomisca/samples/getting-started/target/scala-</span><span class="err">2</span><span class="kt">.</span><span class="err">10</span><span class="kt">/classes...</span>
+</span><span class='line'><span class="o">[</span><span class="kt">error</span><span class="o">]</span> <span class="kt">/Users/pvo/zenexity/workspaces/workspace_pellucid/datomisca/samples/getting-started/src/main/scala/GettingStarted.scala:</span><span class="err">87</span><span class="kt">:</span> <span class="kt">overloaded</span> <span class="kt">method</span> <span class="kt">value</span> <span class="kt">q</span> <span class="kt">with</span> <span class="kt">alternatives:</span>
+</span><span class='line'><span class="o">[</span><span class="kt">error</span><span class="o">]</span>   <span class="o">[</span><span class="kt">A</span>, <span class="kt">R</span><span class="o">(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)](</span><span class="kt">query:</span> <span class="kt">datomisca.TypedQueryAuto1</span><span class="o">[</span><span class="kt">A</span>,<span class="kt">R</span><span class="o">(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)]</span>, <span class="kt">a:</span> <span class="kt">A</span><span class="o">)(</span><span class="kt">implicit</span> <span class="kt">db:</span> <span class="kt">datomisca.DDatabase</span>, <span class="kt">implicit</span> <span class="kt">ddwa:</span> <span class="kt">datomisca.DD2Writer</span><span class="o">[</span><span class="kt">A</span><span class="o">]</span>, <span class="kt">implicit</span> <span class="kt">outConv:</span> <span class="kt">datomisca.DatomicDataToArgs</span><span class="o">[</span><span class="kt">R</span><span class="o">(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)])</span><span class="kt">List</span><span class="o">[</span><span class="kt">R</span><span class="o">(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)]</span> <span class="kt">&lt;and&gt;</span>
+</span><span class='line'><span class="o">[</span><span class="kt">error</span><span class="o">]</span>   <span class="o">[</span><span class="kt">R</span><span class="o">(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)](</span><span class="kt">query:</span> <span class="kt">datomisca.TypedQueryAuto0</span><span class="o">[</span><span class="kt">R</span><span class="o">(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)]</span>, <span class="kt">db:</span> <span class="kt">datomisca.DDatabase</span><span class="o">)(</span><span class="kt">implicit</span> <span class="kt">outConv:</span> <span class="kt">datomisca.DatomicDataToArgs</span><span class="o">[</span><span class="kt">R</span><span class="o">(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)])</span><span class="kt">List</span><span class="o">[</span><span class="kt">R</span><span class="o">(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)(</span><span class="kt">in</span> <span class="kt">method</span> <span class="kt">q</span><span class="o">)]</span> <span class="kt">&lt;and&gt;</span>
+</span><span class='line'><span class="o">[</span><span class="kt">error</span><span class="o">]</span>   <span class="o">[</span><span class="kt">OutArgs</span> <span class="k">&lt;:</span> <span class="kt">datomisca.Args</span>, <span class="kt">T</span><span class="o">](</span><span class="kt">q:</span> <span class="kt">datomisca.TypedQueryInOut</span><span class="o">[</span><span class="kt">datomisca.Args1</span>,<span class="kt">OutArgs</span><span class="o">]</span>, <span class="kt">d1:</span> <span class="kt">datomisca.DatomicData</span><span class="o">)(</span><span class="kt">implicit</span> <span class="kt">db:</span> <span class="kt">datomisca.DDatabase</span>, <span class="kt">implicit</span> <span class="kt">outConv:</span> <span class="kt">datomisca.DatomicDataToArgs</span><span class="o">[</span><span class="kt">OutArgs</span><span class="o">]</span>, <span class="kt">implicit</span> <span class="kt">ott:</span> <span class="kt">datomisca.ArgsToTuple</span><span class="o">[</span><span class="kt">OutArgs</span>,<span class="kt">T</span><span class="o">])</span><span class="kt">List</span><span class="o">[</span><span class="kt">T</span><span class="o">]</span> <span class="kt">&lt;and&gt;</span>
+</span><span class='line'><span class="o">[</span><span class="kt">error</span><span class="o">]</span>   <span class="o">[</span><span class="kt">InArgs</span> <span class="k">&lt;:</span> <span class="kt">datomisca.Args</span><span class="o">](</span><span class="kt">query:</span> <span class="kt">datomisca.PureQuery</span>, <span class="kt">in:</span> <span class="kt">InArgs</span><span class="o">)(</span><span class="kt">implicit</span> <span class="kt">db:</span> <span class="kt">datomisca.DDatabase</span><span class="o">)</span><span class="kt">List</span><span class="o">[</span><span class="kt">List</span><span class="o">[</span><span class="kt">datomisca.DatomicData</span><span class="o">]]</span>
+</span><span class='line'><span class="o">[</span><span class="kt">error</span><span class="o">]</span>  <span class="kt">cannot</span> <span class="kt">be</span> <span class="kt">applied</span> <span class="kt">to</span> <span class="o">(</span><span class="kt">datomisca.TypedQueryAuto2</span><span class="o">[</span><span class="kt">datomisca.DatomicData</span>,<span class="kt">datomisca.DatomicData</span>,<span class="o">(</span><span class="kt">datomisca.DatomicData</span>, <span class="kt">datomisca.DatomicData</span><span class="o">)]</span>, <span class="kt">datomisca.DString</span><span class="o">)</span>
+</span><span class='line'><span class="o">[</span><span class="kt">error</span><span class="o">]</span>         <span class="kt">val</span> <span class="kt">results</span> <span class="kt">=</span> <span class="kt">Datomic.q</span><span class="o">(</span><span class="kt">queryFindByName</span>, <span class="kt">DString</span><span class="o">(</span><span class="err">&quot;</span><span class="kt">John</span><span class="err">&quot;</span><span class="o">))</span>
+</span><span class='line'><span class="o">[</span><span class="kt">error</span><span class="o">]</span>                               <span class="kt">^</span>
+</span><span class='line'><span class="o">[</span><span class="kt">error</span><span class="o">]</span> <span class="kt">one</span> <span class="kt">error</span> <span class="kt">found</span>
+</span><span class='line'><span class="o">[</span><span class="kt">error</span><span class="o">]</span> <span class="o">(</span><span class="kt">compile:compile</span><span class="o">)</span> <span class="kt">Compilation</span> <span class="kt">failed</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The compile error seems a bit long as the compiler tries a few different version of <code>Datomic.q</code> but just remind that when you see <code>cannot be applied to (datomisca.TypedQueryAuto2[…</code>, it means you provided the wrong number of input parameters.</p>
+
+<br/>
+
+
+<h3>Use query results</h3>
+
+<p>Query results are <code>List[DatomicData…]</code> depending on the output parameters inferred by the Scala macros.</p>
+
+<p>In our case, we have 2 output parameters so we expect a <code>List[(DatomicData, DatomicData)]</code>.
+Using <code>List.map</code> (or <code>headOption</code> to get the first one only), you can then use pattern matching to specialize your <code>(DatomicData, DatomicData)</code> to <code>(DLong, DInstant)</code> as you expect.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">results</span> <span class="n">map</span> <span class="o">{</span>
+</span><span class='line'>  <span class="k">case</span> <span class="o">(</span><span class="n">e</span><span class="k">:</span> <span class="kt">DLong</span><span class="o">,</span> <span class="n">birth</span><span class="k">:</span> <span class="kt">DInstant</span><span class="o">)</span> <span class="k">=&gt;</span>
+</span><span class='line'>    <span class="c1">// converts into Scala types</span>
+</span><span class='line'>    <span class="k">val</span> <span class="n">eAsLong</span> <span class="k">=</span> <span class="n">e</span><span class="o">.</span><span class="n">as</span><span class="o">[</span><span class="kt">Long</span><span class="o">]</span>
+</span><span class='line'>    <span class="k">val</span> <span class="n">birthAsDate</span> <span class="k">=</span> <span class="n">birth</span><span class="o">.</span><span class="n">as</span><span class="o">[</span><span class="kt">java.util.Date</span><span class="o">]</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><em>Note 1: that when you want to convert your <code>DatomicData</code>, you can use our converters based on implicit typeclasses as following</em></p>
+
+<p><em>Note 2: The Scala macro has not way just based on query to infer the real types of output parameters but ther is a TODO in the roadmap: using typed schema attributes presented in a future article, we will be able to do better certainly… Be patient ;)</em></p>
+
+<br/>
+
+
+<h1><a name="complex">More complex queries</a></h1>
+
+<p>As Datomisca parses the queries, you may wonder what is the level of completeness of the query parser for now?</p>
+
+<p>Here are a few examples showing what can be executed already:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+<span class='line-number'>49</span>
+<span class='line-number'>50</span>
+<span class='line-number'>51</span>
+<span class='line-number'>52</span>
+<span class='line-number'>53</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">////////////////////////////////////////////////////</span>
+</span><span class='line'><span class="c1">// using variable number of inputs</span>
+</span><span class='line'><span class="k">val</span> <span class="n">q</span> <span class="k">=</span> <span class="nc">Query</span><span class="o">(</span><span class="s">&quot;&quot;&quot;[</span>
+</span><span class='line'><span class="s"> :find ?e</span>
+</span><span class='line'><span class="s"> :in $ [?names ...] </span>
+</span><span class='line'><span class="s"> :where [?e :person/name ?names]</span>
+</span><span class='line'><span class="s">]&quot;&quot;&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="nc">Datomic</span><span class="o">.</span><span class="n">q</span><span class="o">(</span><span class="n">q</span><span class="o">,</span> <span class="n">database</span><span class="o">,</span> <span class="nc">DSet</span><span class="o">(</span><span class="nc">DString</span><span class="o">(</span><span class="s">&quot;toto&quot;</span><span class="o">),</span> <span class="nc">DString</span><span class="o">(</span><span class="s">&quot;tata&quot;</span><span class="o">)))</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">////////////////////////////////////////////////////</span>
+</span><span class='line'><span class="c1">// using tuple inputs</span>
+</span><span class='line'><span class="k">val</span> <span class="n">q</span> <span class="k">=</span> <span class="nc">Query</span><span class="o">(</span><span class="s">&quot;&quot;&quot;[</span>
+</span><span class='line'><span class="s">  :find ?e ?name ?age</span>
+</span><span class='line'><span class="s">  :in $ [[?name ?age]]</span>
+</span><span class='line'><span class="s">  :where [?e :person/name ?name]</span>
+</span><span class='line'><span class="s">         [?e :person/age ?age]</span>
+</span><span class='line'><span class="s">]&quot;&quot;&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="nc">Datomic</span><span class="o">.</span><span class="n">q</span><span class="o">(</span><span class="n">q</span><span class="o">,</span>
+</span><span class='line'>  <span class="n">database</span><span class="o">,</span>
+</span><span class='line'>  <span class="nc">DSet</span><span class="o">(</span>
+</span><span class='line'>    <span class="nc">DSet</span><span class="o">(</span><span class="nc">DString</span><span class="o">(</span><span class="s">&quot;toto&quot;</span><span class="o">),</span> <span class="nc">DLong</span><span class="o">(</span><span class="mi">30L</span><span class="o">)),</span>
+</span><span class='line'>    <span class="nc">DSet</span><span class="o">(</span><span class="nc">DString</span><span class="o">(</span><span class="s">&quot;tutu&quot;</span><span class="o">),</span> <span class="nc">DLong</span><span class="o">(</span><span class="mi">54L</span><span class="o">))</span>
+</span><span class='line'>  <span class="o">)</span>
+</span><span class='line'><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">////////////////////////////////////////////////////</span>
+</span><span class='line'><span class="c1">// using function such as fulltext search</span>
+</span><span class='line'><span class="k">val</span> <span class="n">q</span> <span class="k">=</span> <span class="nc">Query</span><span class="o">(</span><span class="s">&quot;&quot;&quot;[</span>
+</span><span class='line'><span class="s">  :find ?e ?n</span>
+</span><span class='line'><span class="s">  :where [(fulltext $ :person/name &quot;toto&quot;) [[ ?e ?n ]]]</span>
+</span><span class='line'><span class="s">]&quot;&quot;&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">////////////////////////////////////////////////////</span>
+</span><span class='line'><span class="c1">// using rules</span>
+</span><span class='line'><span class="k">val</span> <span class="n">totoRule</span> <span class="k">=</span> <span class="nc">Query</span><span class="o">.</span><span class="n">rules</span><span class="o">(</span><span class="s">&quot;&quot;&quot;</span>
+</span><span class='line'><span class="s">[ [ [toto ?e]</span>
+</span><span class='line'><span class="s">    [?e :person/name &quot;toto&quot;]</span>
+</span><span class='line'><span class="s">] ]</span>
+</span><span class='line'><span class="s">&quot;&quot;&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">q</span> <span class="k">=</span> <span class="nc">Query</span><span class="o">(</span><span class="s">&quot;&quot;&quot;[</span>
+</span><span class='line'><span class="s"> :find ?e ?age</span>
+</span><span class='line'><span class="s"> :in $ %</span>
+</span><span class='line'><span class="s"> :where [?e :person/age ?age]</span>
+</span><span class='line'><span class="s">        (toto ?e)</span>
+</span><span class='line'><span class="s">]</span>
+</span><span class='line'><span class="s">&quot;&quot;&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">////////////////////////////////////////////////////</span>
+</span><span class='line'><span class="c1">// using query specifying just the field in fact to be searched</span>
+</span><span class='line'><span class="k">val</span> <span class="n">q</span> <span class="k">=</span> <span class="nc">Query</span><span class="o">(</span><span class="s">&quot;&quot;&quot;[:find ?e :where [?e :person/name]]&quot;&quot;&quot;</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><em>Note that currently Datomisca reserializes queries to string when executing because Java API requires it but once Datomic Java API accepts that we pass List[List[Object]] instead of strings for query, the interaction will be more direct…</em></p>
+
+<div class="well">Next articles about Datomic operations to insert/retract facts or entities in Datomic using Datomisca.</div>
+
+
+<p>Have datomiscafun!</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Playing the Fool with Scala Macros - Implementing PataMorphism]]></title>
