@@ -252,7 +252,7 @@ Remember that this PataMorphism doesn't pollute your code at runtime at all, it 
 <br/>
 ## Usage
 
-### With default seed (5sec compiling with msgs each 400ms)
+### With default seed (5s compiling with msgs each 400ms)
 {% codeblock lang:scala %}
 import VerySeriousCompiler._
 
@@ -294,7 +294,7 @@ resolving implicit typeclass from scope...................
 {% endcodeblock %}
 
 <br/>
-### With custom seed (5sec compiling with msgs each 400ms)
+### With custom seed (1s compiling with msgs each 200ms)
 
 {% codeblock lang:scala %}
 // using custom seed
@@ -381,6 +381,11 @@ But to test Macro a bit further, I decided to "*re-compile*" the input code from
 {% codeblock lang:scala %}
 reify(a.splice)
 {% endcodeblock %}
+
+#### Using macro paradise
+
+The `maquereau` project is based on [Macro Paradise](http://docs.scala-lang.org/overviews/macros/paradise.html) which is the experimental branch of Scala Macros.
+This implementation of patamorphism doesn't use any experimental feature from Macro Paradise but future samples will certainly.
 
 <br/>
 <br/>
