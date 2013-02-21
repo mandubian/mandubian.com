@@ -8,14 +8,14 @@ categories: [play framework,json,play 2.1,scala]
 keywords: play framework,json,play 2.1,scala
 ---
 
-In a very recent [Pull Request](https://github.com/playframework/Play20/pull/754), `play-json` has been made a stand-alone module in [Play2.2-SNAPSHOT master](https://github.com/playframework/Play20) as play-iteratees.
+In a very recent [Pull Request](https://github.com/playframework/Play20/pull/754), `play-json has been made a stand-alone module in [Play2.2-SNAPSHOT master](https://github.com/playframework/Play20) as play-iteratees.
 
 It means: 
 
 - You can take Play2 Scala Json API as a stand-alone library and keep using Json philosophy promoted by [Play Framework](http://www.playframework.org) anywhere.
 - `play-json` module is stand-alone in terms of dependencies but is a part & parcel of Play2.2 so it will evolve and follow Play2.x releases (and following versions) always ensuring full compatibility with play ecosystem.
 - `play-json` module has 3 ultra lightweight dependencies:
-     - `play-functional`, 
+     - `play-functional`  
      - `play-datacommons`
      - `play-iteratees`
 
