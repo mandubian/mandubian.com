@@ -4,7 +4,7 @@
   <title><![CDATA[Mandubian Blog]]></title>
   <link href="http://www.mandubian.com/atom.xml" rel="self"/>
   <link href="http://www.mandubian.com/"/>
-  <updated>2013-02-18T16:57:33+01:00</updated>
+  <updated>2013-02-21T16:09:23+01:00</updated>
   <id>http://www.mandubian.com/</id>
   <author>
     <name><![CDATA[Pascal Voitot]]></name>
@@ -12,6 +12,167 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Playing with Play2 SCALA JSON API Stand-alone]]></title>
+    <link href="http://www.mandubian.com/2013/02/21/play-json-stand-alone/"/>
+    <updated>2013-02-21T14:14:00+01:00</updated>
+    <id>http://www.mandubian.com/2013/02/21/play-json-stand-alone</id>
+    <content type="html"><![CDATA[<p>In a very recent <a href="https://github.com/playframework/Play20/pull/754">Pull Request</a>, <code>play-json</code> has been made a stand-alone module in <a href="https://github.com/playframework/Play20">Play2.2-SNAPSHOT master</a> as play-iteratees.</p>
+
+<p>It means:</p>
+
+<ul>
+<li>You can take Play2 Scala Json API as a stand-alone library and keep using Json philosophy promoted by <a href="http://www.playframework.org">Play Framework</a> anywhere.</li>
+<li><code>play-json</code> module is stand-alone in terms of dependencies but is a part &amp; parcel of Play2.2 so it will evolve and follow Play2.x releases (and following versions) always ensuring full compatibility with play ecosystem.</li>
+<li><code>play-json</code> module has 3 ultra lightweight dependencies:
+
+<ul>
+<li> <code>play-functional</code>,</li>
+<li> <code>play-datacommons</code></li>
+<li> <code>play-iteratees</code></li>
+</ul>
+</li>
+</ul>
+
+
+<p>These are pure Scala generic pieces of code from Play framework so no Netty or whatever dependencies in it.<br/>
+You can then import <code>play-json</code> in your project without any fear of bringing unwanted deps.</p>
+
+<p><code>play-json</code> will be released with future Play2.2 certainly so meanwhile, I provide:</p>
+
+<ul>
+<li>a build published in my <a href="https://github.com/mandubian/mandubian-mvn/">Maven Github repository</a></li>
+<li>a sample project called <a href="https://github.com/mandubian/play-json-alone">play-json-alone</a></li>
+</ul>
+
+
+<br/>
+
+
+<blockquote><p>Even if the version is <em>2.2-SNAPSHOT</em>, be aware that this is the same code as the one released in Play 2.1.0. This API has reached a good stability level. Enhancements and bug corrections will be brought to it but it&#8217;s production-ready right now.</p></blockquote>
+
+<h2>Adding play-json 2.2-SNAPSHOT in your dependencies</h2>
+
+<p>In your <code>Build.scala</code>, add:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">sbt._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">Keys._</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">object</span> <span class="nc">ApplicationBuild</span> <span class="k">extends</span> <span class="nc">Build</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">val</span> <span class="n">mandubianRepo</span> <span class="k">=</span> <span class="nc">Seq</span><span class="o">(</span>
+</span><span class='line'>    <span class="s">&quot;Mandubian repository snapshots&quot;</span> <span class="n">at</span> <span class="s">&quot;https://github.com/mandubian/mandubian-mvn/raw/master/snapshots/&quot;</span><span class="o">,</span>
+</span><span class='line'>    <span class="s">&quot;Mandubian repository releases&quot;</span> <span class="n">at</span> <span class="s">&quot;https://github.com/mandubian/mandubian-mvn/raw/master/releases/&quot;</span>
+</span><span class='line'>  <span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">lazy</span> <span class="k">val</span> <span class="n">playJsonAlone</span> <span class="k">=</span> <span class="nc">Project</span><span class="o">(</span>
+</span><span class='line'>    <span class="nc">BuildSettings</span><span class="o">.</span><span class="n">buildName</span><span class="o">,</span> <span class="n">file</span><span class="o">(</span><span class="s">&quot;.&quot;</span><span class="o">),</span>
+</span><span class='line'>    <span class="n">settings</span> <span class="k">=</span> <span class="nc">BuildSettings</span><span class="o">.</span><span class="n">buildSettings</span> <span class="o">++</span> <span class="nc">Seq</span><span class="o">(</span>
+</span><span class='line'>      <span class="n">resolvers</span> <span class="o">++=</span> <span class="n">mandubianRepo</span><span class="o">,</span>
+</span><span class='line'>      <span class="n">libraryDependencies</span> <span class="o">++=</span> <span class="nc">Seq</span><span class="o">(</span>
+</span><span class='line'>        <span class="s">&quot;play&quot;</span>        <span class="o">%%</span> <span class="s">&quot;play-json&quot;</span> <span class="o">%</span> <span class="s">&quot;2.2-SNAPSHOT&quot;</span><span class="o">,</span>
+</span><span class='line'>        <span class="s">&quot;org.specs2&quot;</span>  <span class="o">%%</span> <span class="s">&quot;specs2&quot;</span> <span class="o">%</span> <span class="s">&quot;1.13&quot;</span> <span class="o">%</span> <span class="s">&quot;test&quot;</span><span class="o">,</span>
+</span><span class='line'>        <span class="s">&quot;junit&quot;</span>        <span class="o">%</span> <span class="s">&quot;junit&quot;</span> <span class="o">%</span> <span class="s">&quot;4.8&quot;</span> <span class="o">%</span> <span class="s">&quot;test&quot;</span>
+</span><span class='line'>      <span class="o">)</span>
+</span><span class='line'>    <span class="o">)</span>
+</span><span class='line'>  <span class="o">)</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>Using play-json 2.2-SNAPSHOT in your code:</h2>
+
+<p>Just import the following and get everything from Play2.1 Json API:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.functional._</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">EucalyptusTree</span><span class="o">(</span><span class="n">col</span><span class="k">:</span><span class="kt">Int</span><span class="o">,</span> <span class="n">row</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">object</span> <span class="nc">EucalyptusTree</span><span class="o">{</span>
+</span><span class='line'>  <span class="k">implicit</span> <span class="k">val</span> <span class="n">fmt</span> <span class="k">=</span> <span class="nc">Json</span><span class="o">.</span><span class="n">format</span><span class="o">[</span><span class="kt">EucalyptusTree</span><span class="o">]</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">Koala</span><span class="o">(</span><span class="n">name</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">home</span><span class="k">:</span> <span class="kt">EucalyptusTree</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">object</span> <span class="nc">Koala</span><span class="o">{</span>
+</span><span class='line'>  <span class="k">implicit</span> <span class="k">val</span> <span class="n">fmt</span> <span class="k">=</span> <span class="nc">Json</span><span class="o">.</span><span class="n">format</span><span class="o">[</span><span class="kt">Koala</span><span class="o">]</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">kaylee</span> <span class="k">=</span> <span class="nc">Koala</span><span class="o">(</span><span class="s">&quot;kaylee&quot;</span><span class="o">,</span> <span class="nc">EucalyptusTree</span><span class="o">(</span><span class="mi">10</span><span class="o">,</span> <span class="mi">23</span><span class="o">))</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">println</span><span class="o">(</span><span class="nc">Json</span><span class="o">.</span><span class="n">prettyPrint</span><span class="o">(</span><span class="nc">Json</span><span class="o">.</span><span class="n">toJson</span><span class="o">(</span><span class="n">kaylee</span><span class="o">)))</span>
+</span><span class='line'>
+</span><span class='line'><span class="nc">Json</span><span class="o">.</span><span class="n">fromJson</span><span class="o">[</span><span class="kt">Koala</span><span class="o">](</span>
+</span><span class='line'>  <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span>
+</span><span class='line'>    <span class="s">&quot;name&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;kaylee&quot;</span><span class="o">,</span>
+</span><span class='line'>    <span class="s">&quot;home&quot;</span> <span class="o">-&gt;</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span>
+</span><span class='line'>      <span class="s">&quot;col&quot;</span> <span class="o">-&gt;</span> <span class="mi">10</span><span class="o">,</span>
+</span><span class='line'>      <span class="s">&quot;row&quot;</span> <span class="o">-&gt;</span> <span class="mi">23</span>
+</span><span class='line'>    <span class="o">)</span>
+</span><span class='line'><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>Using <code>play-json</code>, you can get some bits of <a href="http://www.playframework.org">Play Framework</a> pure Web philosophy.<br/>
+Naturally, to unleash its full power, don&#8217;t hesitate to dive into <a href="http://www.playframework.org">Play Framework</a> and discover 100% full Web Reactive Stack ;)</p></blockquote>
+
+<p>Thanks a lot to Play Framework team for promoting play-json as stand-alone module!<br/>
+Lots of interesting features incoming soon ;)</p>
+
+<p>Have fun!</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Datomisca Delicatessen - The Scala Reactive Cherry on the Datomic Cake of Facts]]></title>
