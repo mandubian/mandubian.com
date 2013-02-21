@@ -4,7 +4,7 @@
   <title><![CDATA[Mandubian Blog]]></title>
   <link href="http://www.mandubian.com/atom.xml" rel="self"/>
   <link href="http://www.mandubian.com/"/>
-  <updated>2013-02-21T16:09:23+01:00</updated>
+  <updated>2013-02-22T00:02:41+01:00</updated>
   <id>http://www.mandubian.com/</id>
   <author>
     <name><![CDATA[Pascal Voitot]]></name>
@@ -14,11 +14,260 @@
 
   
   <entry>
+    <title type="html"><![CDATA[Being aware Scala 2.10.0 Futures conceal Fatal exceptions]]></title>
+    <link href="http://www.mandubian.com/2013/02/22/scala-future-fatal-exception/"/>
+    <updated>2013-02-22T14:14:00+01:00</updated>
+    <id>http://www.mandubian.com/2013/02/22/scala-future-fatal-exception</id>
+    <content type="html"><![CDATA[<p>A short article to talk about <strong>an interesting issue concerning Scala 2.10.0 Future that might interest you</strong>.</p>
+
+<div class="well">
+<h3>Summary</h3><br/>
+<p>When a <code>Fatal</code> exception is thrown in your <code>Future</code> callback, it&#8217;s not caught by the <code>Future</code> and is thrown to the provided <code>ExecutionContext</code>.</p>
+<p><i>But the current default Scala global <code>ExecutionContext</code> doesn&#8217;t register an <code>UncaughtExceptionHandler</code> for these fatal exceptions and your <code>Future</code> just hangs forever without notifying anything to anybody.</i></p>
+</div>
+
+
+<blockquote><p>This issue is well <a href="https://issues.scala-lang.org/browse/SI-7029">known</a> and a solution to the problem has already been <a href="https://github.com/scala/scala/pull/2044">merged</a> into branch 2.10.x. But this issue is present in Scala 2.10.0 so it&#8217;s interesting to keep this issue in mind IMHO. Let&#8217;s explain clearly about it.</p></blockquote>
+
+<h2>Exceptions can be contained by Future</h2>
+
+<p>Let&#8217;s write some stupid code with Futures.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">import</span> <span class="nn">scala.concurrent._</span>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">import</span> <span class="nn">scala.concurrent.duration._</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Take default Scala global ExecutionContext which is a ForkJoin Thread Pool</span>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">ec</span> <span class="k">=</span> <span class="n">scala</span><span class="o">.</span><span class="n">concurrent</span><span class="o">.</span><span class="nc">ExecutionContext</span><span class="o">.</span><span class="n">global</span>
+</span><span class='line'><span class="n">ec</span><span class="k">:</span> <span class="kt">scala.concurrent.ExecutionContextExecutor</span> <span class="o">=</span> <span class="n">scala</span><span class="o">.</span><span class="n">concurrent</span><span class="o">.</span><span class="n">impl</span><span class="o">.</span><span class="nc">ExecutionContextImpl</span><span class="k">@</span><span class="mi">15</span><span class="n">f445b7</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Create an immediately redeemed Future with a simple RuntimeException</span>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">f</span> <span class="k">=</span> <span class="n">future</span><span class="o">(</span> <span class="k">throw</span> <span class="k">new</span> <span class="nc">RuntimeException</span><span class="o">(</span><span class="s">&quot;foo&quot;</span><span class="o">)</span> <span class="o">)(</span><span class="n">ec</span><span class="o">)</span>
+</span><span class='line'><span class="n">f</span><span class="k">:</span> <span class="kt">scala.concurrent.Future</span><span class="o">[</span><span class="kt">Nothing</span><span class="o">]</span> <span class="k">=</span> <span class="n">scala</span><span class="o">.</span><span class="n">concurrent</span><span class="o">.</span><span class="n">impl</span><span class="o">.</span><span class="nc">Promise$DefaultPromise</span><span class="k">@</span><span class="mi">27380357</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Access brutally the value to show that the Future contains my RuntimeException</span>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="n">f</span><span class="o">.</span><span class="n">value</span>
+</span><span class='line'><span class="n">res22</span><span class="k">:</span> <span class="kt">Option</span><span class="o">[</span><span class="kt">scala.util.Try</span><span class="o">[</span><span class="kt">Nothing</span><span class="o">]]</span> <span class="k">=</span> <span class="nc">Some</span><span class="o">(</span><span class="nc">Failure</span><span class="o">(</span><span class="n">java</span><span class="o">.</span><span class="n">lang</span><span class="o">.</span><span class="nc">RuntimeException</span><span class="k">:</span> <span class="kt">foo</span><span class="o">))</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Use blocking await to get Future result</span>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="nc">Await</span><span class="o">.</span><span class="n">result</span><span class="o">(</span><span class="n">f</span><span class="o">,</span> <span class="mi">2</span> <span class="n">seconds</span><span class="o">)</span>
+</span><span class='line'><span class="n">warning</span><span class="k">:</span> <span class="kt">there</span> <span class="kt">were</span> <span class="err">1</span> <span class="kt">feature</span> <span class="kt">warnings</span><span class="o">;</span> <span class="n">re</span><span class="o">-</span><span class="n">run</span> <span class="k">with</span> <span class="o">-</span><span class="n">feature</span> <span class="k">for</span> <span class="n">details</span>
+</span><span class='line'><span class="n">java</span><span class="o">.</span><span class="n">lang</span><span class="o">.</span><span class="nc">RuntimeException</span><span class="k">:</span> <span class="kt">foo</span>
+</span><span class='line'>  <span class="n">at</span> <span class="nc">$anonfun$1</span><span class="o">.</span><span class="n">apply</span><span class="o">(&lt;</span><span class="n">console</span><span class="k">&gt;:</span><span class="mi">14</span><span class="o">)</span>
+</span><span class='line'>  <span class="n">at</span> <span class="nc">$anonfun$1</span><span class="o">.</span><span class="n">apply</span><span class="o">(&lt;</span><span class="n">console</span><span class="k">&gt;:</span><span class="mi">14</span><span class="o">)</span>
+</span><span class='line'>  <span class="o">...</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>You can see that a <code>Future</code> can contain an <code>Exception</code> (or more generally <code>Throwable</code>).</p></blockquote>
+
+<br/>
+
+
+<h2>Fatal Exceptions can&#8217;t be contained by Future</h2>
+
+<p>If you look in <a href="https://github.com/scala/scala/blob/v2.10.0/src/library/scala/concurrent/Future.scala#L53">Scala 2.10.0 Future.scala</a>, in the scaladoc, you can find:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='plain'><span class='line'>* The following throwable objects are not contained in the future:
+</span><span class='line'>* - `Error` - errors are not contained within futures
+</span><span class='line'>* - `InterruptedException` - not contained within futures
+</span><span class='line'>* - all `scala.util.control.ControlThrowable` except `NonLocalReturnControl` - not contained within futures</span></code></pre></td></tr></table></div></figure>
+
+
+<p>and in the code, in several places, in <code>map</code> or <code>flatMap</code> for example, you can read:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">try</span> <span class="o">{</span>
+</span><span class='line'><span class="o">...</span>
+</span><span class='line'><span class="o">}</span> <span class="k">catch</span> <span class="o">{</span>
+</span><span class='line'>  <span class="k">case</span> <span class="nc">NonFatal</span><span class="o">(</span><span class="n">t</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="n">p</span> <span class="n">failure</span> <span class="n">t</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>This means that every <code>Throwable</code> that is Fatal can&#8217;t be contained in the <code>Future.Failure</code>.</p></blockquote>
+
+<br/>
+
+
+<h2>What&#8217;s a <em>Fatal</em> Throwable?</h2>
+
+<p>To define what&#8217;s fatal, let&#8217;s see what&#8217;s declared as non-fatal in <a href="http://www.scala-lang.org/archives/downloads/distrib/files/nightly/docs/library/index.html#scala.util.control.NonFatal$">NonFatal ScalaDoc</a>.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='plain'><span class='line'>* Extractor of non-fatal Throwables.  
+</span><span class='line'>* Will not match fatal errors like VirtualMachineError  
+</span><span class='line'>* (for example, OutOfMemoryError, a subclass of VirtualMachineError),  
+</span><span class='line'>* ThreadDeath, LinkageError, InterruptedException, ControlThrowable, or NotImplementedError. 
+</span><span class='line'>*
+</span><span class='line'>* Note that [[scala.util.control.ControlThrowable]], an internal Throwable, is not matched by
+</span><span class='line'>* `NonFatal` (and would therefore be thrown).</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>Let&#8217;s consider Fatal exceptions are just critical errors that can&#8217;t be recovered in general.</p></blockquote>
+
+<h2>So what&#8217;s the problem?</h2>
+
+<p>It seems right not to catch fatal errors in the `Future, isn&#8217;t it?</p>
+
+<p>But, look at following code:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// Let&#39;s throw a simple Fatal exception</span>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">f</span> <span class="k">=</span> <span class="n">future</span><span class="o">(</span> <span class="k">throw</span> <span class="k">new</span> <span class="nc">NotImplementedError</span><span class="o">()</span> <span class="o">)(</span><span class="n">ec</span><span class="o">)</span>
+</span><span class='line'><span class="n">f</span><span class="k">:</span> <span class="kt">scala.concurrent.Future</span><span class="o">[</span><span class="kt">Nothing</span><span class="o">]</span> <span class="k">=</span> <span class="n">scala</span><span class="o">.</span><span class="n">concurrent</span><span class="o">.</span><span class="n">impl</span><span class="o">.</span><span class="nc">Promise$DefaultPromise</span><span class="k">@</span><span class="mi">59747</span><span class="n">b17</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="n">f</span><span class="o">.</span><span class="n">value</span>
+</span><span class='line'><span class="n">res0</span><span class="k">:</span> <span class="kt">Option</span><span class="o">[</span><span class="kt">scala.util.Try</span><span class="o">[</span><span class="kt">Nothing</span><span class="o">]]</span> <span class="k">=</span> <span class="nc">None</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Ok, the <code>Future</code> doesn&#8217;t contain the Fatal Exception as expected.</p>
+
+<p><strong>But where is my Fatal Exception if it&#8217;s not caught??? No crash, notification or whatever?</strong></p>
+
+<p>There should be an `UncaughtExceptionHandler at least notifying it!</p>
+
+<br/>
+
+
+<h2>The problem is in the default Scala <code>ExecutionContext</code>.</h2>
+
+<p>As explained in this <a href="https://issues.scala-lang.org/browse/SI-7029">issue</a>, the exception is lost due to the implementation of the default global <code>ExecutionContext</code> provided in Scala.</p>
+
+<p>This is a simple ForkJoin pool of threads but it has no <code>UncaughtExceptionHandler</code>. Have a look at code in <a href="https://github.com/scala/scala/blob/v2.10.0/src/library/scala/concurrent/impl/ExecutionContextImpl.scala#L72">Scala 2.10.0 ExecutionContextImpl.scala</a></p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">try</span> <span class="o">{</span>
+</span><span class='line'>      <span class="k">new</span> <span class="nc">ForkJoinPool</span><span class="o">(</span>
+</span><span class='line'>        <span class="n">desiredParallelism</span><span class="o">,</span>
+</span><span class='line'>        <span class="n">threadFactory</span><span class="o">,</span>
+</span><span class='line'>        <span class="kc">null</span><span class="o">,</span> <span class="c1">//FIXME we should have an UncaughtExceptionHandler, see what Akka does</span>
+</span><span class='line'>        <span class="kc">true</span><span class="o">)</span> <span class="c1">// Async all the way baby</span>
+</span><span class='line'>    <span class="o">}</span> <span class="k">catch</span> <span class="o">{</span>
+</span><span class='line'>      <span class="k">case</span> <span class="nc">NonFatal</span><span class="o">(</span><span class="n">t</span><span class="o">)</span> <span class="k">=&gt;</span>
+</span><span class='line'>        <span class="o">...</span>
+</span><span class='line'>    <span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>Here it&#8217;s quite clear: there is no registered `UncaughtExceptionHandler.</p>
+
+<p>What&#8217;s the consequence?</p></blockquote>
+
+<h2>Your Future hangs forever</h2>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="nc">Await</span><span class="o">.</span><span class="n">result</span><span class="o">(</span><span class="n">f</span><span class="o">,</span> <span class="mi">30</span> <span class="n">seconds</span><span class="o">)</span>
+</span><span class='line'><span class="n">warning</span><span class="k">:</span> <span class="kt">there</span> <span class="kt">were</span> <span class="err">1</span> <span class="kt">feature</span> <span class="kt">warnings</span><span class="o">;</span> <span class="n">re</span><span class="o">-</span><span class="n">run</span> <span class="k">with</span> <span class="o">-</span><span class="n">feature</span> <span class="k">for</span> <span class="n">details</span>
+</span><span class='line'><span class="n">java</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">concurrent</span><span class="o">.</span><span class="nc">TimeoutException</span><span class="k">:</span> <span class="kt">Futures</span> <span class="kt">timed</span> <span class="kt">out</span> <span class="kt">after</span> <span class="o">[</span><span class="err">30</span> <span class="kt">seconds</span><span class="o">]</span>
+</span><span class='line'>  <span class="n">at</span> <span class="n">scala</span><span class="o">.</span><span class="n">concurrent</span><span class="o">.</span><span class="n">impl</span><span class="o">.</span><span class="nc">Promise$DefaultPromise</span><span class="o">.</span><span class="n">ready</span><span class="o">(</span><span class="nc">Promise</span><span class="o">.</span><span class="n">scala</span><span class="k">:</span><span class="err">96</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>As you can see, you can wait as long as you want, the Future is never redeemed properly, it just hangs forever and you don&#8217;t even know that a Fatal Exception has been thrown.</p>
+
+<p>As explained in the issue, please note, if you use a custom <code>ExecutionContext</code> based on <code>SingleThreadExecutor</code>, this issue doesn&#8217;t appear!</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">es</span> <span class="k">=</span> <span class="n">java</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">concurrent</span><span class="o">.</span><span class="nc">Executors</span><span class="o">.</span><span class="n">newSingleThreadExecutor</span>
+</span><span class='line'><span class="n">es</span><span class="k">:</span> <span class="kt">java.util.concurrent.ExecutorService</span> <span class="o">=</span> <span class="n">java</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">concurrent</span><span class="o">.</span><span class="nc">Executors$FinalizableDelegatedExecutorService</span><span class="k">@</span><span class="mi">1</span><span class="n">e336f59</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">ec</span> <span class="k">=</span> <span class="nc">ExecutionContext</span><span class="o">.</span><span class="n">fromExecutorService</span><span class="o">(</span><span class="n">es</span><span class="o">)</span>
+</span><span class='line'><span class="n">ec</span><span class="k">:</span> <span class="kt">scala.concurrent.ExecutionContextExecutorService</span> <span class="o">=</span> <span class="n">scala</span><span class="o">.</span><span class="n">concurrent</span><span class="o">.</span><span class="n">impl</span><span class="o">.</span><span class="nc">ExecutionContextImpl$$anon$1</span><span class="k">@</span><span class="mi">34</span><span class="n">f43dac</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span>  <span class="k">val</span> <span class="n">f</span> <span class="k">=</span> <span class="nc">Future</span><span class="o">[</span><span class="kt">Unit</span><span class="o">](</span><span class="k">throw</span> <span class="k">new</span> <span class="nc">NotImplementedError</span><span class="o">())(</span><span class="n">ec</span><span class="o">)</span>
+</span><span class='line'><span class="nc">Exception</span> <span class="n">in</span> <span class="n">thread</span> <span class="s">&quot;pool-1-thread-1&quot;</span> <span class="n">f</span><span class="k">:</span> <span class="kt">scala.concurrent.Future</span><span class="o">[</span><span class="kt">Unit</span><span class="o">]</span> <span class="k">=</span> <span class="n">scala</span><span class="o">.</span><span class="n">concurrent</span><span class="o">.</span><span class="n">impl</span><span class="o">.</span><span class="nc">Promise$DefaultPromise</span><span class="k">@</span><span class="mi">7</span><span class="n">d01f935</span>
+</span><span class='line'><span class="n">scala</span><span class="o">.</span><span class="nc">NotImplementedError</span><span class="k">:</span> <span class="kt">an</span> <span class="kt">implementation</span> <span class="kt">is</span> <span class="kt">missing</span>
+</span><span class='line'>  <span class="n">at</span> <span class="nc">$line41</span><span class="o">.</span><span class="nc">$read$$iw$$iw$$iw$$iw$$iw$$iw$$anonfun$1</span><span class="o">.</span><span class="n">apply</span><span class="o">(&lt;</span><span class="n">console</span><span class="k">&gt;:</span><span class="mi">15</span><span class="o">)</span>
+</span><span class='line'>  <span class="n">at</span> <span class="nc">$line41</span><span class="o">.</span><span class="nc">$read$$iw$$iw$$iw$$iw$$iw$$iw$$anonfun$1</span><span class="o">.</span><span class="n">apply</span><span class="o">(&lt;</span><span class="n">console</span><span class="k">&gt;:</span><span class="mi">15</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>Conclusion</h2>
+
+<p><strong>In Scala 2.10.0, if you have a Fatal Exception in a Future callback, your Future just trashes the Fatal Exception and hangs forever without notifying anything.</strong></p>
+
+<p>Hopefully, due to this <a href="https://github.com/scala/scala/pull/2044">already merged PR</a>, in a future delivery of Scala 2.10.x, this problem should be corrected.</p>
+
+<p>To finish, in the same old good <a href="https://issues.scala-lang.org/browse/SI-7029">issue</a>, Viktor Klang also raised the question of what should be considered as fatal or not:</p>
+
+<blockquote><p>there&#8217;s a bigger topic at hand here, the one whether NotImplementedError, InterruptedException and ControlThrowable are to be considered fatal or not.</p></blockquote>
+
+<p>Meanwhile, be aware and take care ;)</p>
+
+<p>Have <code>Promise[NonFatal]</code>!</p>
+]]></content>
+  </entry>
+  
+  <entry>
     <title type="html"><![CDATA[Playing with Play2 SCALA JSON API Stand-alone]]></title>
     <link href="http://www.mandubian.com/2013/02/21/play-json-stand-alone/"/>
     <updated>2013-02-21T14:14:00+01:00</updated>
     <id>http://www.mandubian.com/2013/02/21/play-json-stand-alone</id>
-    <content type="html"><![CDATA[<p>In a very recent <a href="https://github.com/playframework/Play20/pull/754">Pull Request</a>, <code>play-json</code> has been made a stand-alone module in <a href="https://github.com/playframework/Play20">Play2.2-SNAPSHOT master</a> as play-iteratees.</p>
+    <content type="html"><![CDATA[<p>In a very recent <a href="https://github.com/playframework/Play20/pull/754">Pull Request</a>, `play-json has been made a stand-alone module in <a href="https://github.com/playframework/Play20">Play2.2-SNAPSHOT master</a> as play-iteratees.</p>
 
 <p>It means:</p>
 
@@ -28,7 +277,7 @@
 <li><code>play-json</code> module has 3 ultra lightweight dependencies:
 
 <ul>
-<li> <code>play-functional</code>,</li>
+<li> <code>play-functional</code></li>
 <li> <code>play-datacommons</code></li>
 <li> <code>play-iteratees</code></li>
 </ul>
