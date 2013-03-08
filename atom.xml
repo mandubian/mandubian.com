@@ -4,7 +4,7 @@
   <title><![CDATA[Mandubian Blog]]></title>
   <link href="http://www.mandubian.com/atom.xml" rel="self"/>
   <link href="http://www.mandubian.com/"/>
-  <updated>2013-02-27T00:19:06+01:00</updated>
+  <updated>2013-03-08T14:29:14+01:00</updated>
   <id>http://www.mandubian.com/</id>
   <author>
     <name><![CDATA[Pascal Voitot]]></name>
@@ -12,6 +12,774 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Datomisca Delicatessen -  Emulsion of Scala type-safety in Datomic Schema]]></title>
+    <link href="http://www.mandubian.com/2013/03/04/datomisca-schema/"/>
+    <updated>2013-03-04T00:00:00+01:00</updated>
+    <id>http://www.mandubian.com/2013/03/04/datomisca-schema</id>
+    <content type="html"><![CDATA[<p>One more step in our progressive unveiling of <a href="http://pellucidanalytics.github.com/datomisca/index.html">Datomisca</a>, our opensource Scala API (sponsored by <a href="http://www.pellucidanalytics.com">Pellucid</a> &amp; <a href="http://www.zenexity.com">Zenexity</a>) trying to enhance <a href="http://www.datomic.com">Datomic</a> experience for Scala developers&#8230;</p>
+
+<p>After evoking <a href="./2013-02-10-datomisca-query.html">queries compiled by Scala macros in previous article</a> and then <a href="./2013-02-18-datomisca-fact-operations.html">reactive transaction &amp; fact operation API</a>, let&#8217;s explain <strong>how <em>Datomisca</em> manages Datomic schema attributes</strong>.</p>
+
+<br/>
+
+
+<h1>Datomic Schema Reminders</h1>
+
+<p>As explained in previous articles, Datomic stores lots of atomic facts called <code>datoms</code> which are constituted of <code>entity-id</code>, <code>attribute</code>, <code>value</code> and <code>transaction-id</code>.</p>
+
+<p>An attribute is just a namespaced keyword <code>:&lt;namespace&gt;.&lt;nested-namespace&gt;/&lt;name&gt; such as</code>:person.address/street`:</p>
+
+<ul>
+<li><code>person.address</code> is just a hierarchical namespace <code>person</code> -> <code>address</code></li>
+<li><code>street</code> is the name of the attribute</li>
+</ul>
+
+
+<p>It&#8217;s cool to provision all thoses atomic pieces of information but what if we provision non existing attribute with bad format, type, &#8230;? Is there a way to control the format of data in Datomic?</p>
+
+<blockquote><p>In a less strict way than SQL, Datomic provides schema facility allowing to constrain the accepted attributes and their type values.</p></blockquote>
+
+<h2>Schema attribute definition</h2>
+
+<p>Datomic schema just defines the accepted attributes and some constraints on those attributes. Each schema attribute can be defined by following fields:</p>
+
+<h3>value type</h3>
+
+<ul>
+<li><strong>basic types</strong> : <code>string</code>, <code>long</code>, <code>float</code>, <code>bigint</code>, <code>bigdec</code>, <code>boolean</code>, <code>instant</code>, <code>uuid</code>, <code>uri</code>, <code>bytes</code> (yes NO <code>int</code>).</li>
+<li><strong>reference</strong> : in Datomic you can reference other entities (these are lazy relations not as strict as the ones in RDBMS)</li>
+</ul>
+
+
+<h3>cardinality</h3>
+
+<ul>
+<li><strong>one</strong> : one-to-one relation if you want an analogy with RDBMS</li>
+<li><strong>many</strong> : one-to-many relation</li>
+</ul>
+
+
+<blockquote><p>Please note that in Datomic, all relations are bidirectional even for one-to-many.</p></blockquote>
+
+<h3>optional constraints:</h3>
+
+<ul>
+<li>unicity</li>
+<li>index creation</li>
+<li>fulltext indexation</li>
+<li>a few more exotic ones that you&#8217;ll find in <a href="http://docs.datomic.com/schema.html">Datomic doc about schema</a></li>
+</ul>
+
+
+<h2>Schema attributes are entities</h2>
+
+<p>The schema validation is applied at fact insertion and allows to prevent from inserting unknown attributes or bad value types. But how are schema attributes defined?</p>
+
+<p><strong>Actually, schema attributes are themselves entities. </strong></p>
+
+<p>Remember, in previous article, I had introduced entities as being just loose aggregation of datoms just identified by the same entity ID (the first attribute of a datom).</p>
+
+<p>So a schema attribute is just an entity stored in a special partition <code>:db.part/db</code> and defined by a few specific fields corresponding to the ones in previous paragraph. Here are the fields used to define a Datomic schema attribute technically speaking:</p>
+
+<h3>mandatory fields</h3>
+
+<ul>
+<li><code>:db/ident</code> : specifies unique name of the attribute</li>
+<li><code>:db/valueType</code> : specifies one the previous types - <em>Please note that even those types are not hard-coded in Datomic and in the future, adding new types could be a new feature.</em></li>
+<li><code>:db/cardinality</code> : specifies the cardinality <code>one</code> or <code>many</code> of the attribute - a many attribute is just a set of values and type <code>Set</code> is important because Datomic only manages sets of unique values as it won&#8217;t return multiple times the same value when querying.</li>
+</ul>
+
+
+<h3>optional fields</h3>
+
+<ul>
+<li><code>:db/unique</code></li>
+<li><code>:db/doc</code> (<em>useful to document your schema</em>)</li>
+<li><code>:db/index</code></li>
+<li><code>:db/fulltext</code></li>
+<li><code>:db/isComponent</code></li>
+<li><code>:db/noHistory</code></li>
+</ul>
+
+
+<p>Here is an example of schema attribute declaration written in Clojure:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='clojure'><span class='line'><span class="p">{</span><span class="ss">:db/id</span> <span class="o">#</span><span class="nv">db/id</span><span class="p">[</span><span class="ss">:db.part/db</span><span class="p">]</span>
+</span><span class='line'> <span class="ss">:db/ident</span> <span class="ss">:person/name</span>
+</span><span class='line'> <span class="ss">:db/valueType</span> <span class="ss">:db.type/string</span>
+</span><span class='line'> <span class="ss">:db/cardinality</span> <span class="ss">:db.cardinality/one</span>
+</span><span class='line'> <span class="ss">:db/doc</span> <span class="s">&quot;A person&#39;s name&quot;</span><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>As you can see, creating schema attributes just means creating new entities in the right partition. So, to add new attributes to Datomic, you just have to add new facts.</p></blockquote>
+
+<br/>
+
+
+<h1>Schema sample</h1>
+
+<p>Let&#8217;s create a schema defining a Koala living in an eucalyptus.</p>
+
+<div class="well">
+  <p>Yes I&#8217;m a super-Koala fan! Don&#8217;t ask me why, this is a long story not linked at all to Australia :D&#8230; But saving Koalas is important to me so I put this little banner for them&#8230;<span style="float: right"><a href="http://www.savethekoala.com"><img src="http://www.mandubian.com/images/mandubian/buttondonate.gif" /></a></span>
+  </p>
+</div>
+
+
+<p>Let&#8217;s define a koala by following attributes:</p>
+
+<ul>
+<li>a name <code>String</code></li>
+<li>an age <code>Long</code></li>
+<li>a sex which can be <code>male</code> or `female</li>
+<li><p>a few eucalyptus trees in which to feed defined by:</p>
+
+<ul>
+<li>a species being a <code>reference</code> to one of the possible species of eucalyptus trees</li>
+<li>a row <code>Long</code> (<em>let&#8217;s imagine those trees are planted in rows/columns</em>)</li>
+<li>a column <code>Long</code></li>
+</ul>
+</li>
+</ul>
+
+
+<p>Here is the Datomic schema for this:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+<span class='line-number'>49</span>
+<span class='line-number'>50</span>
+<span class='line-number'>51</span>
+<span class='line-number'>52</span>
+<span class='line-number'>53</span>
+<span class='line-number'>54</span>
+<span class='line-number'>55</span>
+<span class='line-number'>56</span>
+<span class='line-number'>57</span>
+</pre></td><td class='code'><pre><code class='clojure'><span class='line'><span class="p">[</span>
+</span><span class='line'><span class="p">{</span><span class="ss">:db/id</span> <span class="o">#</span><span class="nv">db/id</span><span class="p">[</span><span class="ss">:db.part/db</span><span class="p">]</span>
+</span><span class='line'> <span class="ss">:db/ident</span> <span class="ss">:koala/name</span>
+</span><span class='line'> <span class="ss">:db/valueType</span> <span class="ss">:db.type/string</span>
+</span><span class='line'> <span class="ss">:db/unique</span> <span class="ss">:db.unique/value</span>
+</span><span class='line'> <span class="ss">:db/cardinality</span> <span class="ss">:db.cardinality/one</span>
+</span><span class='line'> <span class="ss">:db/doc</span> <span class="s">&quot;A koala&#39;s name&quot;</span><span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="p">{</span><span class="ss">:db/id</span> <span class="o">#</span><span class="nv">db/id</span><span class="p">[</span><span class="ss">:db.part/db</span><span class="p">]</span>
+</span><span class='line'> <span class="ss">:db/ident</span> <span class="ss">:koala/age</span>
+</span><span class='line'> <span class="ss">:db/valueType</span> <span class="ss">:db.type/long</span>
+</span><span class='line'> <span class="ss">:db/cardinality</span> <span class="ss">:db.cardinality/one</span>
+</span><span class='line'> <span class="ss">:db/doc</span> <span class="s">&quot;A koala&#39;s age&quot;</span><span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="p">{</span><span class="ss">:db/id</span> <span class="o">#</span><span class="nv">db/id</span><span class="p">[</span><span class="ss">:db.part/db</span><span class="p">]</span>
+</span><span class='line'> <span class="ss">:db/ident</span> <span class="ss">:koala/sex</span>
+</span><span class='line'> <span class="ss">:db/valueType</span> <span class="ss">:db.type/ref</span>
+</span><span class='line'> <span class="ss">:db/cardinality</span> <span class="ss">:db.cardinality/one</span>
+</span><span class='line'> <span class="ss">:db/doc</span> <span class="s">&quot;A koala&#39;s sex&quot;</span><span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="p">{</span><span class="ss">:db/id</span> <span class="o">#</span><span class="nv">db/id</span><span class="p">[</span><span class="ss">:db.part/db</span><span class="p">]</span>
+</span><span class='line'> <span class="ss">:db/ident</span> <span class="ss">:koala/eucalyptus</span>
+</span><span class='line'> <span class="ss">:db/valueType</span> <span class="ss">:db.type/ref</span>
+</span><span class='line'> <span class="ss">:db/cardinality</span> <span class="ss">:db.cardinality/many</span>
+</span><span class='line'> <span class="ss">:db/doc</span> <span class="s">&quot;A koala&#39;s eucalyptus trees&quot;</span><span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="p">{</span><span class="ss">:db/id</span> <span class="o">#</span><span class="nv">db/id</span><span class="p">[</span><span class="ss">:db.part/db</span><span class="p">]</span>
+</span><span class='line'> <span class="ss">:db/ident</span> <span class="ss">:eucalyptus/species</span>
+</span><span class='line'> <span class="ss">:db/valueType</span> <span class="ss">:db.type/ref</span>
+</span><span class='line'> <span class="ss">:db/cardinality</span> <span class="ss">:db.cardinality/one</span>
+</span><span class='line'> <span class="ss">:db/doc</span> <span class="s">&quot;A eucalyptus specie&quot;</span><span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="p">{</span><span class="ss">:db/id</span> <span class="o">#</span><span class="nv">db/id</span><span class="p">[</span><span class="ss">:db.part/db</span><span class="p">]</span>
+</span><span class='line'> <span class="ss">:db/ident</span> <span class="ss">:eucalyptus/row</span>
+</span><span class='line'> <span class="ss">:db/valueType</span> <span class="ss">:db.type/long</span>
+</span><span class='line'> <span class="ss">:db/cardinality</span> <span class="ss">:db.cardinality/one</span>
+</span><span class='line'> <span class="ss">:db/doc</span> <span class="s">&quot;A eucalyptus row&quot;</span><span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="p">{</span><span class="ss">:db/id</span> <span class="o">#</span><span class="nv">db/id</span><span class="p">[</span><span class="ss">:db.part/db</span><span class="p">]</span>
+</span><span class='line'> <span class="ss">:db/ident</span> <span class="ss">:eucalyptus/col</span>
+</span><span class='line'> <span class="ss">:db/valueType</span> <span class="ss">:db.type/long</span>
+</span><span class='line'> <span class="ss">:db/cardinality</span> <span class="ss">:db.cardinality/one</span>
+</span><span class='line'> <span class="ss">:db/doc</span> <span class="s">&quot;A eucalyptus column&quot;</span><span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">;; koala sexes as keywords</span>
+</span><span class='line'><span class="p">[</span><span class="ss">:db/add</span> <span class="o">#</span><span class="nv">db/id</span><span class="p">[</span><span class="ss">:db.part/user</span><span class="p">]</span> <span class="ss">:db/ident</span> <span class="ss">:sex/male</span><span class="p">]</span>
+</span><span class='line'><span class="p">[</span><span class="ss">:db/add</span> <span class="o">#</span><span class="nv">db/id</span><span class="p">[</span><span class="ss">:db.part/user</span><span class="p">]</span> <span class="ss">:db/ident</span> <span class="ss">:sex/female</span><span class="p">]</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">;; eucalyptus species</span>
+</span><span class='line'><span class="p">[</span><span class="ss">:db/add</span> <span class="o">#</span><span class="nv">db/id</span><span class="p">[</span><span class="ss">:db.part/user</span><span class="p">]</span> <span class="ss">:db/ident</span> <span class="ss">:eucalyptus.species/manna_gum</span><span class="p">]</span>
+</span><span class='line'><span class="p">[</span><span class="ss">:db/add</span> <span class="o">#</span><span class="nv">db/id</span><span class="p">[</span><span class="ss">:db.part/user</span><span class="p">]</span> <span class="ss">:db/ident</span> <span class="ss">:eucalyptus.species/tasmanian_blue_gum</span><span class="p">]</span>
+</span><span class='line'><span class="p">[</span><span class="ss">:db/add</span> <span class="o">#</span><span class="nv">db/id</span><span class="p">[</span><span class="ss">:db.part/user</span><span class="p">]</span> <span class="ss">:db/ident</span> <span class="ss">:eucalyptus.species/swamp_gum</span><span class="p">]</span>
+</span><span class='line'><span class="p">[</span><span class="ss">:db/add</span> <span class="o">#</span><span class="nv">db/id</span><span class="p">[</span><span class="ss">:db.part/user</span><span class="p">]</span> <span class="ss">:db/ident</span> <span class="ss">:eucalyptus.species/grey_gum</span><span class="p">]</span>
+</span><span class='line'><span class="p">[</span><span class="ss">:db/add</span> <span class="o">#</span><span class="nv">db/id</span><span class="p">[</span><span class="ss">:db.part/user</span><span class="p">]</span> <span class="ss">:db/ident</span> <span class="ss">:eucalyptus.species/river_red_gum</span><span class="p">]</span>
+</span><span class='line'><span class="p">[</span><span class="ss">:db/add</span> <span class="o">#</span><span class="nv">db/id</span><span class="p">[</span><span class="ss">:db.part/user</span><span class="p">]</span> <span class="ss">:db/ident</span> <span class="ss">:eucalyptus.species/tallowwood</span><span class="p">]</span>
+</span><span class='line'>
+</span><span class='line'><span class="p">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>In this sample, you can see that we have defined 4 namespaces:</p>
+
+<ul>
+<li><code>koala</code> used to logically regroup koala entity fields</li>
+<li><code>eucalyptus</code> used to logically regroup eucalyptus entity fields</li>
+<li><code>sex</code> used to identify koala sex male or female as unique keywords</li>
+<li><code>eucalyptus.species</code> to identify eucalyptus species as unique keywords</li>
+</ul>
+
+
+<p>Remark also:</p>
+
+<ul>
+<li><code>:koala/name</code> field is uniquely valued meaning no koala can have the same name</li>
+<li><code>:koala/eucalyptus</code> field is a <em>one-to-many</em> reference to eucalyptus entities</li>
+</ul>
+
+
+<br/>
+
+
+<h1>Datomisca way of declaring schema</h1>
+
+<h2>First of all, initialize your Datomic DB</h2>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">scala.concurrent.ExecutionContext.Implicits.global</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">import</span> <span class="nn">datomisca._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">Datomic._</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">uri</span> <span class="k">=</span> <span class="s">&quot;datomic:mem://koala-db&quot;</span>
+</span><span class='line'>
+</span><span class='line'><span class="nc">Datomic</span><span class="o">.</span><span class="n">createDatabase</span><span class="o">(</span><span class="n">uri</span><span class="o">)</span>
+</span><span class='line'><span class="k">implicit</span> <span class="k">val</span> <span class="n">conn</span> <span class="k">=</span> <span class="nc">Datomic</span><span class="o">.</span><span class="n">connect</span><span class="o">(</span><span class="n">uri</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>The NOT-preferred way</h2>
+
+<p>Now, you must know it but Datomisca intensively uses Scala 2.10 macros to provide compile-time parsing and validation of Datomic queries or operations written in Clojure.</p>
+
+<p>Previous Schema attributes definition is just a set of classic operations so you can ask Datomisca to parse them at compile-time as following:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">ops</span> <span class="k">=</span> <span class="nc">Datomic</span><span class="o">.</span><span class="n">ops</span><span class="o">(</span><span class="s">&quot;&quot;&quot;[</span>
+</span><span class='line'><span class="s">{:db/id #db/id[:db.part/db]</span>
+</span><span class='line'><span class="s"> :db/ident :koala/name</span>
+</span><span class='line'><span class="s"> :db/valueType :db.type/string</span>
+</span><span class='line'><span class="s"> :db/unique :db.unique/value</span>
+</span><span class='line'><span class="s"> :db/cardinality :db.cardinality/one</span>
+</span><span class='line'><span class="s"> :db/doc &quot;A koala&#39;s name&quot;}</span>
+</span><span class='line'><span class="s">...</span>
+</span><span class='line'><span class="s">]&quot;&quot;&quot;</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Then you can provision the schema into Datomic using:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="nc">Datomic</span><span class="o">.</span><span class="n">transact</span><span class="o">(</span><span class="n">ops</span><span class="o">)</span> <span class="n">map</span> <span class="o">{</span> <span class="n">tx</span> <span class="k">=&gt;</span>
+</span><span class='line'>  <span class="o">...</span>
+</span><span class='line'>  <span class="c1">// do something</span>
+</span><span class='line'>  <span class="c1">//</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>The preferred way</h2>
+
+<p>Ok the previous is cool as you can validate and provision a clojure schema using Datomisca.
+But Datomisca provides a programmatic way of writing schema in Scala. This brings :</p>
+
+<ul>
+<li><strong>scala idiomatic</strong> way of manipulating schema</li>
+<li><strong>Type-safety</strong> to Datomic schema attributes.</li>
+</ul>
+
+
+<p>Let&#8217;s see the code directly:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+<span class='line-number'>49</span>
+<span class='line-number'>50</span>
+<span class='line-number'>51</span>
+<span class='line-number'>52</span>
+<span class='line-number'>53</span>
+<span class='line-number'>54</span>
+<span class='line-number'>55</span>
+<span class='line-number'>56</span>
+<span class='line-number'>57</span>
+<span class='line-number'>58</span>
+<span class='line-number'>59</span>
+<span class='line-number'>60</span>
+<span class='line-number'>61</span>
+<span class='line-number'>62</span>
+<span class='line-number'>63</span>
+<span class='line-number'>64</span>
+<span class='line-number'>65</span>
+<span class='line-number'>66</span>
+<span class='line-number'>67</span>
+<span class='line-number'>68</span>
+<span class='line-number'>69</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// Sex Schema</span>
+</span><span class='line'><span class="k">object</span> <span class="nc">SexSchema</span> <span class="o">{</span>
+</span><span class='line'>  <span class="c1">// First create your namespace</span>
+</span><span class='line'>  <span class="k">object</span> <span class="nc">ns</span> <span class="o">{</span>
+</span><span class='line'>    <span class="k">val</span> <span class="n">sex</span> <span class="k">=</span> <span class="nc">Namespace</span><span class="o">(</span><span class="s">&quot;sex&quot;</span><span class="o">)</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// enumerated values</span>
+</span><span class='line'>  <span class="k">val</span> <span class="nc">FEMALE</span>  <span class="k">=</span> <span class="nc">AddIdent</span><span class="o">(</span><span class="n">ns</span><span class="o">.</span><span class="n">sex</span> <span class="o">/</span> <span class="s">&quot;female&quot;</span><span class="o">)</span> <span class="c1">// :sex/female</span>
+</span><span class='line'>  <span class="k">val</span> <span class="nc">MALE</span>    <span class="k">=</span> <span class="nc">AddIdent</span><span class="o">(</span><span class="n">ns</span><span class="o">.</span><span class="n">sex</span> <span class="o">/</span> <span class="s">&quot;male&quot;</span><span class="o">)</span>   <span class="c1">// :sex/male</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// facts representing the schema to be provisioned</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">txData</span> <span class="k">=</span> <span class="nc">Seq</span><span class="o">(</span><span class="nc">FEMALE</span><span class="o">,</span> <span class="nc">MALE</span><span class="o">)</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Eucalyptus Schema</span>
+</span><span class='line'><span class="k">object</span> <span class="nc">EucalyptusSchema</span> <span class="o">{</span>
+</span><span class='line'>  <span class="k">object</span> <span class="nc">ns</span> <span class="o">{</span>
+</span><span class='line'>    <span class="k">val</span> <span class="n">eucalyptus</span>  <span class="k">=</span> <span class="k">new</span> <span class="nc">Namespace</span><span class="o">(</span><span class="s">&quot;eucalyptus&quot;</span><span class="o">)</span> <span class="o">{</span> <span class="c1">// new is just here to allow structural construction</span>
+</span><span class='line'>      <span class="k">val</span> <span class="n">species</span>   <span class="k">=</span> <span class="nc">Namespace</span><span class="o">(</span><span class="s">&quot;species&quot;</span><span class="o">)</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// different species</span>
+</span><span class='line'>  <span class="k">val</span> <span class="nc">MANNA_GUM</span>           <span class="k">=</span> <span class="nc">AddIdent</span><span class="o">(</span><span class="n">ns</span><span class="o">.</span><span class="n">eucalyptus</span><span class="o">.</span><span class="n">species</span> <span class="o">/</span> <span class="s">&quot;manna_gum&quot;</span><span class="o">)</span>
+</span><span class='line'>  <span class="k">val</span> <span class="nc">TASMANIAN_BLUE_GUM</span>  <span class="k">=</span> <span class="nc">AddIdent</span><span class="o">(</span><span class="n">ns</span><span class="o">.</span><span class="n">eucalyptus</span><span class="o">.</span><span class="n">species</span> <span class="o">/</span> <span class="s">&quot;tasmanian_blue_gum&quot;</span><span class="o">)</span>
+</span><span class='line'>  <span class="k">val</span> <span class="nc">SWAMP_GUM</span>           <span class="k">=</span> <span class="nc">AddIdent</span><span class="o">(</span><span class="n">ns</span><span class="o">.</span><span class="n">eucalyptus</span><span class="o">.</span><span class="n">species</span> <span class="o">/</span> <span class="s">&quot;swamp_gum&quot;</span><span class="o">)</span>
+</span><span class='line'>  <span class="k">val</span> <span class="nc">GRY_GUM</span>             <span class="k">=</span> <span class="nc">AddIdent</span><span class="o">(</span><span class="n">ns</span><span class="o">.</span><span class="n">eucalyptus</span><span class="o">.</span><span class="n">species</span> <span class="o">/</span> <span class="s">&quot;grey_gum&quot;</span><span class="o">)</span>
+</span><span class='line'>  <span class="k">val</span> <span class="nc">RIVER_RED_GUM</span>       <span class="k">=</span> <span class="nc">AddIdent</span><span class="o">(</span><span class="n">ns</span><span class="o">.</span><span class="n">eucalyptus</span><span class="o">.</span><span class="n">species</span> <span class="o">/</span> <span class="s">&quot;river_red_gum&quot;</span><span class="o">)</span>
+</span><span class='line'>  <span class="k">val</span> <span class="nc">TALLOWWOOD</span>          <span class="k">=</span> <span class="nc">AddIdent</span><span class="o">(</span><span class="n">ns</span><span class="o">.</span><span class="n">eucalyptus</span><span class="o">.</span><span class="n">species</span> <span class="o">/</span> <span class="s">&quot;tallowwood&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// schema attributes</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">species</span>  <span class="k">=</span> <span class="nc">Attribute</span><span class="o">(</span><span class="n">ns</span><span class="o">.</span><span class="n">eucalyptus</span> <span class="o">/</span> <span class="s">&quot;species&quot;</span><span class="o">,</span> <span class="nc">SchemaType</span><span class="o">.</span><span class="n">ref</span><span class="o">,</span> <span class="nc">Cardinality</span><span class="o">.</span><span class="n">one</span><span class="o">).</span><span class="n">withDoc</span><span class="o">(</span><span class="s">&quot;Eucalyptus&#39;s species&quot;</span><span class="o">)</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">row</span>      <span class="k">=</span> <span class="nc">Attribute</span><span class="o">(</span><span class="n">ns</span><span class="o">.</span><span class="n">eucalyptus</span> <span class="o">/</span> <span class="s">&quot;row&quot;</span><span class="o">,</span> <span class="nc">SchemaType</span><span class="o">.</span><span class="n">long</span><span class="o">,</span> <span class="nc">Cardinality</span><span class="o">.</span><span class="n">one</span><span class="o">).</span><span class="n">withDoc</span><span class="o">(</span><span class="s">&quot;Eucalyptus&#39;s row&quot;</span><span class="o">)</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">col</span>      <span class="k">=</span> <span class="nc">Attribute</span><span class="o">(</span><span class="n">ns</span><span class="o">.</span><span class="n">eucalyptus</span> <span class="o">/</span> <span class="s">&quot;col&quot;</span><span class="o">,</span> <span class="nc">SchemaType</span><span class="o">.</span><span class="n">long</span><span class="o">,</span> <span class="nc">Cardinality</span><span class="o">.</span><span class="n">one</span><span class="o">).</span><span class="n">withDoc</span><span class="o">(</span><span class="s">&quot;Eucalyptus&#39;s column&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// facts representing the schema to be provisioned</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">txData</span> <span class="k">=</span> <span class="nc">Seq</span><span class="o">(</span>
+</span><span class='line'>    <span class="n">species</span><span class="o">,</span> <span class="n">row</span><span class="o">,</span> <span class="n">col</span><span class="o">,</span>
+</span><span class='line'>    <span class="nc">MANNA_GUM</span><span class="o">,</span> <span class="nc">TASMANIAN_BLUE_GUM</span><span class="o">,</span> <span class="nc">SWAMP_GUM</span><span class="o">,</span>
+</span><span class='line'>    <span class="nc">GRY_GUM</span><span class="o">,</span> <span class="nc">RIVER_RED_GUM</span><span class="o">,</span> <span class="nc">TALLOWWOOD</span>
+</span><span class='line'>  <span class="o">)</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Koala Schema</span>
+</span><span class='line'><span class="k">object</span> <span class="nc">KoalaSchema</span> <span class="o">{</span>
+</span><span class='line'>  <span class="k">object</span> <span class="nc">ns</span> <span class="o">{</span>
+</span><span class='line'>    <span class="k">val</span> <span class="n">koala</span> <span class="k">=</span> <span class="nc">Namespace</span><span class="o">(</span><span class="s">&quot;koala&quot;</span><span class="o">)</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// schema attributes</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">name</span>         <span class="k">=</span> <span class="nc">Attribute</span><span class="o">(</span><span class="n">ns</span><span class="o">.</span><span class="n">koala</span> <span class="o">/</span> <span class="s">&quot;name&quot;</span><span class="o">,</span> <span class="nc">SchemaType</span><span class="o">.</span><span class="n">string</span><span class="o">,</span> <span class="nc">Cardinality</span><span class="o">.</span><span class="n">one</span><span class="o">).</span><span class="n">withDoc</span><span class="o">(</span><span class="s">&quot;Koala&#39;s name&quot;</span><span class="o">).</span><span class="n">withUnique</span><span class="o">(</span><span class="nc">Unique</span><span class="o">.</span><span class="n">value</span><span class="o">)</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">age</span>          <span class="k">=</span> <span class="nc">Attribute</span><span class="o">(</span><span class="n">ns</span><span class="o">.</span><span class="n">koala</span> <span class="o">/</span> <span class="s">&quot;age&quot;</span><span class="o">,</span> <span class="nc">SchemaType</span><span class="o">.</span><span class="n">long</span><span class="o">,</span> <span class="nc">Cardinality</span><span class="o">.</span><span class="n">one</span><span class="o">).</span><span class="n">withDoc</span><span class="o">(</span><span class="s">&quot;Koala&#39;s age&quot;</span><span class="o">)</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">sex</span>          <span class="k">=</span> <span class="nc">Attribute</span><span class="o">(</span><span class="n">ns</span><span class="o">.</span><span class="n">koala</span> <span class="o">/</span> <span class="s">&quot;sex&quot;</span><span class="o">,</span> <span class="nc">SchemaType</span><span class="o">.</span><span class="n">ref</span><span class="o">,</span> <span class="nc">Cardinality</span><span class="o">.</span><span class="n">one</span><span class="o">).</span><span class="n">withDoc</span><span class="o">(</span><span class="s">&quot;Koala&#39;s sex&quot;</span><span class="o">)</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">eucalyptus</span>   <span class="k">=</span> <span class="nc">Attribute</span><span class="o">(</span><span class="n">ns</span><span class="o">.</span><span class="n">koala</span> <span class="o">/</span> <span class="s">&quot;eucalyptus&quot;</span><span class="o">,</span> <span class="nc">SchemaType</span><span class="o">.</span><span class="n">ref</span><span class="o">,</span> <span class="nc">Cardinality</span><span class="o">.</span><span class="n">many</span><span class="o">).</span><span class="n">withDoc</span><span class="o">(</span><span class="s">&quot;Koala&#39;s trees&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// facts representing the schema to be provisioned</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">txData</span> <span class="k">=</span> <span class="nc">Seq</span><span class="o">(</span><span class="n">name</span><span class="o">,</span> <span class="n">age</span><span class="o">,</span> <span class="n">sex</span><span class="o">,</span> <span class="n">eucalyptus</span><span class="o">)</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Provision Schema by just accumulating all txData</span>
+</span><span class='line'><span class="nc">Datomic</span><span class="o">.</span><span class="n">transact</span><span class="o">(</span>
+</span><span class='line'>  <span class="nc">SexSchema</span><span class="o">.</span><span class="n">txData</span> <span class="o">++</span>
+</span><span class='line'>  <span class="nc">EucalyptusSchema</span><span class="o">.</span><span class="n">txData</span> <span class="o">++</span>
+</span><span class='line'>  <span class="nc">KoalaSchema</span><span class="o">.</span><span class="n">txData</span>
+</span><span class='line'><span class="o">)</span> <span class="n">map</span> <span class="o">{</span> <span class="n">tx</span> <span class="k">=&gt;</span>
+</span><span class='line'>  <span class="o">...</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Nothing complicated, isn&#8217;t it?</p>
+
+<p>Exactly the same as writing Clojure schema but in Scala&#8230;</p>
+
+<br/>
+
+
+<h1>Datomisca type-safe schema</h1>
+
+<p>Datomisca takes advantage of Scala type-safety to enhance Datomic schema attribute and make them static-typed. Have a look at Datomisca <code>Attribute</code> definition:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">sealed</span> <span class="k">trait</span> <span class="nc">Attribute</span><span class="o">[</span><span class="kt">DD</span> <span class="k">&lt;:</span> <span class="kt">DatomicData</span>, <span class="kt">Card</span> <span class="k">&lt;:</span> <span class="kt">Cardinality</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>So an <code>Attribute</code> is typed by 2 parameters:</p>
+
+<ul>
+<li>a <code>DatomicData</code> type</li>
+<li>a <code>Cardinality</code> type</li>
+</ul>
+
+
+<p>So when you define a schema attribute using <em>Datomisca</em> API, the compiler also infers those types.</p>
+
+<p>Take this example:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">name</span>  <span class="k">=</span> <span class="nc">Attribute</span><span class="o">(</span><span class="n">ns</span> <span class="o">/</span> <span class="s">&quot;name&quot;</span><span class="o">,</span> <span class="nc">SchemaType</span><span class="o">.</span><span class="n">string</span><span class="o">,</span> <span class="nc">Cardinality</span><span class="o">.</span><span class="n">one</span><span class="o">).</span><span class="n">withDoc</span><span class="o">(</span><span class="s">&quot;Koala&#39;s name&quot;</span><span class="o">).</span><span class="n">withUnique</span><span class="o">(</span><span class="nc">Unique</span><span class="o">.</span><span class="n">value</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<ul>
+<li><code>SchemaType.string</code> implies this is a <code>Attribute[DString, _]</code></li>
+<li><code>Cardinality.one</code> implies this is a `Attribute[_, Cardinality.one]</li>
+</ul>
+
+
+<p>So <code>name</code> is a <code>Attribute[DString, Cardinality.one]</code></p>
+
+<p>In the same way:</p>
+
+<ul>
+<li><code>age</code> is <code>Attribute[DLong, Cardinality.one]</code></li>
+<li><code>sex</code> is <code>Attribute[DRef, Cardinality.one]</code></li>
+<li><code>eucalyptus</code> is <code>Attribute[DRef, Cardinality.many]</code></li>
+</ul>
+
+
+<blockquote><p>As you can imagine, using this type-safe schema attributes, Datomisca can ensure consistency between the Datomic schema and the types manipulated in Scala.</p></blockquote>
+
+<br/>
+
+
+<h2>Taking advantage of type-safe schema</h2>
+
+<h3>Checking types when creating facts</h3>
+
+<blockquote><p>Based on the typed attribute, the compiler can help us a lot to validate that we give the right type for the right attribute.</p></blockquote>
+
+<p>Schema facilities are extensions of basic Datomisca so you must import following to use them:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">DatomicMapping._</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Here is a code sample:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">//////////////////////////////////////////////////////////////////////</span>
+</span><span class='line'><span class="c1">// correct tree with right types</span>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">tree58</span> <span class="k">=</span> <span class="nc">SchemaEntity</span><span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="nc">DId</span><span class="o">(</span><span class="nc">Partition</span><span class="o">.</span><span class="nc">USER</span><span class="o">))(</span><span class="nc">Props</span><span class="o">()</span> <span class="o">+</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">EucalyptusSchema</span><span class="o">.</span><span class="n">species</span> <span class="o">-&gt;</span> <span class="nc">EucalyptusSchema</span><span class="o">.</span><span class="nc">SWAMP_GUM</span><span class="o">.</span><span class="n">ref</span><span class="o">)</span> <span class="o">+</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">EucalyptusSchema</span><span class="o">.</span><span class="n">row</span>     <span class="o">-&gt;</span> <span class="mi">5L</span><span class="o">)</span> <span class="o">+</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">EucalyptusSchema</span><span class="o">.</span><span class="n">col</span>     <span class="o">-&gt;</span> <span class="mi">8L</span><span class="o">)</span>
+</span><span class='line'><span class="o">)</span>
+</span><span class='line'><span class="n">tree58</span><span class="k">:</span> <span class="kt">datomisca.AddEntity</span> <span class="o">=</span>
+</span><span class='line'><span class="o">{</span>
+</span><span class='line'>  <span class="k">:</span><span class="kt">eucalyptus/species</span> <span class="kt">:species/swamp_gum</span>
+</span><span class='line'>  <span class="k">:</span><span class="kt">eucalyptus/row</span> <span class="err">5</span>
+</span><span class='line'>  <span class="kt">:eucalyptus/col</span> <span class="err">8</span>
+</span><span class='line'>  <span class="kt">:db/id</span> <span class="k">#</span><span class="kt">db/id</span><span class="o">[</span><span class="kt">:db.part/user</span> <span class="kt">-</span><span class="err">1000000</span><span class="o">]</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">//////////////////////////////////////////////////////////////////////</span>
+</span><span class='line'><span class="c1">// incorrect tree with a string instead of a long for row</span>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">tree58</span> <span class="k">=</span> <span class="nc">SchemaEntity</span><span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="nc">DId</span><span class="o">(</span><span class="nc">Partition</span><span class="o">.</span><span class="nc">USER</span><span class="o">))(</span><span class="nc">Props</span><span class="o">()</span> <span class="o">+</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">EucalyptusSchema</span><span class="o">.</span><span class="n">species</span> <span class="o">-&gt;</span> <span class="nc">EucalyptusSchema</span><span class="o">.</span><span class="nc">SWAMP_GUM</span><span class="o">.</span><span class="n">ref</span><span class="o">)</span> <span class="o">+</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">EucalyptusSchema</span><span class="o">.</span><span class="n">row</span>     <span class="o">-&gt;</span> <span class="s">&quot;toto&quot;</span><span class="o">)</span> <span class="o">+</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">EucalyptusSchema</span><span class="o">.</span><span class="n">col</span>     <span class="o">-&gt;</span> <span class="mi">8L</span><span class="o">)</span>
+</span><span class='line'><span class="o">)</span>
+</span><span class='line'><span class="o">&lt;</span><span class="n">console</span><span class="k">&gt;:</span><span class="mi">18</span><span class="k">:</span> <span class="kt">error:</span> <span class="kt">could</span> <span class="kt">not</span> <span class="kt">find</span> <span class="kt">implicit</span> <span class="kt">value</span> <span class="kt">for</span> <span class="kt">parameter</span> <span class="kt">attrC:</span>
+</span><span class='line'>  <span class="n">datomisca</span><span class="o">.</span><span class="nc">Attribute2PartialAddEntityWriter</span><span class="o">[</span><span class="kt">datomisca.DLong</span>,<span class="kt">datomisca.CardinalityOne.</span><span class="k">type</span>,<span class="kt">String</span><span class="o">]</span>
+</span><span class='line'>         <span class="o">(</span><span class="nc">EucalyptusSchema</span><span class="o">.</span><span class="n">species</span> <span class="o">-&gt;</span> <span class="nc">EucalyptusSchema</span><span class="o">.</span><span class="nc">SWAMP_GUM</span><span class="o">.</span><span class="n">ref</span><span class="o">)</span> <span class="o">+</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>In second case, compiling fails because <code>DLong =&gt; String</code> doesn&#8217;t exist.</p>
+
+<p>In first case, it works because <code>DLong =&gt; Long</code> is valid.</p>
+
+<br/>
+
+
+<h3>Checking types when getting fields from Datomic entities</h3>
+
+<p>First of all, let&#8217;s create our first little Koala named <em>Rose</em> which loves feeding from 2 eucalyptus trees.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">tree58</span> <span class="k">=</span> <span class="nc">SchemaEntity</span><span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="nc">DId</span><span class="o">(</span><span class="nc">Partition</span><span class="o">.</span><span class="nc">USER</span><span class="o">))(</span><span class="nc">Props</span><span class="o">()</span> <span class="o">+</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">EucalyptusSchema</span><span class="o">.</span><span class="n">species</span> <span class="o">-&gt;</span> <span class="nc">EucalyptusSchema</span><span class="o">.</span><span class="nc">SWAMP_GUM</span><span class="o">.</span><span class="n">ref</span><span class="o">)</span> <span class="o">+</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">EucalyptusSchema</span><span class="o">.</span><span class="n">row</span>     <span class="o">-&gt;</span> <span class="mi">5L</span><span class="o">)</span> <span class="o">+</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">EucalyptusSchema</span><span class="o">.</span><span class="n">col</span>     <span class="o">-&gt;</span> <span class="mi">8L</span><span class="o">)</span>
+</span><span class='line'><span class="o">)</span>
+</span><span class='line'><span class="n">tree74</span><span class="k">:</span> <span class="kt">datomisca.AddEntity</span> <span class="o">=</span>
+</span><span class='line'><span class="o">{</span>
+</span><span class='line'>  <span class="k">:</span><span class="kt">eucalyptus/species</span> <span class="kt">:species/swamp_gum</span>
+</span><span class='line'>  <span class="k">:</span><span class="kt">eucalyptus/row</span> <span class="err">5</span>
+</span><span class='line'>  <span class="kt">:eucalyptus/col</span> <span class="err">8</span>
+</span><span class='line'>  <span class="kt">:db/id</span> <span class="k">#</span><span class="kt">db/id</span><span class="o">[</span><span class="kt">:db.part/user</span> <span class="kt">-</span><span class="err">1000002</span><span class="o">]</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">tree74</span> <span class="k">=</span> <span class="nc">SchemaEntity</span><span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="nc">DId</span><span class="o">(</span><span class="nc">Partition</span><span class="o">.</span><span class="nc">USER</span><span class="o">))(</span><span class="nc">Props</span><span class="o">()</span> <span class="o">+</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">EucalyptusSchema</span><span class="o">.</span><span class="n">species</span> <span class="o">-&gt;</span> <span class="nc">EucalyptusSchema</span><span class="o">.</span><span class="nc">RIVER_RED_GUM</span><span class="o">.</span><span class="n">ref</span><span class="o">)</span> <span class="o">+</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">EucalyptusSchema</span><span class="o">.</span><span class="n">row</span>     <span class="o">-&gt;</span> <span class="mi">7L</span><span class="o">)</span> <span class="o">+</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">EucalyptusSchema</span><span class="o">.</span><span class="n">col</span>     <span class="o">-&gt;</span> <span class="mi">4L</span><span class="o">)</span>
+</span><span class='line'><span class="o">)</span>
+</span><span class='line'><span class="n">tree74</span><span class="k">:</span> <span class="kt">datomisca.AddEntity</span> <span class="o">=</span>
+</span><span class='line'><span class="o">{</span>
+</span><span class='line'>  <span class="k">:</span><span class="kt">eucalyptus/species</span> <span class="kt">:species/river_red_gum</span>
+</span><span class='line'>  <span class="k">:</span><span class="kt">eucalyptus/row</span> <span class="err">7</span>
+</span><span class='line'>  <span class="kt">:eucalyptus/col</span> <span class="err">4</span>
+</span><span class='line'>  <span class="kt">:db/id</span> <span class="k">#</span><span class="kt">db/id</span><span class="o">[</span><span class="kt">:db.part/user</span> <span class="kt">-</span><span class="err">1000004</span><span class="o">]</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">rose</span> <span class="k">=</span> <span class="nc">SchemaEntity</span><span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="nc">DId</span><span class="o">(</span><span class="nc">Partition</span><span class="o">.</span><span class="nc">USER</span><span class="o">))(</span><span class="nc">Props</span><span class="o">()</span> <span class="o">+</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">KoalaSchema</span><span class="o">.</span><span class="n">name</span>        <span class="o">-&gt;</span> <span class="s">&quot;rose&quot;</span> <span class="o">)</span> <span class="o">+</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">KoalaSchema</span><span class="o">.</span><span class="n">age</span>         <span class="o">-&gt;</span> <span class="mi">3L</span> <span class="o">)</span> <span class="o">+</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">KoalaSchema</span><span class="o">.</span><span class="n">sex</span>         <span class="o">-&gt;</span> <span class="nc">SexSchema</span><span class="o">.</span><span class="nc">FEMALE</span><span class="o">.</span><span class="n">ref</span> <span class="o">)</span> <span class="o">+</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">KoalaSchema</span><span class="o">.</span><span class="n">eucalyptus</span>  <span class="o">-&gt;</span> <span class="nc">Set</span><span class="o">(</span><span class="nc">DRef</span><span class="o">(</span><span class="n">tree58</span><span class="o">.</span><span class="n">id</span><span class="o">),</span> <span class="nc">DRef</span><span class="o">(</span><span class="n">tree74</span><span class="o">.</span><span class="n">id</span><span class="o">))</span> <span class="o">)</span>
+</span><span class='line'><span class="o">)</span>
+</span><span class='line'><span class="n">rose</span><span class="k">:</span> <span class="kt">datomisca.AddEntity</span> <span class="o">=</span>
+</span><span class='line'><span class="o">{</span>
+</span><span class='line'>  <span class="k">:</span><span class="kt">koala/eucalyptus</span> <span class="o">[</span><span class="k">#</span><span class="kt">db/id</span><span class="o">[</span><span class="kt">:db.part/user</span> <span class="kt">-</span><span class="err">1000001</span><span class="o">]</span>, <span class="k">#</span><span class="kt">db/id</span><span class="o">[</span><span class="kt">:db.part/user</span> <span class="kt">-</span><span class="err">1000002</span><span class="o">]]</span>
+</span><span class='line'>  <span class="k">:</span><span class="kt">koala/name</span> <span class="err">&quot;</span><span class="kt">rose</span><span class="err">&quot;</span>
+</span><span class='line'>  <span class="kt">:db/id</span> <span class="k">#</span><span class="kt">db/id</span><span class="o">[</span><span class="kt">:db.part/user</span> <span class="kt">-</span><span class="err">1000003</span><span class="o">]</span>
+</span><span class='line'>  <span class="k">:</span><span class="kt">koala/sex</span> <span class="kt">:sex/female</span>
+</span><span class='line'>  <span class="k">:</span><span class="kt">koala/age</span> <span class="err">3</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Now let&#8217;s provision those koala &amp; trees into Datomic and retrieve real entity corresponding to our little Rose kitty.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="nc">Datomic</span><span class="o">.</span><span class="n">transact</span><span class="o">(</span><span class="n">tree58</span><span class="o">,</span> <span class="n">tree74</span><span class="o">,</span> <span class="n">rose</span><span class="o">)</span> <span class="n">map</span> <span class="o">{</span> <span class="n">tx</span> <span class="k">=&gt;</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">realRose</span> <span class="k">=</span> <span class="nc">Datomic</span><span class="o">.</span><span class="n">resolveEntity</span><span class="o">(</span><span class="n">tx</span><span class="o">,</span> <span class="n">rose</span><span class="o">.</span><span class="n">id</span><span class="o">)</span>
+</span><span class='line'>  <span class="o">...</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Finally let&#8217;s take advantage of typed schema attribute to access safely to fiels of the entity:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">maybeRose</span> <span class="k">=</span> <span class="nc">Datomic</span><span class="o">.</span><span class="n">transact</span><span class="o">(</span><span class="n">tree58</span><span class="o">,</span> <span class="n">tree74</span><span class="o">,</span> <span class="n">rose</span><span class="o">)</span> <span class="n">map</span> <span class="o">{</span> <span class="n">tx</span> <span class="k">=&gt;</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">realRose</span> <span class="k">=</span> <span class="nc">Datomic</span><span class="o">.</span><span class="n">resolveEntity</span><span class="o">(</span><span class="n">tx</span><span class="o">,</span> <span class="n">rose</span><span class="o">.</span><span class="n">id</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">val</span> <span class="n">name</span> <span class="k">=</span> <span class="n">realRose</span><span class="o">(</span><span class="nc">KoalaSchema</span><span class="o">.</span><span class="n">name</span><span class="o">)</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">age</span> <span class="k">=</span> <span class="n">realRose</span><span class="o">(</span><span class="nc">KoalaSchema</span><span class="o">.</span><span class="n">age</span><span class="o">)</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">sex</span> <span class="k">=</span> <span class="n">realRose</span><span class="o">(</span><span class="nc">KoalaSchema</span><span class="o">.</span><span class="n">sex</span><span class="o">)</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">eucalyptus</span> <span class="k">=</span> <span class="n">realRose</span><span class="o">(</span><span class="nc">KoalaSchema</span><span class="o">.</span><span class="n">eucalyptus</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="o">(</span><span class="n">name</span><span class="o">,</span> <span class="n">age</span><span class="o">,</span> <span class="n">sex</span><span class="o">,</span> <span class="n">eucalyptus</span><span class="o">)</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'><span class="n">maybeRose</span><span class="k">:</span> <span class="kt">scala.concurrent.Future</span><span class="o">[(</span><span class="kt">String</span>, <span class="kt">Long</span>, <span class="kt">Long</span>, <span class="kt">Set</span><span class="o">[</span><span class="kt">Long</span><span class="o">])]</span> <span class="k">=</span> <span class="n">scala</span><span class="o">.</span><span class="n">concurrent</span><span class="o">.</span><span class="n">impl</span><span class="o">.</span><span class="nc">Promise$DefaultPromise</span><span class="k">@</span><span class="mi">49</span><span class="n">f454d6</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>What&#8217;s important here is that you get a <code>(String, Long, Long, Set[Long])</code> which means the compiler was able to infer the right types from the Schema Attribute&#8230;</p>
+
+<p>Greattt!!!</p>
+
+<p>Ok that&#8217;s all for today!</p>
+
+<p>Next article about an extension Datomisca provides for convenience : mapping Datomic entities to Scala structures such as case-classes or tuples. We don&#8217;t believe this is really the philosophy of Datomic in which atomic operations are much more interesting. But sometimes it&#8217;s convenient when you want to have data abstraction layer&#8230;</p>
+
+<p>Have KoalaFun!</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Shapelaysson = Shapeless + Play-Json ]]></title>
