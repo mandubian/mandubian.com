@@ -4,7 +4,7 @@
   <title><![CDATA[Mandubian Blog]]></title>
   <link href="http://www.mandubian.com/atom.xml" rel="self"/>
   <link href="http://www.mandubian.com/"/>
-  <updated>2013-03-08T14:29:14+01:00</updated>
+  <updated>2013-03-12T12:50:31+01:00</updated>
   <id>http://www.mandubian.com/</id>
   <author>
     <name><![CDATA[Pascal Voitot]]></name>
@@ -12,6 +12,201 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Shapeless HList Schema-Type-Safe conversion to Datomisca/Datomic Entities]]></title>
+    <link href="http://www.mandubian.com/2013/03/12/datomisca-shapeless-hlist/"/>
+    <updated>2013-03-12T12:12:00+01:00</updated>
+    <id>http://www.mandubian.com/2013/03/12/datomisca-shapeless-hlist</id>
+    <content type="html"><![CDATA[<blockquote><p>The code is on github project <a href="https://github.com/mandubian/shapotomic">shapotomic</a></p></blockquote>
+
+<h4>Datomisca is a Scala API for Datomic DB</h4>
+
+<p>If you want to know more about Datomisca/Datomic schema go to my <a href="http://mandubian.com/2013/03/04/datomisca-schema/">recent article</a>. What&#8217;s interesting with Datomisca schema is that they are statically typed allowing some compiler validations and type inference.</p>
+
+<h4><a href="https://github.com/milessabin/shapeless">Shapeless HList</a> are heterogenous polymorphic lists</h4>
+
+<p>HList are able to contain different types of data and able to keep tracks of these types.</p>
+
+<br/>
+
+
+<div class="well">
+<b><p>This project is an experience trying to :</p>
+
+<ul>
+  <li>convert HList to/from Datomic Entities</li>
+  <li>check HList types against schema at compile-time</li>
+</ul></b>
+</div>
+
+
+<p>This uses :</p>
+
+<ul>
+<li>Datomisca type-safe schema</li>
+<li>Shapeless HList</li>
+<li>Shapeless polymorphic functions</li>
+</ul>
+
+
+<p>Please note that we don&#8217;t provide any <code>Iso[From, To]</code> since there is no isomorphism here.
+Actually, there are 2 monomorphisms (injective):</p>
+
+<ul>
+<li><code>HList   =&gt; AddEntity</code> to provision an entity</li>
+<li><code>DEntity =&gt; HList</code> when retrieving entity</li>
+</ul>
+
+
+<p>We would need to implement <code>Mono[From, To]</code> certainly for our case&#8230;</p>
+
+<h2>Code sample</h2>
+
+<h3>Create schema based on <code>HList</code></h3>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// Koala Schema</span>
+</span><span class='line'><span class="k">object</span> <span class="nc">Koala</span> <span class="o">{</span>
+</span><span class='line'>  <span class="k">object</span> <span class="nc">ns</span> <span class="o">{</span>
+</span><span class='line'>    <span class="k">val</span> <span class="n">koala</span> <span class="k">=</span> <span class="nc">Namespace</span><span class="o">(</span><span class="s">&quot;koala&quot;</span><span class="o">)</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// schema attributes</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">name</span>        <span class="k">=</span> <span class="nc">Attribute</span><span class="o">(</span><span class="n">ns</span><span class="o">.</span><span class="n">koala</span> <span class="o">/</span> <span class="s">&quot;name&quot;</span><span class="o">,</span> <span class="nc">SchemaType</span><span class="o">.</span><span class="n">string</span><span class="o">,</span> <span class="nc">Cardinality</span><span class="o">.</span><span class="n">one</span><span class="o">).</span><span class="n">withDoc</span><span class="o">(</span><span class="s">&quot;Koala&#39;s name&quot;</span><span class="o">)</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">age</span>         <span class="k">=</span> <span class="nc">Attribute</span><span class="o">(</span><span class="n">ns</span><span class="o">.</span><span class="n">koala</span> <span class="o">/</span> <span class="s">&quot;age&quot;</span><span class="o">,</span> <span class="nc">SchemaType</span><span class="o">.</span><span class="n">long</span><span class="o">,</span> <span class="nc">Cardinality</span><span class="o">.</span><span class="n">one</span><span class="o">).</span><span class="n">withDoc</span><span class="o">(</span><span class="s">&quot;Koala&#39;s age&quot;</span><span class="o">)</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">trees</span>       <span class="k">=</span> <span class="nc">Attribute</span><span class="o">(</span><span class="n">ns</span><span class="o">.</span><span class="n">koala</span> <span class="o">/</span> <span class="s">&quot;trees&quot;</span><span class="o">,</span> <span class="nc">SchemaType</span><span class="o">.</span><span class="n">string</span><span class="o">,</span> <span class="nc">Cardinality</span><span class="o">.</span><span class="n">many</span><span class="o">).</span><span class="n">withDoc</span><span class="o">(</span><span class="s">&quot;Koala&#39;s trees&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// the schema in HList form</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">schema</span> <span class="k">=</span> <span class="n">name</span> <span class="o">::</span> <span class="n">age</span> <span class="o">::</span> <span class="n">trees</span> <span class="o">::</span> <span class="nc">HNil</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// the datomic facts corresponding to schema </span>
+</span><span class='line'>  <span class="c1">// (need specifying upper type for shapeless conversion to list)</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">txData</span> <span class="k">=</span> <span class="n">schema</span><span class="o">.</span><span class="n">toList</span><span class="o">[</span><span class="kt">Operation</span><span class="o">]</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Provision schema</span>
+</span><span class='line'><span class="nc">Datomic</span><span class="o">.</span><span class="n">transact</span><span class="o">(</span><span class="nc">Koala</span><span class="o">.</span><span class="n">txData</span><span class="o">)</span> <span class="n">map</span> <span class="o">{</span> <span class="n">tx</span> <span class="k">=&gt;</span> <span class="o">...</span> <span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>Validate <code>HList</code> against Schema</h3>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// creates a Temporary ID &amp; keeps it for resolving entity after insertion</span>
+</span><span class='line'><span class="k">val</span> <span class="n">id</span> <span class="k">=</span> <span class="nc">DId</span><span class="o">(</span><span class="nc">Partition</span><span class="o">.</span><span class="nc">USER</span><span class="o">)</span>
+</span><span class='line'><span class="c1">// creates an HList entity </span>
+</span><span class='line'><span class="k">val</span> <span class="n">hListEntity</span> <span class="k">=</span>
+</span><span class='line'>  <span class="n">id</span> <span class="o">::</span> <span class="s">&quot;kaylee&quot;</span> <span class="o">::</span> <span class="mi">3L</span> <span class="o">::</span>
+</span><span class='line'>  <span class="nc">Set</span><span class="o">(</span> <span class="s">&quot;manna_gum&quot;</span><span class="o">,</span> <span class="s">&quot;tallowwood&quot;</span> <span class="o">)</span> <span class="o">::</span>
+</span><span class='line'>  <span class="nc">HNil</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// validates and converts at compile-time this HList against schema</span>
+</span><span class='line'><span class="n">hListEntity</span><span class="o">.</span><span class="n">toAddEntity</span><span class="o">(</span><span class="nc">Koala</span><span class="o">.</span><span class="n">schema</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// If you remove a field from HList and try again, the compiler fails</span>
+</span><span class='line'><span class="k">val</span> <span class="n">badHListEntity</span> <span class="k">=</span>
+</span><span class='line'>  <span class="n">id</span> <span class="o">::</span> <span class="s">&quot;kaylee&quot;</span> <span class="o">::</span>
+</span><span class='line'>  <span class="nc">Set</span><span class="o">(</span> <span class="s">&quot;manna_gum&quot;</span><span class="o">,</span> <span class="s">&quot;tallowwood&quot;</span> <span class="o">)</span> <span class="o">::</span>
+</span><span class='line'>  <span class="nc">HNil</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="n">badHListEntity</span><span class="o">.</span><span class="n">toAddEntity</span><span class="o">(</span><span class="nc">Koala</span><span class="o">.</span><span class="n">schema</span><span class="o">)</span>
+</span><span class='line'><span class="o">&lt;</span><span class="n">console</span><span class="k">&gt;:</span><span class="mi">23</span><span class="k">:</span> <span class="kt">error:</span> <span class="kt">could</span> <span class="kt">not</span> <span class="kt">find</span> <span class="kt">implicit</span> <span class="kt">value</span> <span class="kt">for</span> <span class="kt">parameter</span> <span class="kt">pull:</span>
+</span><span class='line'>  <span class="n">shapotomic</span><span class="o">.</span><span class="nc">SchemaCheckerFromHList</span><span class="o">.</span><span class="nc">Pullback2</span><span class="o">[</span><span class="kt">shapeless.::</span><span class="o">[</span><span class="kt">datomisca.TempId</span>,<span class="kt">shapeless.::</span><span class="o">[</span><span class="kt">String</span>,<span class="kt">shapeless.::</span><span class="o">[</span><span class="kt">scala.collection.immutable.Set</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span>,<span class="kt">shapeless.HNil</span><span class="o">]]]</span>,
+</span><span class='line'>  <span class="kt">shapeless.::</span><span class="o">[</span><span class="kt">datomisca.RawAttribute</span><span class="o">[</span><span class="kt">datomisca.DString</span>,<span class="kt">datomisca.CardinalityOne.</span><span class="k">type</span><span class="o">]</span>,
+</span><span class='line'>  <span class="kt">shapeless.::</span><span class="o">[</span><span class="kt">datomisca.RawAttribute</span><span class="o">[</span><span class="kt">datomisca.DLong</span>,<span class="kt">datomisca.CardinalityOne.</span><span class="k">type</span><span class="o">]</span>,
+</span><span class='line'>  <span class="kt">shapeless.::</span><span class="o">[</span><span class="kt">datomisca.RawAttribute</span><span class="o">[</span><span class="kt">datomisca.DString</span>,<span class="kt">datomisca.CardinalityMany.</span><span class="k">type</span><span class="o">]</span>,<span class="kt">shapeless.HNil</span><span class="o">]]]</span>,<span class="kt">datomisca.AddEntity</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><em>The compiler error is a bit weird at first but if you take a few seconds to read it, you&#8217;ll see that there is nothing hard about it, it just says:</em></p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="n">I</span> <span class="n">can</span><span class="-Symbol">&#39;t</span> <span class="n">convert</span>
+</span><span class='line'><span class="o">(</span><span class="nc">TempId</span> <span class="o">::)</span> <span class="nc">String</span>             <span class="o">::</span> <span class="nc">Set</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span>      <span class="o">::</span> <span class="nc">HNil</span> <span class="k">=&gt;</span>
+</span><span class='line'>            <span class="nc">Attr</span><span class="o">[</span><span class="kt">DString</span>, <span class="kt">one</span><span class="o">]</span> <span class="o">::</span> <span class="nc">Attr</span><span class="o">[</span><span class="kt">DLong</span>, <span class="kt">one</span><span class="o">]</span> <span class="o">::</span> <span class="nc">Attr</span><span class="o">[</span><span class="kt">DString</span>, <span class="kt">many</span><span class="o">]</span> <span class="o">::</span> <span class="nc">HNil</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>Convert <code>DEntity</code> to static-typed <code>HList</code> based on schema</h3>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">e</span> <span class="k">=</span> <span class="nc">Datomic</span><span class="o">.</span><span class="n">resolveEntity</span><span class="o">(</span><span class="n">tx</span><span class="o">,</span> <span class="n">id</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// rebuilds HList entity from DEntity statically typed by schema</span>
+</span><span class='line'><span class="k">val</span> <span class="n">postHListEntity</span> <span class="k">=</span> <span class="n">e</span><span class="o">.</span><span class="n">toHList</span><span class="o">(</span><span class="nc">Koala</span><span class="o">.</span><span class="n">schema</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Explicitly typing the value to show that the compiler builds the right typed HList from schema</span>
+</span><span class='line'><span class="k">val</span> <span class="n">validateHListEntityType</span><span class="k">:</span> <span class="kt">Long</span> <span class="kt">::</span> <span class="kt">String</span> <span class="kt">::</span> <span class="kt">Long</span> <span class="kt">::</span> <span class="kt">Set</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="o">::</span> <span class="nc">HNil</span> <span class="k">=</span> <span class="n">postHListEntity</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>Conclusion</h2>
+
+<p>Using <code>HList</code> with compile-time schema validation is quite interesting because it provides a very basic and versatile data structure to manipulate Datomic entities in a type-safe style.</p>
+
+<p>Moreover, as Datomic pushes atomic data manipulation (simple facts instead of full entities), it&#8217;s really cool to use <code>HList</code> instead of rigid static structure such as case-class.</p>
+
+<p>For ex:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">simplerOp</span> <span class="k">=</span> <span class="o">(</span><span class="n">id</span> <span class="o">::</span> <span class="s">&quot;kaylee&quot;</span> <span class="o">::</span> <span class="mi">5L</span><span class="o">).</span><span class="n">toAddEntity</span><span class="o">(</span><span class="nc">Koala</span><span class="o">.</span><span class="n">name</span> <span class="o">::</span> <span class="nc">Koala</span><span class="o">.</span><span class="n">age</span> <span class="o">::</span> <span class="nc">HNil</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Have TypedFun</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Datomisca Delicatessen -  Emulsion of Scala type-safety in Datomic Schema]]></title>
