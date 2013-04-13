@@ -88,4 +88,6 @@ d3.select(self.frameElement).style("height", height + "px");
 
 </script>
 
+>For info, this dendrograph was pre-computed using Play2.1 app sucking Tweets & filtering/grouping the results in a very manual-o-matic way… 
+
 Have Fun(ctional)
