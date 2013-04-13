@@ -4,7 +4,7 @@
   <title><![CDATA[Mandubian Blog]]></title>
   <link href="http://www.mandubian.com/atom.xml" rel="self"/>
   <link href="http://www.mandubian.com/"/>
-  <updated>2013-03-12T12:50:31+01:00</updated>
+  <updated>2013-04-13T14:25:30+02:00</updated>
   <id>http://www.mandubian.com/</id>
   <author>
     <name><![CDATA[Pascal Voitot]]></name>
@@ -12,6 +12,86 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Quick Survey about most basic concept in Functional Programming]]></title>
+    <link href="http://www.mandubian.com/2013/04/13/FP-survey/"/>
+    <updated>2013-04-13T14:14:00+02:00</updated>
+    <id>http://www.mandubian.com/2013/04/13/FP-survey</id>
+    <content type="html"><![CDATA[<h4>The question</h4>
+
+<div class="well">
+<h3>What&#8217;s the first word coming in your mind when I say:</h3>
+<h3><i>&#8220;Most basic concept of functional programming?&#8221;</i></h3>
+</div>
+
+
+
+
+
+
+
+
+<script src="http://d3js.org/d3.v3.js"></script>
+
+
+
+
+<script>
+var width = 800,
+    height = 600;
+
+var cluster = d3.layout.cluster()
+    .size([height, width - 560]);
+
+var diagonal = d3.svg.diagonal()
+    .projection(function(d) { return [d.y, d.x]; });
+
+var content = document.getElementsByClassName("entry-content")[0];
+
+var svg = d3.select(content).append("svg")
+    .attr("width", width)
+    .attr("height", height)
+    .append("g")
+    .attr("transform", "translate(50,0)");
+
+d3.json("/javascripts/survey1-results.json", function(error, json) {
+  if (error) return console.warn(error);
+  console.log(json);
+
+  var nodes = cluster.nodes(json),
+      links = cluster.links(nodes);
+
+  var link = svg.selectAll(".link")
+      .data(links)
+      .enter().append("path")
+      .attr("class", "link")
+      .attr("d", diagonal);
+
+  var node = svg.selectAll(".node")
+      .data(nodes)
+      .enter().append("g")
+      .attr("class", "node")
+      .attr("transform", function(d) { return "translate(" + d.y + "," + d.x + ")"; })
+
+  node.append("circle")
+      .attr("r", 4.5);
+
+  node.append("text")
+      .attr("dx", function(d) { return d.children ? -8 : 8; })
+      .attr("dy", 3)
+      .style("text-anchor", function(d) { return d.children ? "end" : "start"; })
+      .text(function(d) { return d.name; });
+});
+
+d3.select(self.frameElement).style("height", height + "px");
+
+</script>
+
+
+<p>Have Fun(ctional)</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Shapeless HList Schema-Type-Safe conversion to Datomisca/Datomic Entities]]></title>

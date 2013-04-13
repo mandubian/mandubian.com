@@ -1,0 +1,38 @@
+{ "children" : [ { "children" : [ { "name" : "function :)" },
+            { "name" : "first-class function" },
+            { "name" : "is right! function is the first word coming to my mind ;-)" },
+            { "name" : "high order functions" },
+            { "name" : "composition of small functions, to make larger ones." },
+            { "name" : "first-class function" },
+            { "name" : "composition of small functions, to make larger ones." },
+            { "name" : "Um, \"functions\"?" },
+            { "name" : "function :-)" },
+            { "name" : "lambda" },
+            { "name" : "function as value" },
+            { "name" : "higher-order function" }
+          ],
+        "name" : "function"
+      },
+      { "children" : [ { "name" : "programming with (immutable) values." },
+            { "name" : "inmutable" },
+            { "name" : "immutability" }
+          ],
+        "name" : "immutable"
+      },
+      { "children" : [ { "name" : "math" },
+            { "name" : "changing my answer to \"math\"..." }
+          ],
+        "name" : "math"
+      },
+      { "children" : [ { "name" : "map" },
+            { "name" : "><>" },
+            { "name" : "ask the question on a different day and you'll probably get a different answer!" },
+            { "name" : "Oxymoron" },
+            { "name" : "FP in one word: Lists. Not sure this is typical FP though. Probably just part of it." },
+            { "name" : "no side-effect" }
+          ],
+        "name" : "miscelleanous"
+      }
+    ],
+  "name" : "Answers"
+}

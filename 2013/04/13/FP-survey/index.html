@@ -5,12 +5,28 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Category: play 2.1 - Mandubian Blog</title>
+  <title>Quick Survey about most basic concept in Functional Programming - Mandubian Blog</title>
   <meta name="author" content="Pascal Voitot">
 
   
-  <meta name="description" content="Category: play 2.1">
+  <meta name="description" content="Quick Survey About Most Basic Concept in Functional Programming
+    
+    
+      
+        
+
+
+
+
+
+
+
+
   
+
+
+Apr 13th, 2013 &hellip;">
+  <meta name="keywords" content="functional programming,survey,concept">
 
   <!-- http://t.co/dKP3o1e -->
   <meta name="HandheldFriendly" content="True">
@@ -18,7 +34,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://www.mandubian.comblog/categories/play-2-1">
+  <link rel="canonical" href="http://www.mandubian.com/2013/04/13/FP-survey">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/bootstrap/bootstrap.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/stylesheets/bootstrap/responsive.css" media="screen, projection" rel="stylesheet" type="text/css">
@@ -109,38 +125,170 @@
   <div class="container">
     <div class="row-fluid">
       
-<article role="article" class="span9">
+<article class="hentry span9" role="article">
 
   
   <header class="page-header">
-    <h1 class="entry-title">Category: Play 2.1</h1>
+    
+      <h1 class="entry-title">Quick Survey About Most Basic Concept in Functional Programming</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-04-13T14:14:00+02:00" pubdate data-updated="true">Apr 13<span>th</span>, 2013</time>
+        
+         | <a href="#disqus_thread">Comments</a>
+        
+      </p>
     
   </header>
-  
-  <div id="blog-archives" class="category">
 
 
+<div class="entry-content"><h4>The question</h4>
 
-  
-  <h1>2013</h1>
-
-<article>
-  <div class="well">
-
-<h2><a href="/2013/02/21/play-json-stand-alone/">Playing with Play2 SCALA JSON API Stand-alone</a></h2>
-<time datetime="2013-02-21T14:14:00+01:00" pubdate><span class='month'>Feb</span> <span class='day'>21</span> <span class='year'>2013</span></time>
-
-<footer>
-  <span class="categories">posted in <a class='category' href='/blog/categories/json/'>json</a>, <a class='category' href='/blog/categories/play-2-1/'>play 2.1</a>, <a class='category' href='/blog/categories/play-framework/'>play framework</a>, <a class='category' href='/blog/categories/scala/'>scala</a></span>
-</footer>
-
+<div class="well">
+<h3>What&#8217;s the first word coming in your mind when I say:</h3>
+<h3><i>&#8220;Most basic concept of functional programming?&#8221;</i></h3>
 </div>
 
-</article>
 
+
+
+
+
+
+
+<script src="http://d3js.org/d3.v3.js"></script>
+
+
+
+
+<script>
+var width = 800,
+    height = 600;
+
+var cluster = d3.layout.cluster()
+    .size([height, width - 560]);
+
+var diagonal = d3.svg.diagonal()
+    .projection(function(d) { return [d.y, d.x]; });
+
+var content = document.getElementsByClassName("entry-content")[0];
+
+var svg = d3.select(content).append("svg")
+    .attr("width", width)
+    .attr("height", height)
+    .append("g")
+    .attr("transform", "translate(50,0)");
+
+d3.json("/javascripts/survey1-results.json", function(error, json) {
+  if (error) return console.warn(error);
+  console.log(json);
+
+  var nodes = cluster.nodes(json),
+      links = cluster.links(nodes);
+
+  var link = svg.selectAll(".link")
+      .data(links)
+      .enter().append("path")
+      .attr("class", "link")
+      .attr("d", diagonal);
+
+  var node = svg.selectAll(".node")
+      .data(nodes)
+      .enter().append("g")
+      .attr("class", "node")
+      .attr("transform", function(d) { return "translate(" + d.y + "," + d.x + ")"; })
+
+  node.append("circle")
+      .attr("r", 4.5);
+
+  node.append("text")
+      .attr("dx", function(d) { return d.children ? -8 : 8; })
+      .attr("dy", 3)
+      .style("text-anchor", function(d) { return d.children ? "end" : "start"; })
+      .text(function(d) { return d.name; });
+});
+
+d3.select(self.frameElement).style("height", height + "px");
+
+</script>
+
+
+<p>Have Fun(ctional)</p>
 </div>
 
+
+  <footer>
+    <p class="meta">
+      
   
+
+<span class="byline author vcard">Posted by <span class="fn">Pascal Voitot</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-04-13T14:14:00+02:00" pubdate data-updated="true">Apr 13<span>th</span>, 2013</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/concept/'>concept</a>, <a class='category' href='/blog/categories/functional-programming/'>functional programming</a>, <a class='category' href='/blog/categories/survey/'>survey</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://www.mandubian.com/2013/04/13/FP-survey/" data-via="mandubian" data-counturl="http://www.mandubian.com/2013/04/13/FP-survey/" >Tweet</a>
+  
+  
+  <div class="g-plusone" data-size="medium"></div>
+  
+  
+</div>
+
+    
+    
+    <section>
+      <h1>Comments</h1>
+      <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+    </section>
+    
+    <ul class="pager">
+      
+      <li class="previous"><a class="basic-alignment left"
+        href="/2013/03/12/datomisca-shapeless-hlist/" title="Previous Post:
+        Shapeless HList Schema-Type-Safe conversion to Datomisca/Datomic Entities">&laquo; Shapeless HList Schema-Type-Safe conversion to Datomisca/Datomic Entities</a></li>
+      
+      <li><a href="/blog/archives">Blog Archives</a></li>
+      
+    </ul>
+  </footer>
 </article>
 
 <aside class="sidebar-nav span3">
@@ -174,23 +322,23 @@
 
 
 <section class="well">
-  <ul id="tweets" class="nav" data-user="mandubian" data-count="4" data-replies="false">
-    <li class="loading">Status updating...</li>
-  </ul>
-  
-    <a href="http://twitter.com/mandubian" class="twitter-follow-button" data-show-count="false">Follow @mandubian</a>
-  
-</section>
-
-
-
-<section class="well">
   <ul id="gh_repos" data-user="mandubian" data-count="5" data-skip="true" class="nav">
 	<li class="nav-header">On GitHub</li>
     <li class="loading">Status updating...</li>
   </ul>
   
   <a class="github-follow" href="https://github.com/mandubian">Follow @mandubian</a>
+  
+</section>
+
+
+
+<section class="well">
+  <ul id="tweets" class="nav" data-user="mandubian" data-count="4" data-replies="false">
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+    <a href="http://twitter.com/mandubian" class="twitter-follow-button" data-show-count="false">Follow @mandubian</a>
   
 </section>
 
@@ -222,7 +370,10 @@
       var disqus_shortname = 'mandubian';
       
         
-        var disqus_script = 'count.js';
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://www.mandubian.com/2013/04/13/FP-survey/';
+        var disqus_url = 'http://www.mandubian.com/2013/04/13/FP-survey/';
+        var disqus_script = 'embed.js';
       
     (function () {
       var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
