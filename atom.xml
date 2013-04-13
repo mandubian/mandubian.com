@@ -4,7 +4,7 @@
   <title><![CDATA[Mandubian Blog]]></title>
   <link href="http://www.mandubian.com/atom.xml" rel="self"/>
   <link href="http://www.mandubian.com/"/>
-  <updated>2013-04-13T14:29:42+02:00</updated>
+  <updated>2013-04-13T14:31:00+02:00</updated>
   <id>http://www.mandubian.com/</id>
   <author>
     <name><![CDATA[Pascal Voitot]]></name>
@@ -89,7 +89,7 @@ d3.select(self.frameElement).style("height", height + "px");
 </script>
 
 
-<blockquote><p>For info, this dendrograph was pre-computed using Play2.1 app sucking Tweets and filtering/grouping the results ;)</p></blockquote>
+<blockquote><p>For info, this dendrograph was pre-computed using Play2.1 app sucking Tweets &amp; filtering/grouping the results in a very manual-o-matic way…</p></blockquote>
 
 <p>Have Fun(ctional)</p>
 ]]></content>
