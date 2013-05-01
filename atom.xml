@@ -4,7 +4,7 @@
   <title><![CDATA[Mandubian Blog]]></title>
   <link href="http://www.mandubian.com/atom.xml" rel="self"/>
   <link href="http://www.mandubian.com/"/>
-  <updated>2013-04-16T00:30:20+02:00</updated>
+  <updated>2013-05-01T18:26:59+02:00</updated>
   <id>http://www.mandubian.com/</id>
   <author>
     <name><![CDATA[Pascal Voitot]]></name>
@@ -12,6 +12,264 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[JsZipper : Play2 Json advanced (& monadic) manipulations]]></title>
+    <link href="http://www.mandubian.com/2013/05/01/JsZipper/"/>
+    <updated>2013-05-01T17:17:00+02:00</updated>
+    <id>http://www.mandubian.com/2013/05/01/JsZipper</id>
+    <content type="html"><![CDATA[<h4>EXPERIMENTAL / DRAFT</h4>
+
+<br/>
+
+
+<div class="well">
+<p><b><code>JsZipper</code> is a new tool allowing much more complex & powerful manipulations of Json structures for Play2/Json Scala API (not a part of Play2 core for now)</b></p>
+<p><code>JsZipper</code> is inspired by the <a href="http://en.wikipedia.org/wiki/Zipper_(data_structure)">Zipper</a> concept introduced by <a href="http://en.wikipedia.org/wiki/Gérard_Huet">Gérard Huet</a> in 1997.</p>
+
+<p>The Zipper allows to update immutable traversable structures in an efficient way. Json is an immutable AST so it fits well. FYI, the Zipper behaves like a loupe that walks through each node of the AST (left/right/up/down) while keeping aware of the nodes on its left, its right and its upper. The interesting idea behind the loupe is that when it targets a node, it can modify and even delete the focused node. The analogy to the pants zipper is quite good too because when it goes down the tree, it behaves as if it was <i>opening</i> the tree to be able to drive the loupe through all nodes and when it goes up, it <i>closes</i> back the tree&#8230; I won&#8217;t tell more here, it would be too long.</p>
+
+<p><code>JsZipper</code> is a specific interpretation of Zipper concept for Play/Json API based on :
+<ul><li>Scala Streams to go through / update / construct Json AST nodes in a lazy way</li>
+<li>Monadic aspects to provide <i>funnier</i> ways of manipulating the Json AST (plz see below)</li>
+</ul>
+</p>
+<br/>
+<p><i>Please note, <code>JsZipper</code> is not an end in itself but a tool useful to provide new API to manipulate Json.</i></p>
+</div>
+
+
+<p>Let&#8217;s go to samples because it explains everything.</p>
+
+<p>We&#8217;ll use following Json Object.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">js</span> <span class="k">=</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span>
+</span><span class='line'>  <span class="s">&quot;key1&quot;</span> <span class="o">-&gt;</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span>
+</span><span class='line'>    <span class="s">&quot;key11&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;TO_FIND&quot;</span><span class="o">,</span>
+</span><span class='line'>    <span class="s">&quot;key12&quot;</span> <span class="o">-&gt;</span> <span class="mi">123L</span><span class="o">,</span>
+</span><span class='line'>    <span class="s">&quot;key13&quot;</span> <span class="o">-&gt;</span> <span class="nc">JsNull</span>
+</span><span class='line'>  <span class="o">),</span>
+</span><span class='line'>  <span class="s">&quot;key2&quot;</span> <span class="o">-&gt;</span> <span class="mi">123</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;key3&quot;</span> <span class="o">-&gt;</span> <span class="kc">true</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;key4&quot;</span> <span class="o">-&gt;</span> <span class="nc">Json</span><span class="o">.</span><span class="n">arr</span><span class="o">(</span><span class="s">&quot;TO_FIND&quot;</span><span class="o">,</span> <span class="mf">345.6</span><span class="o">,</span> <span class="s">&quot;test&quot;</span><span class="o">,</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span><span class="s">&quot;key411&quot;</span> <span class="o">-&gt;</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span><span class="s">&quot;key4111&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;TO_FIND&quot;</span><span class="o">)))</span>
+</span><span class='line'><span class="o">)</span>
+</span><span class='line'><span class="n">js</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsObject</span> <span class="o">=</span> <span class="o">{</span><span class="s">&quot;key1&quot;</span><span class="k">:</span><span class="o">{</span><span class="err">&quot;</span><span class="kt">key11</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">TO_FIND</span><span class="err">&quot;</span><span class="o">,</span><span class="err">&quot;</span><span class="kt">key12</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">123</span><span class="o">,</span><span class="s">&quot;key13&quot;</span><span class="k">:</span><span class="kt">null</span><span class="o">},</span><span class="s">&quot;key2&quot;</span><span class="k">:</span><span class="err">123</span><span class="o">,</span><span class="s">&quot;key3&quot;</span><span class="k">:</span><span class="kt">true</span><span class="o">,</span><span class="s">&quot;key4&quot;</span><span class="k">:</span><span class="err">[&quot;</span><span class="kt">TO_FIND</span><span class="err">&quot;</span><span class="o">,</span><span class="mf">345.6</span><span class="o">,</span><span class="s">&quot;test&quot;</span><span class="o">,{</span><span class="s">&quot;key411&quot;</span><span class="k">:</span><span class="o">{</span><span class="err">&quot;</span><span class="kt">key4111</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">TO_FIND</span><span class="err">&quot;</span><span class="o">}}</span><span class="err">]</span><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h1>Basic manipulations</h1>
+
+<h2>Setting multiple paths/values</h2>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="n">js</span><span class="o">.</span><span class="n">set</span><span class="o">(</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;key4&quot;</span><span class="o">)(</span><span class="mi">2</span><span class="o">)</span> <span class="o">-&gt;</span> <span class="nc">JsNumber</span><span class="o">(</span><span class="mf">765.23</span><span class="o">),</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;key1&quot;</span> <span class="o">\</span> <span class="s">&quot;key12&quot;</span><span class="o">)</span> <span class="o">-&gt;</span> <span class="nc">JsString</span><span class="o">(</span><span class="s">&quot;toto&quot;</span><span class="o">)</span>
+</span><span class='line'><span class="o">)</span>
+</span><span class='line'><span class="n">res1</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsValue</span> <span class="o">=</span> <span class="o">{</span><span class="s">&quot;key1&quot;</span><span class="k">:</span><span class="o">{</span><span class="err">&quot;</span><span class="kt">key11</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">TO_FIND</span><span class="err">&quot;</span><span class="o">,</span><span class="err">&quot;</span><span class="kt">key12</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">toto</span><span class="err">&quot;</span><span class="o">,</span><span class="s">&quot;key13&quot;</span><span class="k">:</span><span class="kt">null</span><span class="o">},</span><span class="s">&quot;key2&quot;</span><span class="k">:</span><span class="err">123</span><span class="o">,</span><span class="s">&quot;key3&quot;</span><span class="k">:</span><span class="kt">true</span><span class="o">,</span><span class="s">&quot;key4&quot;</span><span class="k">:</span><span class="err">[&quot;</span><span class="kt">TO_FIND</span><span class="err">&quot;</span><span class="o">,</span><span class="mf">345.6</span><span class="o">,</span><span class="mf">765.23</span><span class="o">,{</span><span class="s">&quot;key411&quot;</span><span class="k">:</span><span class="o">{</span><span class="err">&quot;</span><span class="kt">key4111</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">TO_FIND</span><span class="err">&quot;</span><span class="o">}}</span><span class="err">]</span><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>Deleting multiple paths/values</h2>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="n">js</span><span class="o">.</span><span class="n">delete</span><span class="o">(</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;key4&quot;</span><span class="o">)(</span><span class="mi">2</span><span class="o">),</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;key1&quot;</span> <span class="o">\</span> <span class="s">&quot;key12&quot;</span><span class="o">),</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;key1&quot;</span> <span class="o">\</span> <span class="s">&quot;key13&quot;</span><span class="o">)</span>
+</span><span class='line'><span class="o">)</span>
+</span><span class='line'><span class="n">res2</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsValue</span> <span class="o">=</span> <span class="o">{</span><span class="s">&quot;key1&quot;</span><span class="k">:</span><span class="o">{</span><span class="err">&quot;</span><span class="kt">key11</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">TO_FIND</span><span class="err">&quot;</span><span class="o">},</span><span class="s">&quot;key2&quot;</span><span class="k">:</span><span class="err">123</span><span class="o">,</span><span class="s">&quot;key3&quot;</span><span class="k">:</span><span class="kt">true</span><span class="o">,</span><span class="s">&quot;key4&quot;</span><span class="k">:</span><span class="err">[&quot;</span><span class="kt">TO_FIND</span><span class="err">&quot;</span><span class="o">,</span><span class="mf">345.6</span><span class="o">,{</span><span class="s">&quot;key411&quot;</span><span class="k">:</span><span class="o">{</span><span class="err">&quot;</span><span class="kt">key4111</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">TO_FIND</span><span class="err">&quot;</span><span class="o">}}</span><span class="err">]</span><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>Finding paths/values according to a filter</h2>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="n">js</span><span class="o">.</span><span class="n">findAll</span><span class="o">(</span> <span class="k">_</span> <span class="o">==</span> <span class="nc">JsString</span><span class="o">(</span><span class="s">&quot;TO_FIND&quot;</span><span class="o">)</span> <span class="o">).</span><span class="n">toList</span>
+</span><span class='line'><span class="n">res5</span><span class="k">:</span> <span class="kt">List</span><span class="o">[(</span><span class="kt">play.api.libs.json.JsPath</span>, <span class="kt">play.api.libs.json.JsValue</span><span class="o">)]</span> <span class="k">=</span> <span class="nc">List</span><span class="o">(</span>
+</span><span class='line'>  <span class="o">(/</span><span class="n">key1</span><span class="o">/</span><span class="n">key11</span><span class="o">,</span><span class="s">&quot;TO_FIND&quot;</span><span class="o">),</span>
+</span><span class='line'>  <span class="o">(/</span><span class="n">key4</span><span class="o">(</span><span class="mi">0</span><span class="o">),</span><span class="s">&quot;TO_FIND&quot;</span><span class="o">),</span>
+</span><span class='line'>  <span class="o">(/</span><span class="n">key4</span><span class="o">(</span><span class="mi">3</span><span class="o">)/</span><span class="n">key411</span><span class="o">/</span><span class="n">key4111</span><span class="o">,</span><span class="s">&quot;TO_FIND&quot;</span><span class="o">)</span>
+</span><span class='line'><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>Updating values according to a filter based on value</h2>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="n">js</span><span class="o">.</span><span class="n">updateAll</span><span class="o">(</span> <span class="o">(</span><span class="k">_:</span><span class="kt">JsValue</span><span class="o">)</span> <span class="o">==</span> <span class="nc">JsString</span><span class="o">(</span><span class="s">&quot;TO_FIND&quot;</span><span class="o">)</span> <span class="o">){</span> <span class="n">js</span> <span class="k">=&gt;</span>
+</span><span class='line'>  <span class="k">val</span> <span class="nc">JsString</span><span class="o">(</span><span class="n">str</span><span class="o">)</span> <span class="k">=</span> <span class="n">js</span>
+</span><span class='line'>  <span class="nc">JsString</span><span class="o">(</span><span class="n">str</span> <span class="o">+</span> <span class="s">&quot;2&quot;</span><span class="o">)</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'><span class="n">res6</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsValue</span> <span class="o">=</span> <span class="o">{</span><span class="s">&quot;key1&quot;</span><span class="k">:</span><span class="o">{</span><span class="err">&quot;</span><span class="kt">key11</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">TO_FIND2</span><span class="err">&quot;</span><span class="o">,</span><span class="err">&quot;</span><span class="kt">key12</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">123</span><span class="o">,</span><span class="s">&quot;key13&quot;</span><span class="k">:</span><span class="kt">null</span><span class="o">},</span><span class="s">&quot;key2&quot;</span><span class="k">:</span><span class="err">123</span><span class="o">,</span><span class="s">&quot;key3&quot;</span><span class="k">:</span><span class="kt">true</span><span class="o">,</span><span class="s">&quot;key4&quot;</span><span class="k">:</span><span class="err">[&quot;</span><span class="kt">TO_FIND2</span><span class="err">&quot;</span><span class="o">,</span><span class="mf">345.6</span><span class="o">,</span><span class="s">&quot;test&quot;</span><span class="o">,{</span><span class="s">&quot;key411&quot;</span><span class="k">:</span><span class="o">{</span><span class="err">&quot;</span><span class="kt">key4111</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">TO_FIND2</span><span class="err">&quot;</span><span class="o">}}</span><span class="err">]</span><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>Updating values according to a filter based on path+value</h2>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="n">js</span><span class="o">.</span><span class="n">updateAll</span><span class="o">{</span> <span class="o">(</span><span class="n">path</span><span class="o">,</span> <span class="n">js</span><span class="o">)</span> <span class="k">=&gt;</span>
+</span><span class='line'>  <span class="nc">JsPathExtension</span><span class="o">.</span><span class="n">hasKey</span><span class="o">(</span><span class="n">path</span><span class="o">)</span> <span class="o">==</span> <span class="nc">Some</span><span class="o">(</span><span class="s">&quot;key4111&quot;</span><span class="o">)</span>
+</span><span class='line'><span class="o">}{</span> <span class="o">(</span><span class="n">path</span><span class="o">,</span> <span class="n">js</span><span class="o">)</span> <span class="k">=&gt;</span>
+</span><span class='line'>  <span class="k">val</span> <span class="nc">JsString</span><span class="o">(</span><span class="n">str</span><span class="o">)</span> <span class="k">=</span> <span class="n">js</span>
+</span><span class='line'>  <span class="nc">JsString</span><span class="o">(</span><span class="n">str</span> <span class="o">+</span> <span class="n">path</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">last</span><span class="o">)</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'><span class="n">res1</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsValue</span> <span class="o">=</span> <span class="o">{</span><span class="s">&quot;key1&quot;</span><span class="k">:</span><span class="o">{</span><span class="err">&quot;</span><span class="kt">key11</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">TO_FIND</span><span class="err">&quot;</span><span class="o">,</span><span class="err">&quot;</span><span class="kt">key12</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">123</span><span class="o">,</span><span class="s">&quot;key13&quot;</span><span class="k">:</span><span class="kt">null</span><span class="o">},</span><span class="s">&quot;key2&quot;</span><span class="k">:</span><span class="err">123</span><span class="o">,</span><span class="s">&quot;key3&quot;</span><span class="k">:</span><span class="kt">true</span><span class="o">,</span><span class="s">&quot;key4&quot;</span><span class="k">:</span><span class="err">[&quot;</span><span class="kt">TO_FIND</span><span class="err">&quot;</span><span class="o">,</span><span class="mf">345.6</span><span class="o">,</span><span class="s">&quot;test&quot;</span><span class="o">,{</span><span class="s">&quot;key411&quot;</span><span class="k">:</span><span class="o">{</span><span class="err">&quot;</span><span class="kt">key4111</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">TO_FIND/key4111</span><span class="err">&quot;</span><span class="o">}}</span><span class="err">]</span><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>Creating an object from scratch</h2>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">build</span> <span class="k">=</span> <span class="nc">JsExtensions</span><span class="o">.</span><span class="n">buildJsObject</span><span class="o">(</span>
+</span><span class='line'>  <span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;key1&quot;</span> <span class="o">\</span> <span class="s">&quot;key11&quot;</span> <span class="o">-&gt;</span> <span class="nc">JsString</span><span class="o">(</span><span class="s">&quot;toto&quot;</span><span class="o">),</span>
+</span><span class='line'>  <span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;key1&quot;</span> <span class="o">\</span> <span class="s">&quot;key12&quot;</span> <span class="o">-&gt;</span> <span class="nc">JsNumber</span><span class="o">(</span><span class="mi">123L</span><span class="o">),</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;key2&quot;</span><span class="o">)(</span><span class="mi">0</span><span class="o">)</span>      <span class="o">-&gt;</span> <span class="nc">JsBoolean</span><span class="o">(</span><span class="kc">true</span><span class="o">),</span>
+</span><span class='line'>  <span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;key3&quot;</span>           <span class="o">-&gt;</span> <span class="nc">Json</span><span class="o">.</span><span class="n">arr</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span> <span class="mi">2</span><span class="o">,</span> <span class="mi">3</span><span class="o">)</span>
+</span><span class='line'><span class="o">)</span>
+</span><span class='line'><span class="n">build</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsValue</span> <span class="o">=</span> <span class="o">{</span><span class="s">&quot;key1&quot;</span><span class="k">:</span><span class="o">{</span><span class="err">&quot;</span><span class="kt">key11</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">toto</span><span class="err">&quot;</span><span class="o">,</span><span class="err">&quot;</span><span class="kt">key12</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">123</span><span class="o">},</span><span class="s">&quot;key3&quot;</span><span class="k">:</span><span class="err">[1</span><span class="o">,</span><span class="mi">2</span><span class="o">,</span><span class="mi">3</span><span class="err">]</span><span class="o">,</span><span class="s">&quot;key2&quot;</span><span class="k">:</span><span class="err">[</span><span class="kt">true</span><span class="err">]</span><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<h1>Let&#8217;s be funnier with Monads now</h1>
+
+<blockquote><p>Let&#8217;s use <code>Future</code> as our Monad because it&#8217;s&#8230; coooool to do things in the future ;)</p></blockquote>
+
+<p>Imagine you call several services returning <code>Future[JsValue]</code> and you want to build/update a <code>JsObject</code> from it.
+Until now, if you wanted to do that with Play2/Json, it was quite tricky and required some code.</p>
+
+<p>Here is what you can do now.</p>
+
+<h2>Updating multiple <em>FUTURE</em> values at given paths</h2>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">maybeJs</span> <span class="k">=</span> <span class="n">js</span><span class="o">.</span><span class="n">setM</span><span class="o">[</span><span class="kt">Future</span><span class="o">](</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;key4&quot;</span><span class="o">)(</span><span class="mi">2</span><span class="o">)</span>        <span class="o">-&gt;</span> <span class="n">future</span><span class="o">{</span> <span class="nc">JsNumber</span><span class="o">(</span><span class="mf">765.23</span><span class="o">)</span> <span class="o">},</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;key1&quot;</span> <span class="o">\</span> <span class="s">&quot;key12&quot;</span><span class="o">)</span> <span class="o">-&gt;</span> <span class="n">future</span><span class="o">{</span> <span class="nc">JsString</span><span class="o">(</span><span class="s">&quot;toto&quot;</span><span class="o">)</span> <span class="o">}</span>
+</span><span class='line'><span class="o">)</span>
+</span><span class='line'><span class="n">maybeJs</span><span class="k">:</span> <span class="kt">scala.concurrent.Future</span><span class="o">[</span><span class="kt">play.api.libs.json.JsValue</span><span class="o">]</span> <span class="k">=</span> <span class="n">scala</span><span class="o">.</span><span class="n">concurrent</span><span class="o">.</span><span class="n">impl</span><span class="o">.</span><span class="nc">Promise$DefaultPromise</span><span class="k">@</span><span class="mi">6</span><span class="n">beb722d</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="nc">Await</span><span class="o">.</span><span class="n">result</span><span class="o">(</span><span class="n">maybeJs</span><span class="o">,</span> <span class="nc">Duration</span><span class="o">(</span><span class="s">&quot;2 seconds&quot;</span><span class="o">))</span>
+</span><span class='line'><span class="n">res4</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsValue</span> <span class="o">=</span> <span class="o">{</span><span class="s">&quot;key1&quot;</span><span class="k">:</span><span class="o">{</span><span class="err">&quot;</span><span class="kt">key11</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">TO_FIND</span><span class="err">&quot;</span><span class="o">,</span><span class="err">&quot;</span><span class="kt">key12</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">toto</span><span class="err">&quot;</span><span class="o">,</span><span class="s">&quot;key13&quot;</span><span class="k">:</span><span class="kt">null</span><span class="o">},</span><span class="s">&quot;key2&quot;</span><span class="k">:</span><span class="err">123</span><span class="o">,</span><span class="s">&quot;key3&quot;</span><span class="k">:</span><span class="kt">true</span><span class="o">,</span><span class="s">&quot;key4&quot;</span><span class="k">:</span><span class="err">[&quot;</span><span class="kt">TO_FIND</span><span class="err">&quot;</span><span class="o">,</span><span class="mf">345.6</span><span class="o">,</span><span class="mf">765.23</span><span class="o">,{</span><span class="s">&quot;key411&quot;</span><span class="k">:</span><span class="o">{</span><span class="err">&quot;</span><span class="kt">key4111</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">TO_FIND</span><span class="err">&quot;</span><span class="o">}}</span><span class="err">]</span><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>Update multiple <em>FUTURE</em> values according to a filter</h2>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">maybeJs</span> <span class="k">=</span> <span class="n">js</span><span class="o">.</span><span class="n">updateAllM</span><span class="o">[</span><span class="kt">Future</span><span class="o">](</span> <span class="o">(</span><span class="k">_:</span><span class="kt">JsValue</span><span class="o">)</span> <span class="o">==</span> <span class="nc">JsString</span><span class="o">(</span><span class="s">&quot;TO_FIND&quot;</span><span class="o">)</span> <span class="o">){</span> <span class="n">js</span> <span class="k">=&gt;</span>
+</span><span class='line'>  <span class="n">future</span> <span class="o">{</span>
+</span><span class='line'>    <span class="k">val</span> <span class="nc">JsString</span><span class="o">(</span><span class="n">str</span><span class="o">)</span> <span class="k">=</span> <span class="n">js</span>
+</span><span class='line'>    <span class="nc">JsString</span><span class="o">(</span><span class="n">str</span> <span class="o">+</span> <span class="s">&quot;2&quot;</span><span class="o">)</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'><span class="n">maybeJs</span><span class="k">:</span> <span class="kt">scala.concurrent.Future</span><span class="o">[</span><span class="kt">play.api.libs.json.JsValue</span><span class="o">]</span> <span class="k">=</span> <span class="n">scala</span><span class="o">.</span><span class="n">concurrent</span><span class="o">.</span><span class="n">impl</span><span class="o">.</span><span class="nc">Promise$DefaultPromise</span><span class="k">@</span><span class="mi">35</span><span class="n">a4bb1a</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="nc">Await</span><span class="o">.</span><span class="n">result</span><span class="o">(</span><span class="n">maybeJs</span><span class="o">,</span> <span class="nc">Duration</span><span class="o">(</span><span class="s">&quot;2 seconds&quot;</span><span class="o">))</span>
+</span><span class='line'><span class="n">res6</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsValue</span> <span class="o">=</span> <span class="o">{</span><span class="s">&quot;key1&quot;</span><span class="k">:</span><span class="o">{</span><span class="err">&quot;</span><span class="kt">key11</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">TO_FIND2</span><span class="err">&quot;</span><span class="o">,</span><span class="err">&quot;</span><span class="kt">key12</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">123</span><span class="o">,</span><span class="s">&quot;key13&quot;</span><span class="k">:</span><span class="kt">null</span><span class="o">},</span><span class="s">&quot;key2&quot;</span><span class="k">:</span><span class="err">123</span><span class="o">,</span><span class="s">&quot;key3&quot;</span><span class="k">:</span><span class="kt">true</span><span class="o">,</span><span class="s">&quot;key4&quot;</span><span class="k">:</span><span class="err">[&quot;</span><span class="kt">TO_FIND2</span><span class="err">&quot;</span><span class="o">,</span><span class="mf">345.6</span><span class="o">,</span><span class="s">&quot;test&quot;</span><span class="o">,{</span><span class="s">&quot;key411&quot;</span><span class="k">:</span><span class="o">{</span><span class="err">&quot;</span><span class="kt">key4111</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">TO_FIND2</span><span class="err">&quot;</span><span class="o">}}</span><span class="err">]</span><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>Creating a <em>FUTURE</em> JsArray from scratch</h2>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">maybeArr</span> <span class="k">=</span> <span class="nc">JsExtensions</span><span class="o">.</span><span class="n">buildJsArrayM</span><span class="o">[</span><span class="kt">Future</span><span class="o">](</span>
+</span><span class='line'>  <span class="n">future</span> <span class="o">{</span> <span class="nc">JsNumber</span><span class="o">(</span><span class="mf">123.45</span><span class="o">)</span> <span class="o">},</span>
+</span><span class='line'>  <span class="n">future</span> <span class="o">{</span> <span class="nc">JsString</span><span class="o">(</span><span class="s">&quot;toto&quot;</span><span class="o">)</span> <span class="o">}</span>
+</span><span class='line'><span class="o">)</span>
+</span><span class='line'><span class="n">maybeArr</span><span class="k">:</span> <span class="kt">scala.concurrent.Future</span><span class="o">[</span><span class="kt">play.api.libs.json.JsValue</span><span class="o">]</span> <span class="k">=</span> <span class="n">scala</span><span class="o">.</span><span class="n">concurrent</span><span class="o">.</span><span class="n">impl</span><span class="o">.</span><span class="nc">Promise$DefaultPromise</span><span class="k">@</span><span class="mi">220</span><span class="n">d48e4</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="nc">Await</span><span class="o">.</span><span class="n">result</span><span class="o">(</span><span class="n">maybeArr</span><span class="o">,</span> <span class="nc">Duration</span><span class="o">(</span><span class="s">&quot;2 seconds&quot;</span><span class="o">))</span>
+</span><span class='line'><span class="n">res0</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsValue</span> <span class="o">=</span> <span class="o">[</span><span class="err">123</span><span class="kt">.</span><span class="err">45</span>,<span class="err">&quot;</span><span class="kt">toto</span><span class="err">&quot;</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>It&#8217;s still draft so it can be improved but if you like it, don&#8217;t hesitate to comment and if people like it, it could become a part of Play Framework itself</p>
+
+<p>Have fun!</p>
+
+<br/>
+
+
+<br/>
+
+
+<br/>
+
+
+<br/>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Quick Survey about most basic concept in Functional Programming]]></title>
