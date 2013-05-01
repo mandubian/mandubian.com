@@ -10,6 +10,9 @@ keywords: play framework,scala,json,zipper,monad,future,functional programming
 
 #### EXPERIMENTAL / DRAFT
 <br/>
+
+The code is available on Github project [play-json-zipper](https://github.com/mandubian/play-json-zipper)
+
 <div class="well">
 <p><b><code>JsZipper</code> is a new tool allowing much more complex & powerful manipulations of Json structures for Play2/Json Scala API (not a part of Play2 core for now)</b></p>
 <p><code>JsZipper</code> is inspired by the <a href="http://en.wikipedia.org/wiki/Zipper_(data_structure)">Zipper</a> concept introduced by <a href="http://en.wikipedia.org/wiki/Gérard_Huet">Gérard Huet</a> in 1997.</p>
