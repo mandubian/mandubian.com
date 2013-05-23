@@ -1,0 +1,575 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Play2 Json Path Pattern Matching - Mandubian Blog</title>
+  <meta name="author" content="Pascal Voitot">
+
+  
+  <meta name="description" content="Play2 Json Path Pattern Matching
+    
+    
+      
+        
+
+
+
+
+
+
+
+
+  
+
+
+May 1st, 2013
+        
+         | Comments &hellip;">
+  <meta name="keywords" content="play framework,scala,json,pattern matching">
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://www.mandubian.com/2013/05/01/jspath-pattern-matching">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/bootstrap/bootstrap.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/stylesheets/bootstrap/responsive.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/stylesheets/syntax/syntax.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/stylesheets/d3d.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <style type="text/css">
+    body {
+      padding-bottom: 40px;
+    }
+    h1 {
+      margin-bottom: 15px;
+    }
+    img {
+      max-width: 100%;
+    }
+    .sharing, .meta, .pager {
+      margin: 20px 0px 20px 0px;
+    }
+    .page-footer p {
+      text-align: center;
+    }
+
+    article {
+      margin-bottom: 50px;
+      border-top: #DDD solid 20px;
+    }
+ 
+  </style>
+  <script src="/javascripts/libs/jquery.js"></script>
+  <script src="/javascripts/libs/modernizr-2.0.js"></script>
+  <script src="/javascripts/libs/bootstrap.js"></script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <link href="/atom.xml" rel="alternate" title="Mandubian Blog" type="application/atom+xml">
+  
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-10417377-11']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   >
+  <nav role="navigation"><div class="navbar">
+  <div class="navbar-inner">
+    <div class="container">
+      <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </a>
+
+      <a class="brand" href="/">Mandubian Blog</a>
+
+      <div class="nav-collapse">
+        <ul class="nav">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+
+        <ul class="nav pull-right" data-subscription="rss">
+          <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+          
+        </ul>
+
+        
+          <form class="pull-right navbar-search" action="http://google.com/search" method="get">
+            <fieldset role="search">
+              <input type="hidden" name="q" value="site:www.mandubian.com" />
+              <input class="search-query" type="text" name="q" results="0" placeholder="Search"/>
+            </fieldset>
+          </form>
+        
+      </div>
+    </div>
+  </div>
+</div>
+</nav>
+  <div class="container">
+    <div class="row-fluid">
+      
+<article class="hentry span9" role="article">
+
+  
+  <header class="page-header">
+    
+      <h1 class="entry-title">Play2 Json Path Pattern Matching</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-05-01T17:17:00+02:00" pubdate data-updated="true">May 1<span>st</span>, 2013</time>
+        
+         | <a href="#disqus_thread">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><h4>EXPERIMENTAL / DRAFT</h4>
+
+<br/>
+
+
+
+
+<div class="well">
+<p>While experimenting <b>Play21/Json Zipper</b> in my <a href="http://www.mandubian.com/2013/05/01/JsZipper/">previous article</a>, I needed to match patterns on <code>JsPath</code> and decided to explore a bit this topic.</p>
+<p>This article just presents my experimentations on <code>JsPath</code> pattern matching so that people interested in the topic can tell me if they like it or not and what they would add or remove. So don&#8217;t hesitate to let comments about it.</p>
+<p>If the result is satisfying, I&#8217;ll propose it to Play team ;)</p>
+</div>
+
+
+<p>Let&#8217;s go to samples as usual.</p>
+
+<h2>Very simple pattern matching</h2>
+
+<h3><code>match/scale</code>-style</h3>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;toto&quot;</span> <span class="k">match</span> <span class="o">{</span>
+</span><span class='line'>  <span class="k">case</span> <span class="nc">__</span> <span class="o">\</span> <span class="n">key</span> <span class="k">=&gt;</span> <span class="nc">Some</span><span class="o">(</span><span class="n">key</span><span class="o">)</span>
+</span><span class='line'>  <span class="k">case</span> <span class="k">_</span> <span class="k">=&gt;</span> <span class="nc">None</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'><span class="n">res0</span><span class="k">:</span> <span class="kt">Option</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="k">=</span> <span class="nc">Some</span><span class="o">(</span><span class="n">toto</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3><code>val</code>-style</h3>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="k">_</span> <span class="o">\</span> <span class="n">toto</span> <span class="k">=</span> <span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;toto&quot;</span>
+</span><span class='line'><span class="n">toto</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=</span> <span class="n">toto</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Note that I don&#8217;t write <code>val __ \ toto = __ \ "toto"</code> <em>(2x Underscore)</em> as you would expect.</p>
+
+<p>Why? Let&#8217;s write it:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="nc">__</span> <span class="o">\</span> <span class="n">toto</span> <span class="k">=</span> <span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;toto&quot;</span>
+</span><span class='line'><span class="o">&lt;</span><span class="n">console</span><span class="k">&gt;:</span><span class="mi">20</span><span class="k">:</span> <span class="kt">error:</span> <span class="kt">recursive</span> <span class="kt">value</span> <span class="kt">x$1</span> <span class="kt">needs</span> <span class="k">type</span>
+</span><span class='line'><span class="kt">val</span> <span class="k">__</span> <span class="kt">\</span> <span class="kt">toto</span> <span class="o">=</span> <span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;toto&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Actually, 1st <code>__</code> is considered as a variable to be affected by Scala compiler. Then the variable <code>__</code> appears on left and right side which is not good.</p>
+
+<p>So I use <code>_</code> to ignore its value because I know it&#8217;s <code>__</code>. If I absolutely wanted to match with <code>__</code>, you would have written:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="nc">JsPath</span> <span class="o">\</span> <span class="n">toto</span> <span class="k">=</span> <span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;toto&quot;</span>
+</span><span class='line'><span class="n">toto</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=</span> <span class="n">toto</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<h2>Pattern matching with indexed path</h2>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="o">(</span><span class="k">_</span> <span class="o">\</span> <span class="n">toto</span><span class="o">)@@</span><span class="n">idx</span> <span class="k">=</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;toto&quot;</span><span class="o">)(</span><span class="mi">2</span><span class="o">)</span>
+</span><span class='line'><span class="n">toto</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=</span> <span class="n">toto</span>
+</span><span class='line'><span class="n">idx</span><span class="k">:</span> <span class="kt">Int</span> <span class="o">=</span> <span class="mi">2</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;toto&quot;</span><span class="o">)(</span><span class="mi">2</span><span class="o">)</span> <span class="k">match</span> <span class="o">{</span>
+</span><span class='line'>  <span class="k">case</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;toto&quot;</span><span class="o">)@@</span><span class="n">idx</span> <span class="k">=&gt;</span> <span class="nc">Some</span><span class="o">(</span><span class="n">idx</span><span class="o">)</span>
+</span><span class='line'>  <span class="k">case</span> <span class="k">_</span>      <span class="k">=&gt;</span> <span class="nc">None</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'><span class="n">res1</span><span class="k">:</span> <span class="kt">Option</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="k">=</span> <span class="nc">Some</span><span class="o">(</span><span class="mi">2</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Note the usage of <code>@@</code> operator that you can dislike. <em>I didn&#8217;t find anything better for now but if anyone has a better idea, please give it to me ;)</em></p>
+
+<br/>
+
+
+<h2>Pattern matching the last element of a JsPath</h2>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="k">_</span> <span class="o">\</span> <span class="n">last</span> <span class="k">=</span> <span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;alpha&quot;</span> <span class="o">\</span> <span class="s">&quot;beta&quot;</span> <span class="o">\</span> <span class="s">&quot;delta&quot;</span> <span class="o">\</span> <span class="s">&quot;gamma&quot;</span>
+</span><span class='line'><span class="n">last</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=</span> <span class="n">gamma</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Using <code>_</code>, I ignore everything before <code>gamma</code> node.</p>
+
+<br/>
+
+
+<h2>Matching only the first element and the last one</h2>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="k">_</span> <span class="o">\</span> <span class="n">first</span> <span class="o">\?\</span> <span class="n">last</span> <span class="k">=</span> <span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;alpha&quot;</span> <span class="o">\</span> <span class="s">&quot;beta&quot;</span> <span class="o">\</span> <span class="s">&quot;gamma&quot;</span> <span class="o">\</span> <span class="s">&quot;delta&quot;</span>
+</span><span class='line'><span class="n">first</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=</span> <span class="n">alpha</span>
+</span><span class='line'><span class="n">last</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=</span> <span class="n">delta</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="o">(</span><span class="k">_</span> <span class="o">\</span> <span class="n">first</span><span class="o">)@@</span><span class="n">idx</span> <span class="o">\?\</span> <span class="n">last</span> <span class="k">=</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;alpha&quot;</span><span class="o">)(</span><span class="mi">2</span><span class="o">)</span> <span class="o">\</span> <span class="s">&quot;beta&quot;</span> <span class="o">\</span> <span class="s">&quot;gamma&quot;</span> <span class="o">\</span> <span class="s">&quot;delta&quot;</span>
+</span><span class='line'><span class="n">first</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=</span> <span class="n">alpha</span>
+</span><span class='line'><span class="n">idx</span><span class="k">:</span> <span class="kt">Int</span> <span class="o">=</span> <span class="mi">2</span>
+</span><span class='line'><span class="n">last</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=</span> <span class="n">delta</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Note the <code>\?\</code> operator which is also a temporary choice: I didn&#8217;t want to choose <code>\\</code> ause <code>\?\</code> operator only works in the case where you match between the first and the last element of the path and not between anything and anything&#8230;</p>
+
+<br/>
+
+
+<h2>A few more complex cases</h2>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="o">(</span><span class="k">_</span> <span class="o">\</span> <span class="n">alpha</span><span class="o">)@@</span><span class="n">idx</span> <span class="o">\</span> <span class="n">beta</span> <span class="o">\</span> <span class="n">gamma</span> <span class="o">\</span> <span class="n">delta</span> <span class="k">=</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;alpha&quot;</span><span class="o">)(</span><span class="mi">2</span><span class="o">)</span> <span class="o">\</span> <span class="s">&quot;beta&quot;</span> <span class="o">\</span> <span class="s">&quot;gamma&quot;</span> <span class="o">\</span> <span class="s">&quot;delta&quot;</span>
+</span><span class='line'><span class="n">alpha</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=</span> <span class="n">alpha</span>
+</span><span class='line'><span class="n">idx</span><span class="k">:</span> <span class="kt">Int</span> <span class="o">=</span> <span class="mi">2</span>
+</span><span class='line'><span class="n">beta</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=</span> <span class="n">beta</span>
+</span><span class='line'><span class="n">gamma</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=</span> <span class="n">gamma</span>
+</span><span class='line'><span class="n">delta</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=</span> <span class="n">delta</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="o">(</span><span class="k">_</span> <span class="o">\</span> <span class="n">alpha</span><span class="o">)@@</span><span class="n">idx</span> <span class="o">\</span> <span class="k">_</span> <span class="o">\</span> <span class="k">_</span> <span class="o">\</span> <span class="n">delta</span> <span class="k">=</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;alpha&quot;</span><span class="o">)(</span><span class="mi">2</span><span class="o">)</span> <span class="o">\</span> <span class="s">&quot;beta&quot;</span> <span class="o">\</span> <span class="s">&quot;gamma&quot;</span> <span class="o">\</span> <span class="s">&quot;delta&quot;</span>
+</span><span class='line'><span class="n">alpha</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=</span> <span class="n">alpha</span>
+</span><span class='line'><span class="n">idx</span><span class="k">:</span> <span class="kt">Int</span> <span class="o">=</span> <span class="mi">2</span>
+</span><span class='line'><span class="n">delta</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=</span> <span class="n">delta</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="k">_</span><span class="o">@@</span><span class="n">idx</span> <span class="o">\?\</span> <span class="n">gamma</span> <span class="o">\</span> <span class="n">delta</span> <span class="k">=</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;alpha&quot;</span><span class="o">)(</span><span class="mi">2</span><span class="o">)</span> <span class="o">\</span> <span class="s">&quot;beta&quot;</span> <span class="o">\</span> <span class="s">&quot;gamma&quot;</span> <span class="o">\</span> <span class="s">&quot;delta&quot;</span>
+</span><span class='line'><span class="n">idx</span><span class="k">:</span> <span class="kt">Int</span> <span class="o">=</span> <span class="mi">2</span>
+</span><span class='line'><span class="n">gamma</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=</span> <span class="n">gamma</span>
+</span><span class='line'><span class="n">delta</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=</span> <span class="n">delta</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;alpha&quot;</span><span class="o">)(</span><span class="mi">2</span><span class="o">)</span> <span class="o">\</span> <span class="s">&quot;beta&quot;</span> <span class="o">\</span> <span class="s">&quot;gamma&quot;</span> <span class="o">\</span> <span class="s">&quot;delta&quot;</span> <span class="k">match</span> <span class="o">{</span>
+</span><span class='line'>  <span class="k">case</span> <span class="k">_</span><span class="o">@@</span><span class="mi">2</span> <span class="o">\</span> <span class="s">&quot;beta&quot;</span> <span class="o">\</span> <span class="s">&quot;gamma&quot;</span> <span class="o">\</span> <span class="k">_</span> <span class="k">=&gt;</span> <span class="kc">true</span>
+</span><span class='line'>  <span class="k">case</span> <span class="k">_</span> <span class="k">=&gt;</span> <span class="kc">false</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'><span class="n">res4</span><span class="k">:</span> <span class="kt">Boolean</span> <span class="o">=</span> <span class="kc">true</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<h2>And finally using regex?</h2>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">pattern</span> <span class="k">=</span> <span class="s">&quot;&quot;&quot;al(\d)*pha&quot;&quot;&quot;</span><span class="o">.</span><span class="n">r</span>
+</span><span class='line'><span class="n">pattern</span><span class="k">:</span> <span class="kt">scala.util.matching.Regex</span> <span class="o">=</span> <span class="n">al</span><span class="o">(\</span><span class="n">d</span><span class="o">)*</span><span class="n">pha</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;foo&quot;</span><span class="o">)(</span><span class="mi">2</span><span class="o">)</span> <span class="o">\</span> <span class="s">&quot;al1234pha&quot;</span> <span class="o">\</span> <span class="s">&quot;bar&quot;</span> <span class="k">match</span> <span class="o">{</span>
+</span><span class='line'>  <span class="k">case</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;foo&quot;</span><span class="o">)@@</span><span class="n">idx</span> <span class="o">\</span> <span class="n">pattern</span><span class="o">(</span><span class="k">_</span><span class="o">)</span> <span class="o">\</span> <span class="s">&quot;bar&quot;</span> <span class="k">=&gt;</span> <span class="kc">true</span>
+</span><span class='line'>  <span class="k">case</span> <span class="k">_</span> <span class="k">=&gt;</span> <span class="kc">false</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'><span class="n">res6</span><span class="k">:</span> <span class="kt">Boolean</span> <span class="o">=</span> <span class="kc">true</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>So, I think we can provide more features and now I&#8217;m going to use it with my <code>JsZipper</code> stuff in my next article ;)</p>
+
+<p>If you like it, tell it!</p>
+
+<p>Have fun!</p>
+
+<br/>
+
+
+<br/>
+
+
+<br/>
+
+
+<br/>
+
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Pascal Voitot</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-05-01T17:17:00+02:00" pubdate data-updated="true">May 1<span>st</span>, 2013</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/json/'>json</a>, <a class='category' href='/blog/categories/pattern-matching/'>pattern matching</a>, <a class='category' href='/blog/categories/play-framework/'>play framework</a>, <a class='category' href='/blog/categories/scala/'>scala</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://www.mandubian.com/2013/05/01/jspath-pattern-matching/" data-via="mandubian" data-counturl="http://www.mandubian.com/2013/05/01/jspath-pattern-matching/" >Tweet</a>
+  
+  
+  <div class="g-plusone" data-size="medium"></div>
+  
+  
+</div>
+
+    
+    
+    <section>
+      <h1>Comments</h1>
+      <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+    </section>
+    
+    <ul class="pager">
+      
+      <li class="previous"><a class="basic-alignment left"
+        href="/2013/05/01/JsZipper/" title="Previous Post:
+        JsZipper : Play2 Json advanced (& monadic) manipulations">&laquo; JsZipper : Play2 Json advanced (& monadic) manipulations</a></li>
+      
+      <li><a href="/blog/archives">Blog Archives</a></li>
+      
+    </ul>
+  </footer>
+</article>
+
+<aside class="sidebar-nav span3">
+  
+    <section class="well">
+  <ul id="recent_posts" class="nav nav-list">
+    <li class="nav-header">Recent Posts</li>
+    
+      <li class="post">
+        <a href="/2013/05/01/jspath-pattern-matching/">Play2 Json Path Pattern Matching</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2013/05/01/JsZipper/">JsZipper : Play2 Json advanced (& monadic) manipulations</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2013/04/13/FP-survey/">Quick Survey about most basic concept in Functional Programming</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2013/03/12/datomisca-shapeless-hlist/">Shapeless HList Schema-Type-Safe conversion to Datomisca/Datomic Entities</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2013/03/04/datomisca-schema/">Datomisca Delicatessen -  Emulsion of Scala type-safety in Datomic Schema</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+<section class="well">
+  <ul id="gh_repos" data-user="mandubian" data-count="5" data-skip="true" class="nav">
+	<li class="nav-header">On GitHub</li>
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+  <a class="github-follow" href="https://github.com/mandubian">Follow @mandubian</a>
+  
+</section>
+
+
+
+<section class="well">
+  <ul id="tweets" class="nav" data-user="mandubian" data-count="4" data-replies="false">
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+    <a href="http://twitter.com/mandubian" class="twitter-follow-button" data-show-count="false">Follow @mandubian</a>
+  
+</section>
+
+
+
+
+
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo" class="page-footer"><hr>
+<p>
+  Copyright &copy; 2013 - Pascal Voitot -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'mandubian';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://www.mandubian.com/2013/05/01/jspath-pattern-matching/';
+        var disqus_url = 'http://www.mandubian.com/2013/05/01/jspath-pattern-matching/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+  <script type="text/javascript">
+    (function() {
+      var script = document.createElement('script'); script.type = 'text/javascript'; script.async = true;
+      script.src = 'https://apis.google.com/js/plusone.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(script, s);
+    })();
+  </script>
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = 'http://platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>
