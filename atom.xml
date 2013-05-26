@@ -4,7 +4,7 @@
   <title><![CDATA[Mandubian Blog]]></title>
   <link href="http://www.mandubian.com/atom.xml" rel="self"/>
   <link href="http://www.mandubian.com/"/>
-  <updated>2013-05-26T16:55:35+02:00</updated>
+  <updated>2013-05-26T16:57:14+02:00</updated>
   <id>http://www.mandubian.com/</id>
   <author>
     <name><![CDATA[Pascal Voitot]]></name>
@@ -15,9 +15,9 @@
   
   <entry>
     <title type="html"><![CDATA[Reactive Json Crafting : JsZipper + ReactiveMongo + multiple Async WS calls]]></title>
-    <link href="http://www.mandubian.com/2013/05/01/jszipper-reactivemongo-webservice/"/>
+    <link href="http://www.mandubian.com/2013/05/01/reactive-json-crafting-jszipper-reactivemongo-webservice/"/>
     <updated>2013-05-01T17:17:00+02:00</updated>
-    <id>http://www.mandubian.com/2013/05/01/jszipper-reactivemongo-webservice</id>
+    <id>http://www.mandubian.com/2013/05/01/reactive-json-crafting-jszipper-reactivemongo-webservice</id>
     <content type="html"><![CDATA[<h4>EXPERIMENTAL / DRAFT</h4>
 
 <p>The sample app can be found on Github <a href="https://github.com/mandubian/play-json-zipper/tree/master/samples/multiservices">here</a></p>
