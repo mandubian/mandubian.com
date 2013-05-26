@@ -4,7 +4,7 @@
   <title><![CDATA[Mandubian Blog]]></title>
   <link href="http://www.mandubian.com/atom.xml" rel="self"/>
   <link href="http://www.mandubian.com/"/>
-  <updated>2013-05-23T19:03:01+02:00</updated>
+  <updated>2013-05-26T16:55:35+02:00</updated>
   <id>http://www.mandubian.com/</id>
   <author>
     <name><![CDATA[Pascal Voitot]]></name>
@@ -12,6 +12,368 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Reactive Json Crafting : JsZipper + ReactiveMongo + multiple Async WS calls]]></title>
+    <link href="http://www.mandubian.com/2013/05/01/jszipper-reactivemongo-webservice/"/>
+    <updated>2013-05-01T17:17:00+02:00</updated>
+    <id>http://www.mandubian.com/2013/05/01/jszipper-reactivemongo-webservice</id>
+    <content type="html"><![CDATA[<h4>EXPERIMENTAL / DRAFT</h4>
+
+<p>The sample app can be found on Github <a href="https://github.com/mandubian/play-json-zipper/tree/master/samples/multiservices">here</a></p>
+
+<br/>
+
+
+<p>Hi again folks!</p>
+
+<p>Now, you may certainly have realized I&#8217;m <a href="http://www.playframework.org">Play2.1</a> Json API advocate. But you may also have understood that I&#8217;m not interested in Json as an end in itself. What catches my attention is that it&#8217;s a versatile arborescent data structure that can be used in web server&amp;client, in DB such as <a href="http://reactivemongo.org">ReactiveMongo</a> and also when communicating between servers with WebServices.</p>
+
+<p>So I keep exploring what can be done with Json (specially in the context of PlayFramework reactive architecture) and building the tools that are required to concretize my ideas.</p>
+
+<div class="well">
+<p>My last article introduced <a href="http://www.mandubian.com/2013/05/01/jspath-pattern-matching/">JsPath Pattern Matching</a> and I told you that I needed this tool to use it with JsZipper. It&#8217;s time to use it&#8230;</p>
+<p>Here is why I want to do:</p>
+<ul>
+  <li><b>Build dynamically a Json structure by aggregating data obtained by calling several external WS</b> such as twitterAPI or github API or whatever API.</li>
+
+  <li><b>Build this structure from a Json template stored in MongoDB</b> in which I will find the URL and params of WebServices to call.</li>
+
+  <li><b>Use Play2.1/WS & ReactiveMongo reactive API</b> meaning resulting Json should be built in an asynchronous and non-blocking way.</li>
+
+  <li><b>Use concept of JsZipper</b> introduced in my <a href="http://www.mandubian.com/2013/05/01/JsZipper/">previous article</a> to be able to modify efficiently Play2.1/Json immutable structures.</li>
+</ul>
+</div>
+
+
+<blockquote><p>Please note that this idea and its implementation is just an exercise of style to study the idea and introduce technical concepts but naturally it might seem a bit fake. Moreover, keep in mind, JsZipper API is still draft&#8230;</p></blockquote>
+
+<br/>
+
+
+<h2>The idea of Json template</h2>
+
+<p>Imagine I want to gather twitter user timeline and github user profile in a single Json object.</p>
+
+<p>I also would like to:</p>
+
+<ul>
+<li>configure the URL of WS and query parameters to fetch data</li>
+<li>customize the resulting Json structure</li>
+</ul>
+
+
+<p>Let&#8217;s use a <em>Json template</em> such as:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='json'><span class='line'><span class="p">{</span>
+</span><span class='line'>  <span class="nt">&quot;streams&quot;</span> <span class="p">:</span> <span class="p">{</span>
+</span><span class='line'>    <span class="nt">&quot;twitter&quot;</span> <span class="p">:</span> <span class="p">{</span>
+</span><span class='line'>      <span class="nt">&quot;url&quot;</span> <span class="p">:</span> <span class="s2">&quot;http://localhost:9000/twitter/statuses/user_timeline&quot;</span><span class="p">,</span>
+</span><span class='line'>      <span class="nt">&quot;user_id&quot;</span> <span class="p">:</span> <span class="s2">&quot;twitter_nick&quot;</span>
+</span><span class='line'>    <span class="p">},</span>
+</span><span class='line'>    <span class="nt">&quot;github&quot;</span> <span class="p">:</span> <span class="p">{</span>
+</span><span class='line'>      <span class="nt">&quot;url&quot;</span> <span class="p">:</span> <span class="s2">&quot;http://localhost:9000/github/users&quot;</span><span class="p">,</span>
+</span><span class='line'>      <span class="nt">&quot;user_id&quot;</span> <span class="p">:</span> <span class="s2">&quot;github_nick&quot;</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'>  <span class="p">}</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Using the <code>url</code> and <code>user_id</code> found in <code>__\streams\twitter, I can call twitter API to fetch the stream of tweets and the same for</code>__\streams\github`. Finally I replace the content of each node as following:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="o">{</span>
+</span><span class='line'>  <span class="s">&quot;streams&quot;</span> <span class="k">:</span> <span class="o">{</span>
+</span><span class='line'>    <span class="err">&quot;</span><span class="kt">twitter</span><span class="err">&quot;</span> <span class="kt">:</span> <span class="o">{</span>
+</span><span class='line'>      <span class="c1">// TWITTER USER TIMELINE HERE</span>
+</span><span class='line'>    <span class="o">},</span>
+</span><span class='line'>    <span class="s">&quot;github&quot;</span> <span class="k">:</span> <span class="o">{</span>
+</span><span class='line'>      <span class="c1">// GITHUB USER PROFILE HERE</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Moreover, I&#8217;d like to store multiple templates like previous sample with multiple <code>user_id</code> to be able to retrieve multiple streams at the same time.</p>
+
+<br/>
+
+
+<h2>Creating Json template in Play/ReactiveMongo (v0.9)</h2>
+
+<p>Recently, Stephane Godbillon has released <a href="http://reactivemongo.org">ReactiveMongo v0.9</a> with corresponding Play plugin. This version really improves and eases the way you can manipulate Json directly with Play &amp; Mongo from Scala.</p>
+
+<p>Let&#8217;s store a few instance of previous templates using this API:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// gets my mongo collection</span>
+</span><span class='line'><span class="k">def</span> <span class="n">coll</span> <span class="k">=</span> <span class="n">db</span><span class="o">.</span><span class="n">collection</span><span class="o">[</span><span class="kt">JSONCollection</span><span class="o">](</span><span class="s">&quot;templates&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">def</span> <span class="n">provision</span> <span class="k">=</span> <span class="nc">Action</span> <span class="o">{</span> <span class="nc">Async</span> <span class="o">{</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">values</span> <span class="k">=</span> <span class="nc">Enumerator</span><span class="o">(</span>
+</span><span class='line'>    <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span>
+</span><span class='line'>      <span class="s">&quot;streams&quot;</span> <span class="o">-&gt;</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span>
+</span><span class='line'>        <span class="s">&quot;twitter&quot;</span> <span class="o">-&gt;</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span>
+</span><span class='line'>          <span class="s">&quot;url&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;http://localhost:9000/twitter/statuses/user_timeline&quot;</span><span class="o">,</span>
+</span><span class='line'>          <span class="s">&quot;user_id&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;twitter_nick1&quot;</span>
+</span><span class='line'>        <span class="o">),</span>
+</span><span class='line'>        <span class="s">&quot;github&quot;</span> <span class="o">-&gt;</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span>
+</span><span class='line'>          <span class="s">&quot;url&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;http://localhost:9000/github/users&quot;</span><span class="o">,</span>
+</span><span class='line'>          <span class="s">&quot;user_id&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;github_nick1&quot;</span>
+</span><span class='line'>        <span class="o">)</span>
+</span><span class='line'>      <span class="o">)</span>
+</span><span class='line'>    <span class="o">),</span>
+</span><span class='line'>    <span class="o">...</span> <span class="n">more</span> <span class="n">templates</span>
+</span><span class='line'>  <span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="n">coll</span><span class="o">.</span><span class="n">bulkInsert</span><span class="o">(</span><span class="n">values</span><span class="o">).</span><span class="n">map</span><span class="o">{</span> <span class="n">nb</span> <span class="k">=&gt;</span>
+</span><span class='line'>    <span class="nc">Ok</span><span class="o">(</span><span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span><span class="s">&quot;nb&quot;</span><span class="o">-&gt;</span><span class="n">nb</span><span class="o">))</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">}</span> <span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Hard isn&#8217;t it?</p>
+
+<p>Note that I use <code>localhost</code> URL because with real Twitter/Github API I would need OAuth2 tokens and this would be a pain for this sample :)</p>
+
+<br/>
+
+
+<br/>
+
+
+<h2>Reactive Json crafting</h2>
+
+<p>Now, let&#8217;s do the real job i.e the following steps:</p>
+
+<ul>
+<li>retrieve the template(s) from Mongo using ReactiveMongo <code>JsonCollection</code></li>
+<li>call the WebServices to fetch the data using Play Async WS</li>
+<li>update the Json template(s) using Monadic JsZipper <code>JsZipperM[Future]</code></li>
+</ul>
+
+
+<p>The interesting technical points here are that:</p>
+
+<ul>
+<li>ReactiveMongo is async so we get <code>Future[JsValue]</code></li>
+<li>Play/WS is Async so we get also <code>Future[JsValue]</code></li>
+<li>We need to call multiple WS so we have a <code>Seq[Future[JsValue]]</code></li>
+</ul>
+
+
+<p>We could use Play/Json transformers presented in a <a href="http://www.mandubian.com/2012/10/29/unveiling-play-2-dot-1-json-api-part3-json-transformers/">previous article</a> but knowing that you have to manage Futures and multiple WS calls, it would create quite complicated code.</p>
+
+<p>Here is where Monadic JsZipper becomes interesting:</p>
+
+<ul>
+<li><p><code>JsZipper</code> allows modifying immutable JsValue which is already cool</p></li>
+<li><p><code>JsZipperM[Future]</code> allows modifying <code>JsValue</code> in the future and it&#8217;s even better!</p></li>
+</ul>
+
+
+<p>Actually the real power of JsZipper (<em>besides being able to modify/delete/create a node in immutable Json tree</em>) is to transform a Json tree into a Stream of nodes that it can traverse in depth, in width or whatever you need.</p>
+
+<br/>
+
+
+<h3>Less code with WS sequential calls</h3>
+
+<p>Here is the code because you&#8217;ll see how easy it is:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// a helper to call WS</span>
+</span><span class='line'><span class="k">def</span> <span class="n">callWSFromTemplate</span><span class="o">(</span><span class="n">value</span><span class="k">:</span> <span class="kt">JsValue</span><span class="o">)</span><span class="k">:</span> <span class="kt">Future</span><span class="o">[</span><span class="kt">JsValue</span><span class="o">]</span> <span class="k">=</span>
+</span><span class='line'>  <span class="nc">WS</span><span class="o">.</span><span class="n">url</span><span class="o">((</span><span class="n">value</span> <span class="o">\</span> <span class="s">&quot;url&quot;</span><span class="o">).</span><span class="n">as</span><span class="o">[</span><span class="kt">String</span><span class="o">])</span>
+</span><span class='line'>    <span class="o">.</span><span class="n">withQueryString</span><span class="o">(</span> <span class="s">&quot;user_id&quot;</span> <span class="o">-&gt;</span> <span class="o">(</span><span class="n">value</span> <span class="o">\</span> <span class="s">&quot;user_id&quot;</span><span class="o">).</span><span class="n">as</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="o">)</span>
+</span><span class='line'>    <span class="o">.</span><span class="n">get</span><span class="o">().</span><span class="n">map</span><span class="o">{</span> <span class="n">resp</span> <span class="k">=&gt;</span> <span class="n">resp</span><span class="o">.</span><span class="n">json</span> <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// calling WS sequentially</span>
+</span><span class='line'><span class="k">def</span> <span class="n">dataSeq</span> <span class="k">=</span> <span class="nc">Action</span><span class="o">{</span>
+</span><span class='line'>  <span class="nc">Async</span><span class="o">{</span>
+</span><span class='line'>    <span class="k">for</span><span class="o">{</span>
+</span><span class='line'>      <span class="n">templates</span> <span class="k">&lt;-</span> <span class="n">coll</span><span class="o">.</span><span class="n">find</span><span class="o">(</span><span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">()).</span><span class="n">cursor</span><span class="o">[</span><span class="kt">JsObject</span><span class="o">].</span><span class="n">toList</span>   <span class="c1">// retrieves templates from Mongo</span>
+</span><span class='line'>      <span class="n">updated</span>   <span class="k">&lt;-</span> <span class="nc">Json</span><span class="o">.</span><span class="n">toJson</span><span class="o">(</span><span class="n">templates</span><span class="o">).</span><span class="n">updateAllM</span><span class="o">{</span>
+</span><span class='line'>        <span class="k">case</span> <span class="o">(</span><span class="k">_</span> <span class="o">\</span> <span class="s">&quot;twitter&quot;</span><span class="o">,</span> <span class="n">value</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="n">callWSFromTemplate</span><span class="o">(</span><span class="n">value</span><span class="o">)</span>
+</span><span class='line'>        <span class="k">case</span> <span class="o">(</span><span class="k">_</span> <span class="o">\</span> <span class="s">&quot;github&quot;</span><span class="o">,</span> <span class="n">value</span><span class="o">)</span>  <span class="k">=&gt;</span> <span class="n">callWSFromTemplate</span><span class="o">(</span><span class="n">value</span><span class="o">)</span>
+</span><span class='line'>        <span class="k">case</span> <span class="o">(</span><span class="k">_</span><span class="o">,</span> <span class="n">value</span><span class="o">)</span>             <span class="k">=&gt;</span> <span class="nc">Future</span><span class="o">.</span><span class="n">successful</span><span class="o">(</span><span class="n">value</span><span class="o">)</span>
+</span><span class='line'>      <span class="o">}</span>
+</span><span class='line'>    <span class="o">}</span> <span class="k">yield</span> <span class="nc">Ok</span><span class="o">(</span><span class="n">updated</span><span class="o">)</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Please note:</p>
+
+<ul>
+<li><p><code>Json.toJson(templates)</code> transforms a <code>List[JsObject]</code> into <code>JsArray</code> because we want to manipulate pure <code>JsValue</code> with <code>JsZipperM[Future]</code>.</p></li>
+<li><p><code>.updateAllM( (JsPath, JsValue) =&gt; Future[JsValue] )</code> is a wrapper API hiding the construction of a <code>JsZipperM[Future]</code>: once built, the `JsZipperM[Future] traverses the Json tree and for each node, it calls the provided function <em>flatMapping</em> on Futures before going to next node. This makes the calls to WS sequential and not parallel.</p></li>
+<li><p><code>case (_ \ "twitter", value)</code> : yes here is the JsPath pattern matching and imagine the crazy stuff you can do mixing Json traversal and pattern matching ;)</p></li>
+<li><p><code>Async</code> means the embedded code will return <code>Future[Result]</code> but remember that it DOESN&#8217;T mean the <code>Action</code> is synchronous/blocking because in Play, everything is Asynchronous/non-blocking by default.</p></li>
+</ul>
+
+
+<p>Then you could tell me that this is cool but the WS are not called in parallel but sequentially. Yes it&#8217;s true but imagine that it&#8217;s less than 10 lines of code and could even be reduced. Yet, here is the parallelized version&#8230;</p>
+
+<br/>
+
+
+<h3>Parallel WS calls</h3>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">def</span> <span class="n">dataPar</span> <span class="k">=</span> <span class="nc">Action</span><span class="o">{</span>
+</span><span class='line'>  <span class="nc">Async</span><span class="o">{</span>
+</span><span class='line'>    <span class="n">coll</span><span class="o">.</span><span class="n">find</span><span class="o">(</span><span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">()).</span><span class="n">cursor</span><span class="o">[</span><span class="kt">JsObject</span><span class="o">].</span><span class="n">toList</span><span class="o">.</span><span class="n">flatMap</span><span class="o">{</span> <span class="n">templates</span> <span class="k">=&gt;</span>
+</span><span class='line'>      <span class="c1">// converts List[JsObject] into JsArray</span>
+</span><span class='line'>      <span class="k">val</span> <span class="n">jsonTemplates</span> <span class="k">=</span> <span class="nc">Json</span><span class="o">.</span><span class="n">toJson</span><span class="o">(</span><span class="n">templates</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>      <span class="c1">// gathers all nodes that need to be updated</span>
+</span><span class='line'>      <span class="k">val</span> <span class="n">nodes</span> <span class="k">=</span> <span class="n">jsonTemplates</span><span class="o">.</span><span class="n">findAll</span><span class="o">{</span>
+</span><span class='line'>        <span class="k">case</span> <span class="o">(</span><span class="k">_</span> <span class="o">\</span> <span class="s">&quot;twitter&quot;</span><span class="o">,</span> <span class="k">_</span><span class="o">)</span> <span class="o">|</span> <span class="o">(</span><span class="k">_</span> <span class="o">\</span> <span class="s">&quot;github&quot;</span><span class="o">,</span> <span class="k">_</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="kc">true</span>
+</span><span class='line'>        <span class="k">case</span> <span class="o">(</span><span class="k">_</span><span class="o">,</span> <span class="n">value</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="kc">false</span>
+</span><span class='line'>      <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>      <span class="c1">// launches WS calls in parallel and updates original JsArray</span>
+</span><span class='line'>      <span class="nc">Future</span><span class="o">.</span><span class="n">traverse</span><span class="o">(</span><span class="n">nodes</span><span class="o">){</span>
+</span><span class='line'>        <span class="k">case</span> <span class="o">(</span><span class="n">path</span><span class="o">@(</span><span class="k">_</span> <span class="o">\</span> <span class="s">&quot;twitter&quot;</span><span class="o">),</span> <span class="n">value</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="n">callWSFromTemplate</span><span class="o">(</span><span class="n">value</span><span class="o">).</span><span class="n">map</span><span class="o">(</span> <span class="n">resp</span> <span class="k">=&gt;</span> <span class="n">path</span> <span class="o">-&gt;</span> <span class="n">resp</span> <span class="o">)</span>
+</span><span class='line'>        <span class="k">case</span> <span class="o">(</span><span class="n">path</span><span class="o">@(</span><span class="k">_</span> <span class="o">\</span> <span class="s">&quot;github&quot;</span><span class="o">),</span> <span class="n">value</span><span class="o">)</span>  <span class="k">=&gt;</span> <span class="n">callWSFromTemplate</span><span class="o">(</span><span class="n">value</span><span class="o">).</span><span class="n">map</span><span class="o">(</span> <span class="n">resp</span> <span class="k">=&gt;</span> <span class="n">path</span> <span class="o">-&gt;</span> <span class="n">resp</span> <span class="o">)</span>
+</span><span class='line'>      <span class="o">}.</span><span class="n">map</span><span class="o">{</span> <span class="n">pathvalues</span> <span class="k">=&gt;</span> <span class="nc">Ok</span><span class="o">(</span><span class="n">jsonTemplates</span><span class="o">.</span><span class="n">set</span><span class="o">(</span><span class="n">pathvalues</span><span class="k">:_</span><span class="kt">*</span><span class="o">))</span> <span class="o">}</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Note that:</p>
+
+<ul>
+<li><p><code>jsonTemplates.findAll( filter: (JsPath, JsValue) =&gt; Boolean )</code> traverses the Json tree and returns a <code>Stream[(JsPath, JsValue)]</code> containing the filtered nodes. This is not done with <code>Future</code> because we want to get all nodes now to be able to launch all WS calls in parallel.</p></li>
+<li><p><code>Future.traverse(nodes)(T =&gt; Future[T])</code> traverses the filtered values and calls all WS in parallel.</p></li>
+<li><p><code>case (path@(_ \ "twitter"), value)</code> is just JsPath pattern matching once again keeping track of full path to be able to return it with the value <code>path -&gt; resp</code> for next point.</p></li>
+<li><p><code>jsonTemplates.set( (JsPath, JsValue)* )</code> finally updates all values at given path. Note how easy it is to update multiple values at multiple paths.</p></li>
+</ul>
+
+
+<p>A bit less elegant than the sequential case but not so much.</p>
+
+<br/>
+
+
+<br/>
+
+
+<h2>Conclusion</h2>
+
+<p>This sample is a bit stupid but you can see the potential of mixing those different tools together.</p>
+
+<p>Alone, JsZipper and JsPath pattern matching provides very powerful ways of manipulating Json that Reads/Writes can&#8217;t do easily.</p>
+
+<p>When you add reactive API on top of that, JsZipper becomes really interesting and elegant.</p>
+
+<p>The sample app can be found on Github <a href="https://github.com/mandubian/play-json-zipper/tree/master/samples/multiservices">here</a></p>
+
+<p>Have JsZipperM[fun]!</p>
+
+<br/>
+
+
+<br/>
+
+
+<br/>
+
+
+<br/>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Play2 Json Path Pattern Matching]]></title>
