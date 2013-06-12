@@ -4,7 +4,7 @@
   <title><![CDATA[Mandubian Blog]]></title>
   <link href="http://www.mandubian.com/atom.xml" rel="self"/>
   <link href="http://www.mandubian.com/"/>
-  <updated>2013-05-26T16:57:14+02:00</updated>
+  <updated>2013-06-12T16:58:58+02:00</updated>
   <id>http://www.mandubian.com/</id>
   <author>
     <name><![CDATA[Pascal Voitot]]></name>
@@ -12,6 +12,896 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Play AutoSource : 2'30 Kickstart Full REST & CRUD Datasource in Play App (demo'ed with ReactiveMongo + AngularJS)]]></title>
+    <link href="http://www.mandubian.com/2013/06/11/play-autosource/"/>
+    <updated>2013-06-11T18:18:00+02:00</updated>
+    <id>http://www.mandubian.com/2013/06/11/play-autosource</id>
+    <content type="html"><![CDATA[<h4>EXPERIMENTAL / DRAFT</h4>
+
+<p>The module code and sample app can be found on Github <a href="https://github.com/mandubian/play-autosource">here</a></p>
+
+<br/>
+
+
+<p>Here we go:</p>
+
+<h3>0&#8217; : Create App</h3>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="o">&gt;</span> <span class="n">play2</span> <span class="k">new</span> <span class="n">auto</span><span class="o">-</span><span class="n">persons</span>
+</span><span class='line'>       <span class="k">_</span>            <span class="k">_</span>
+</span><span class='line'> <span class="k">_</span> <span class="nc">__</span> <span class="o">|</span> <span class="o">|</span> <span class="nc">__</span> <span class="k">_</span> <span class="k">_</span>  <span class="k">_</span><span class="o">|</span> <span class="o">|</span>
+</span><span class='line'><span class="o">|</span> <span class="-Symbol">&#39;_</span> <span class="o">\|</span> <span class="o">|/</span> <span class="k">_</span><span class="err">&#39;</span> <span class="o">|</span> <span class="o">||</span> <span class="o">|</span><span class="k">_</span><span class="o">|</span>
+</span><span class='line'><span class="o">|</span>  <span class="nc">__/|</span><span class="k">_</span><span class="o">|\</span><span class="nc">____|\__</span> <span class="o">(</span><span class="k">_</span><span class="o">)</span>
+</span><span class='line'><span class="o">|</span><span class="k">_</span><span class="o">|</span>            <span class="o">|</span><span class="nc">__</span><span class="o">/</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">play</span><span class="o">!</span> <span class="mf">2.1</span><span class="o">.</span><span class="mi">1</span> <span class="o">(</span><span class="n">using</span> <span class="nc">Java</span> <span class="mf">1.7</span><span class="o">.</span><span class="mi">0</span><span class="n">_21</span> <span class="n">and</span> <span class="nc">Scala</span> <span class="mf">2.10</span><span class="o">.</span><span class="mi">0</span><span class="o">),</span> <span class="n">http</span><span class="o">://</span><span class="n">www</span><span class="o">.</span><span class="n">playframework</span><span class="o">.</span><span class="n">org</span>
+</span><span class='line'>
+</span><span class='line'><span class="nc">The</span> <span class="k">new</span> <span class="n">application</span> <span class="n">will</span> <span class="n">be</span> <span class="n">created</span> <span class="n">in</span> <span class="o">/</span><span class="nc">Users</span><span class="o">/</span><span class="n">pvo</span><span class="o">/</span><span class="n">zenexity</span><span class="o">/</span><span class="n">workspaces</span><span class="o">/</span><span class="n">workspace_mandubian</span><span class="o">/</span><span class="n">auto</span><span class="o">-</span><span class="n">persons</span>
+</span><span class='line'>
+</span><span class='line'><span class="nc">What</span> <span class="n">is</span> <span class="n">the</span> <span class="n">application</span> <span class="n">name</span><span class="o">?</span> <span class="o">[</span><span class="kt">auto-persons</span><span class="o">]</span>
+</span><span class='line'><span class="o">&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="nc">Which</span> <span class="n">template</span> <span class="k">do</span> <span class="n">you</span> <span class="n">want</span> <span class="n">to</span> <span class="n">use</span> <span class="k">for</span> <span class="k">this</span> <span class="k">new</span> <span class="n">application</span><span class="o">?</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="mi">1</span>             <span class="o">-</span> <span class="nc">Create</span> <span class="n">a</span> <span class="n">simple</span> <span class="nc">Scala</span> <span class="n">application</span>
+</span><span class='line'>  <span class="mi">2</span>             <span class="o">-</span> <span class="nc">Create</span> <span class="n">a</span> <span class="n">simple</span> <span class="nc">Java</span> <span class="n">application</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&gt;</span> <span class="mi">1</span>
+</span><span class='line'><span class="nc">OK</span><span class="o">,</span> <span class="n">application</span> <span class="n">auto</span><span class="o">-</span><span class="n">persons</span> <span class="n">is</span> <span class="n">created</span><span class="o">.</span>
+</span><span class='line'>
+</span><span class='line'><span class="nc">Have</span> <span class="n">fun</span><span class="o">!</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>10&#8217; : edit project/Build.scala, add <code>play-autosource:reactivemongo</code> dependency</h3>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">mandubianRepo</span> <span class="k">=</span> <span class="nc">Seq</span><span class="o">(</span>
+</span><span class='line'>  <span class="s">&quot;Mandubian repository snapshots&quot;</span> <span class="n">at</span> <span class="s">&quot;https://github.com/mandubian/mandubian-mvn/raw/master/snapshots/&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;Mandubian repository releases&quot;</span> <span class="n">at</span> <span class="s">&quot;https://github.com/mandubian/mandubian-mvn/raw/master/releases/&quot;</span>
+</span><span class='line'><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">appDependencies</span> <span class="k">=</span> <span class="nc">Seq</span><span class="o">()</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">main</span> <span class="k">=</span> <span class="n">play</span><span class="o">.</span><span class="nc">Project</span><span class="o">(</span><span class="n">appName</span><span class="o">,</span> <span class="n">appVersion</span><span class="o">,</span> <span class="n">appDependencies</span><span class="o">).</span><span class="n">settings</span><span class="o">(</span>
+</span><span class='line'>  <span class="n">resolvers</span> <span class="o">++=</span> <span class="n">mandubianRepo</span><span class="o">,</span>
+</span><span class='line'>  <span class="n">libraryDependencies</span> <span class="o">++=</span> <span class="nc">Seq</span><span class="o">(</span>
+</span><span class='line'>    <span class="s">&quot;play-autosource&quot;</span>   <span class="o">%%</span> <span class="s">&quot;reactivemongo&quot;</span>       <span class="o">%</span> <span class="s">&quot;0.1-SNAPSHOT&quot;</span><span class="o">,</span>
+</span><span class='line'>    <span class="s">&quot;org.specs2&quot;</span>        <span class="o">%%</span> <span class="s">&quot;specs2&quot;</span>              <span class="o">%</span> <span class="s">&quot;1.13&quot;</span>        <span class="o">%</span> <span class="s">&quot;test&quot;</span><span class="o">,</span>
+</span><span class='line'>    <span class="s">&quot;junit&quot;</span>              <span class="o">%</span> <span class="s">&quot;junit&quot;</span>               <span class="o">%</span> <span class="s">&quot;4.8&quot;</span>         <span class="o">%</span> <span class="s">&quot;test&quot;</span>
+</span><span class='line'>  <span class="o">)</span>
+</span><span class='line'><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>30&#8217; : Create new ReactiveMongo AutoSource Controller in app/Person.scala</h3>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">package</span> <span class="nn">controllers</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">import</span> <span class="nn">play.api._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">play.api.mvc._</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// BORING IMPORTS</span>
+</span><span class='line'><span class="c1">// Json</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.functional.syntax._</span>
+</span><span class='line'><span class="c1">// Reactive JSONCollection</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">play.modules.reactivemongo.json.collection.JSONCollection</span>
+</span><span class='line'><span class="c1">// Autosource</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">play.autosource.reactivemongo._</span>
+</span><span class='line'><span class="c1">// AutoSource is Async so imports Scala Future implicits</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">scala.concurrent.ExecutionContext.Implicits.global</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">play.api.Play.current</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// &gt;&gt;&gt; THE IMPORTANT PART &lt;&lt;&lt;</span>
+</span><span class='line'><span class="k">object</span> <span class="nc">Persons</span> <span class="k">extends</span> <span class="nc">ReactiveMongoAutoSourceController</span><span class="o">[</span><span class="kt">JsObject</span><span class="o">]</span> <span class="o">{</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">coll</span> <span class="k">=</span> <span class="n">db</span><span class="o">.</span><span class="n">collection</span><span class="o">[</span><span class="kt">JSONCollection</span><span class="o">](</span><span class="s">&quot;persons&quot;</span><span class="o">)</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>50&#8217; : Add AutoSource routes at beginning <code>conf/routes</code></h3>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="o">-&gt;</span>      <span class="o">/</span><span class="n">person</span>                     <span class="n">controllers</span><span class="o">.</span><span class="nc">Person</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>60&#8217; : Create <code>conf/play.plugins</code> to initialize ReactiveMongo Plugin</h3>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="mi">400</span><span class="k">:</span><span class="kt">play.modules.reactivemongo.ReactiveMongoPlugin</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>70&#8217; : Append to <code>conf/application.conf</code> to initialize MongoDB connection</h3>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">mongodb</span><span class="o">.</span><span class="n">uri</span> <span class="o">=</span><span class="s">&quot;mongodb://localhost:27017/persons&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>80&#8217; : Launch application</h3>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="o">&gt;</span> <span class="n">play2</span> <span class="n">run</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">[</span><span class="kt">info</span><span class="o">]</span> <span class="nc">Loading</span> <span class="n">project</span> <span class="n">definition</span> <span class="n">from</span> <span class="o">/.../</span><span class="n">auto</span><span class="o">-</span><span class="n">persons</span><span class="o">/</span><span class="n">project</span>
+</span><span class='line'><span class="o">[</span><span class="kt">info</span><span class="o">]</span> <span class="nc">Set</span> <span class="n">current</span> <span class="n">project</span> <span class="n">to</span> <span class="n">auto</span><span class="o">-</span><span class="n">persons</span> <span class="o">(</span><span class="n">in</span> <span class="n">build</span> <span class="n">file</span><span class="o">:/.../</span><span class="n">auto</span><span class="o">-</span><span class="n">persons</span><span class="o">/)</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">[</span><span class="kt">info</span><span class="o">]</span> <span class="nc">Updating</span> <span class="o">{</span><span class="n">file</span><span class="o">:/.../</span><span class="n">auto</span><span class="o">-</span><span class="n">persons</span><span class="o">/}</span><span class="n">auto</span><span class="o">-</span><span class="n">persons</span><span class="o">...</span>
+</span><span class='line'><span class="o">[</span><span class="kt">info</span><span class="o">]</span> <span class="nc">Done</span> <span class="n">updating</span><span class="o">.</span>
+</span><span class='line'><span class="o">---</span> <span class="o">(</span><span class="nc">Running</span> <span class="n">the</span> <span class="n">application</span> <span class="n">from</span> <span class="nc">SBT</span><span class="o">,</span> <span class="n">auto</span><span class="o">-</span><span class="n">reloading</span> <span class="n">is</span> <span class="n">enabled</span><span class="o">)</span> <span class="o">---</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">[</span><span class="kt">info</span><span class="o">]</span> <span class="n">play</span> <span class="o">-</span> <span class="nc">Listening</span> <span class="k">for</span> <span class="nc">HTTP</span> <span class="n">on</span> <span class="o">/</span><span class="mi">0</span><span class="k">:</span><span class="err">0</span><span class="kt">:</span><span class="err">0</span><span class="kt">:</span><span class="err">0</span><span class="kt">:</span><span class="err">0</span><span class="kt">:</span><span class="err">0</span><span class="kt">:</span><span class="err">0</span><span class="kt">:</span><span class="err">0</span><span class="kt">:</span><span class="err">9000</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">(</span><span class="kt">Server</span> <span class="kt">started</span><span class="o">,</span> <span class="kt">use</span> <span class="kt">Ctrl+D</span> <span class="kt">to</span> <span class="kt">stop</span> <span class="kt">and</span> <span class="kt">go</span> <span class="kt">back</span> <span class="kt">to</span> <span class="kt">the</span> <span class="kt">console...</span><span class="o">)</span>
+</span><span class='line'><span class="o">[</span><span class="kt">info</span><span class="o">]</span> <span class="nc">Compiling</span> <span class="mi">5</span> <span class="nc">Scala</span> <span class="n">sources</span> <span class="n">and</span> <span class="mi">1</span> <span class="nc">Java</span> <span class="n">source</span> <span class="n">to</span> <span class="o">/.../</span><span class="n">auto</span><span class="o">-</span><span class="n">persons</span><span class="o">/</span><span class="n">target</span><span class="o">/</span><span class="n">scala</span><span class="o">-</span><span class="mf">2.10</span><span class="o">/</span><span class="n">classes</span><span class="o">...</span>
+</span><span class='line'><span class="o">[</span><span class="kt">warn</span><span class="o">]</span> <span class="n">there</span> <span class="n">were</span> <span class="mi">2</span> <span class="n">feature</span> <span class="n">warnings</span><span class="o">;</span> <span class="n">re</span><span class="o">-</span><span class="n">run</span> <span class="k">with</span> <span class="o">-</span><span class="n">feature</span> <span class="k">for</span> <span class="n">details</span>
+</span><span class='line'><span class="o">[</span><span class="kt">warn</span><span class="o">]</span> <span class="n">one</span> <span class="n">warning</span> <span class="n">found</span>
+</span><span class='line'><span class="o">[</span><span class="kt">success</span><span class="o">]</span> <span class="nc">Compiled</span> <span class="n">in</span> <span class="mi">6</span><span class="n">s</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>100&#8217; : Insert your first 2 persons with Curl</h3>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="o">&gt;</span><span class="n">curl</span> <span class="o">-</span><span class="n">X</span> <span class="nc">POST</span> <span class="o">-</span><span class="n">d</span> <span class="err">&#39;</span><span class="o">{</span> <span class="s">&quot;name&quot;</span><span class="k">:</span><span class="err">&quot;</span><span class="kt">bob</span><span class="err">&quot;</span><span class="o">,</span> <span class="s">&quot;age&quot;</span><span class="k">:</span><span class="err">25</span> <span class="o">}</span><span class="err">&#39;</span> <span class="o">--</span><span class="n">header</span> <span class="s">&quot;Content-Type:application/json&quot;</span> <span class="n">http</span><span class="o">://</span><span class="n">localhost</span><span class="k">:</span><span class="err">9000</span><span class="kt">/person</span> <span class="kt">--include</span>
+</span><span class='line'>
+</span><span class='line'><span class="nc">HTTP</span><span class="o">/</span><span class="mf">1.1</span> <span class="mi">200</span> <span class="nc">OK</span>
+</span><span class='line'><span class="nc">Content</span><span class="o">-</span><span class="nc">Type</span><span class="k">:</span> <span class="kt">application/json</span><span class="o">;</span> <span class="n">charset</span><span class="k">=</span><span class="n">utf</span><span class="o">-</span><span class="mi">8</span>
+</span><span class='line'><span class="nc">Content</span><span class="o">-</span><span class="nc">Length</span><span class="k">:</span> <span class="err">33</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">{</span><span class="err">&quot;</span><span class="kt">id</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;51</span><span class="kt">b868ef31d4002c0bac8ba4</span><span class="err">&quot;</span><span class="o">}</span> <span class="kt">-&gt;</span> <span class="kt">oh</span> <span class="kt">a</span> <span class="kt">BSONObjectId</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&gt;</span><span class="n">curl</span> <span class="o">-</span><span class="n">X</span> <span class="nc">POST</span> <span class="o">-</span><span class="n">d</span> <span class="err">&#39;</span><span class="o">{</span> <span class="s">&quot;name&quot;</span><span class="k">:</span><span class="err">&quot;</span><span class="kt">john</span><span class="err">&quot;</span><span class="o">,</span> <span class="s">&quot;age&quot;</span><span class="k">:</span><span class="err">43</span> <span class="o">}</span><span class="err">&#39;</span> <span class="o">--</span><span class="n">header</span> <span class="s">&quot;Content-Type:application/json&quot;</span> <span class="n">http</span><span class="o">://</span><span class="n">localhost</span><span class="k">:</span><span class="err">9000</span><span class="kt">/person</span> <span class="kt">--include</span>
+</span><span class='line'>
+</span><span class='line'><span class="nc">HTTP</span><span class="o">/</span><span class="mf">1.1</span> <span class="mi">200</span> <span class="nc">OK</span>
+</span><span class='line'><span class="nc">Content</span><span class="o">-</span><span class="nc">Type</span><span class="k">:</span> <span class="kt">application/json</span><span class="o">;</span> <span class="n">charset</span><span class="k">=</span><span class="n">utf</span><span class="o">-</span><span class="mi">8</span>
+</span><span class='line'><span class="nc">Content</span><span class="o">-</span><span class="nc">Length</span><span class="k">:</span> <span class="err">33</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">{</span><span class="err">&quot;</span><span class="kt">id</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;51</span><span class="kt">b868fa31d4002c0bac8ba5</span><span class="err">&quot;</span><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>110&#8217; : Get all persons</h3>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="o">&gt;</span><span class="n">curl</span> <span class="n">http</span><span class="o">://</span><span class="n">localhost</span><span class="k">:</span><span class="err">9000</span><span class="kt">/person</span> <span class="kt">--include</span>
+</span><span class='line'>
+</span><span class='line'><span class="nc">HTTP</span><span class="o">/</span><span class="mf">1.1</span> <span class="mi">200</span> <span class="nc">OK</span>
+</span><span class='line'><span class="nc">Content</span><span class="o">-</span><span class="nc">Type</span><span class="k">:</span> <span class="kt">application/json</span><span class="o">;</span> <span class="n">charset</span><span class="k">=</span><span class="n">utf</span><span class="o">-</span><span class="mi">8</span>
+</span><span class='line'><span class="nc">Content</span><span class="o">-</span><span class="nc">Length</span><span class="k">:</span> <span class="err">118</span>
+</span><span class='line'>
+</span><span class='line'><span class="err">[</span>
+</span><span class='line'>  <span class="o">{</span><span class="err">&quot;</span><span class="kt">name</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">bob</span><span class="err">&quot;</span><span class="o">,</span><span class="err">&quot;</span><span class="kt">age</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">25</span><span class="kt">.</span><span class="err">0</span><span class="o">,</span><span class="s">&quot;id&quot;</span><span class="k">:</span><span class="err">&quot;51</span><span class="kt">b868ef31d4002c0bac8ba4</span><span class="err">&quot;</span><span class="o">},</span>
+</span><span class='line'>  <span class="o">{</span><span class="s">&quot;name&quot;</span><span class="k">:</span><span class="err">&quot;</span><span class="kt">john</span><span class="err">&quot;</span><span class="o">,</span><span class="s">&quot;age&quot;</span><span class="k">:</span><span class="err">43</span><span class="kt">.</span><span class="err">0</span><span class="o">,</span><span class="s">&quot;id&quot;</span><span class="k">:</span><span class="err">&quot;51</span><span class="kt">b868fa31d4002c0bac8ba5</span><span class="err">&quot;</span><span class="o">}</span>
+</span><span class='line'><span class="err">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>115&#8217; : Delete one person</h3>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="o">&gt;</span><span class="n">curl</span> <span class="o">-</span><span class="n">X</span> <span class="nc">DELETE</span> <span class="n">http</span><span class="o">://</span><span class="n">localhost</span><span class="k">:</span><span class="err">9000</span><span class="kt">/person/</span><span class="err">51</span><span class="kt">b868ef31d4002c0bac8ba4</span> <span class="kt">--include</span>
+</span><span class='line'>
+</span><span class='line'><span class="nc">HTTP</span><span class="o">/</span><span class="mf">1.1</span> <span class="mi">200</span> <span class="nc">OK</span>
+</span><span class='line'><span class="nc">Content</span><span class="o">-</span><span class="nc">Type</span><span class="k">:</span> <span class="kt">application/json</span><span class="o">;</span> <span class="n">charset</span><span class="k">=</span><span class="n">utf</span><span class="o">-</span><span class="mi">8</span>
+</span><span class='line'><span class="nc">Content</span><span class="o">-</span><span class="nc">Length</span><span class="k">:</span> <span class="err">33</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">{</span><span class="err">&quot;</span><span class="kt">id</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;51</span><span class="kt">b868ef31d4002c0bac8ba4</span><span class="err">&quot;</span><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>120&#8217; : Verify person was deleted</h3>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="o">&gt;</span><span class="n">curl</span> <span class="o">-</span><span class="n">X</span> <span class="nc">GET</span> <span class="n">http</span><span class="o">://</span><span class="n">localhost</span><span class="k">:</span><span class="err">9000</span><span class="kt">/person/</span><span class="err">51</span><span class="kt">b868ef31d4002c0bac8ba4</span> <span class="kt">--include</span>
+</span><span class='line'>
+</span><span class='line'><span class="nc">HTTP</span><span class="o">/</span><span class="mf">1.1</span> <span class="mi">404</span> <span class="nc">Not</span> <span class="nc">Found</span>
+</span><span class='line'><span class="nc">Content</span><span class="o">-</span><span class="nc">Type</span><span class="k">:</span> <span class="kt">text/plain</span><span class="o">;</span> <span class="n">charset</span><span class="k">=</span><span class="n">utf</span><span class="o">-</span><span class="mi">8</span>
+</span><span class='line'><span class="nc">Content</span><span class="o">-</span><span class="nc">Length</span><span class="k">:</span> <span class="err">37</span>
+</span><span class='line'>
+</span><span class='line'><span class="kt">ID</span> <span class="err">51</span><span class="kt">b868ef31d4002c0bac8ba4</span> <span class="kt">not</span> <span class="kt">found</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>125&#8217; : Update person</h3>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="o">&gt;</span><span class="n">curl</span> <span class="o">-</span><span class="n">X</span> <span class="nc">PUT</span> <span class="o">-</span><span class="n">d</span> <span class="err">&#39;</span><span class="o">{</span> <span class="s">&quot;name&quot;</span><span class="k">:</span><span class="err">&quot;</span><span class="kt">john</span><span class="err">&quot;</span><span class="o">,</span> <span class="s">&quot;age&quot;</span><span class="k">:</span><span class="err">35</span> <span class="o">}</span><span class="err">&#39;</span> <span class="o">--</span><span class="n">header</span> <span class="s">&quot;Content-Type:application/json&quot;</span> <span class="n">http</span><span class="o">://</span><span class="n">localhost</span><span class="k">:</span><span class="err">9000</span><span class="kt">/person/</span><span class="err">51</span><span class="kt">b868fa31d4002c0bac8ba5</span> <span class="kt">--include</span>
+</span><span class='line'>
+</span><span class='line'><span class="nc">HTTP</span><span class="o">/</span><span class="mf">1.1</span> <span class="mi">200</span> <span class="nc">OK</span>
+</span><span class='line'><span class="nc">Content</span><span class="o">-</span><span class="nc">Type</span><span class="k">:</span> <span class="kt">application/json</span><span class="o">;</span> <span class="n">charset</span><span class="k">=</span><span class="n">utf</span><span class="o">-</span><span class="mi">8</span>
+</span><span class='line'><span class="nc">Content</span><span class="o">-</span><span class="nc">Length</span><span class="k">:</span> <span class="err">33</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">{</span><span class="err">&quot;</span><span class="kt">id</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;51</span><span class="kt">b868fa31d4002c0bac8ba5</span><span class="err">&quot;</span><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>130&#8217; : Batch insert 2 persons (johnny &amp; tom) with more properties</h3>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="o">&gt;</span><span class="n">curl</span> <span class="o">-</span><span class="n">X</span> <span class="nc">POST</span> <span class="o">-</span><span class="n">d</span> <span class="err">&#39;</span><span class="o">[{</span> <span class="err">&quot;</span><span class="kt">name</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">johnny</span><span class="err">&quot;</span>, <span class="err">&quot;</span><span class="kt">age</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">15</span>, <span class="err">&quot;</span><span class="kt">address</span><span class="err">&quot;</span><span class="kt">:</span><span class="o">{</span><span class="err">&quot;</span><span class="kt">city</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">Paris</span><span class="err">&quot;</span>, <span class="err">&quot;</span><span class="kt">street</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">rue</span> <span class="kt">quincampoix</span><span class="err">&quot;</span><span class="o">}</span> <span class="o">}</span>,<span class="o">{</span> <span class="err">&quot;</span><span class="kt">name</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">tom</span><span class="err">&quot;</span>, <span class="err">&quot;</span><span class="kt">age</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">3</span>, <span class="err">&quot;</span><span class="kt">address</span><span class="err">&quot;</span><span class="kt">:</span><span class="o">{</span><span class="err">&quot;</span><span class="kt">city</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">Trifouilly</span><span class="err">&quot;</span>, <span class="err">&quot;</span><span class="kt">street</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">rue</span> <span class="kt">des</span> <span class="kt">accidents</span> <span class="kt">de</span> <span class="kt">poucettes</span><span class="err">&quot;</span><span class="o">}</span> <span class="o">}]</span><span class="err">&#39;</span> <span class="o">--</span><span class="n">header</span> <span class="s">&quot;Content-Type:application/json&quot;</span> <span class="n">http</span><span class="o">://</span><span class="n">localhost</span><span class="k">:</span><span class="err">9000</span><span class="kt">/person/batch</span> <span class="kt">--include</span>
+</span><span class='line'>
+</span><span class='line'><span class="nc">HTTP</span><span class="o">/</span><span class="mf">1.1</span> <span class="mi">200</span> <span class="nc">OK</span>
+</span><span class='line'><span class="nc">Content</span><span class="o">-</span><span class="nc">Type</span><span class="k">:</span> <span class="kt">application/json</span><span class="o">;</span> <span class="n">charset</span><span class="k">=</span><span class="n">utf</span><span class="o">-</span><span class="mi">8</span>
+</span><span class='line'><span class="nc">Content</span><span class="o">-</span><span class="nc">Length</span><span class="k">:</span> <span class="err">8</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">{</span><span class="err">&quot;</span><span class="kt">nb</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">2</span><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>135&#8217; : Get all persons whose name begins by &#8220;john&#8221;</h3>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="o">&gt;</span><span class="n">curl</span> <span class="o">-</span><span class="n">X</span> <span class="nc">POST</span> <span class="o">-</span><span class="n">d</span> <span class="err">&#39;</span><span class="o">{</span><span class="s">&quot;name&quot;</span><span class="k">:</span><span class="o">{</span><span class="err">&quot;</span><span class="kt">$regex</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">^john</span><span class="err">&quot;</span><span class="o">}}</span><span class="err">&#39;</span> <span class="o">--</span><span class="n">header</span> <span class="s">&quot;Content-Type:application/json&quot;</span> <span class="n">http</span><span class="o">://</span><span class="n">localhost</span><span class="k">:</span><span class="err">9000</span><span class="kt">/person/find</span> <span class="kt">--include</span>
+</span><span class='line'>
+</span><span class='line'><span class="nc">HTTP</span><span class="o">/</span><span class="mf">1.1</span> <span class="mi">200</span> <span class="nc">OK</span>
+</span><span class='line'><span class="nc">Content</span><span class="o">-</span><span class="nc">Type</span><span class="k">:</span> <span class="kt">application/json</span><span class="o">;</span> <span class="n">charset</span><span class="k">=</span><span class="n">utf</span><span class="o">-</span><span class="mi">8</span>
+</span><span class='line'><span class="nc">Content</span><span class="o">-</span><span class="nc">Length</span><span class="k">:</span> <span class="err">175</span>
+</span><span class='line'>
+</span><span class='line'><span class="err">[</span>
+</span><span class='line'>  <span class="o">{</span><span class="err">&quot;</span><span class="kt">name</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">john</span><span class="err">&quot;</span><span class="o">,</span><span class="err">&quot;</span><span class="kt">age</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">35</span><span class="kt">.</span><span class="err">0</span><span class="o">,</span><span class="s">&quot;id&quot;</span><span class="k">:</span><span class="err">&quot;51</span><span class="kt">b868fa31d4002c0bac8ba5</span><span class="err">&quot;</span><span class="o">},</span>
+</span><span class='line'>  <span class="o">{</span><span class="s">&quot;id&quot;</span><span class="k">:</span><span class="err">&quot;51</span><span class="kt">b86a1931d400bc01ac8ba8</span><span class="err">&quot;</span><span class="o">,</span><span class="s">&quot;name&quot;</span><span class="k">:</span><span class="err">&quot;</span><span class="kt">johnny</span><span class="err">&quot;</span><span class="o">,</span><span class="s">&quot;age&quot;</span><span class="k">:</span><span class="err">15</span><span class="kt">.</span><span class="err">0</span><span class="o">,</span><span class="s">&quot;address&quot;</span><span class="k">:</span><span class="o">{</span><span class="err">&quot;</span><span class="kt">city</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">Paris</span><span class="err">&quot;</span><span class="o">,</span><span class="err">&quot;</span><span class="kt">street</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">rue</span> <span class="kt">quincampoix</span><span class="err">&quot;</span><span class="o">}}</span>
+</span><span class='line'><span class="err">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>140&#8217; : Delete all persons</h3>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="o">&gt;</span><span class="n">curl</span> <span class="o">-</span><span class="n">X</span> <span class="nc">DELETE</span> <span class="o">-</span><span class="n">d</span> <span class="err">&#39;</span><span class="o">{}</span><span class="err">&#39;</span> <span class="o">--</span><span class="n">header</span> <span class="s">&quot;Content-Type:application/json&quot;</span> <span class="n">http</span><span class="o">://</span><span class="n">localhost</span><span class="k">:</span><span class="err">9000</span><span class="kt">/person/batch</span> <span class="kt">--include</span>
+</span><span class='line'>
+</span><span class='line'><span class="nc">HTTP</span><span class="o">/</span><span class="mf">1.1</span> <span class="mi">200</span> <span class="nc">OK</span>
+</span><span class='line'><span class="nc">Content</span><span class="o">-</span><span class="nc">Type</span><span class="k">:</span> <span class="kt">text/plain</span><span class="o">;</span> <span class="n">charset</span><span class="k">=</span><span class="n">utf</span><span class="o">-</span><span class="mi">8</span>
+</span><span class='line'><span class="nc">Content</span><span class="o">-</span><span class="nc">Length</span><span class="k">:</span> <span class="err">7</span>
+</span><span class='line'>
+</span><span class='line'><span class="kt">deleted</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>145&#8217; : Take 5&#8217; rest</h3>
+
+<br/>
+
+
+<h3>150&#8217; : Done</h3>
+
+<br/>
+
+
+<br/>
+
+
+<h2>So what was demonstrated here?</h2>
+
+<p>With Play-Autosource, in a few lines, you obtain :</p>
+
+<ul>
+<li><strong>A backed abstract datasource (here implemented for <a href="http://www.reactivemongo.org">ReactiveMongo</a> but it could be implemented for other DBs)</strong></li>
+<li><strong>All CRUD operations are exposed as pure REST services</strong></li>
+<li><strong>The datasource is typesafe (here <code>JsObject</code> but we&#8217;ll show later that we can use any type)</strong></li>
+</ul>
+
+
+<p>It can be useful to kickstart any application in which you&#8217;re going to work iteratively on our data models in direct interaction with front-end.</p>
+
+<p>It could also be useful to Frontend developers who need to bootstrap frontend code with Play Framework application backend. With <em>Autosource</em>, they don&#8217;t have to care about modelizing strictly a datasource on server-side and can dig into their client-side code quite quickly.</p>
+
+<br/>
+
+
+<br/>
+
+
+<h2>Adding constraints &amp; validation</h2>
+
+<blockquote><p>Now you tell me: &#8220;Hey that&#8217;s stupid, you store directly <code>JsObject</code> but my data are structured and must be validated before inserting them&#8221;</p></blockquote>
+
+<p>Yes you&#8217;re right so let&#8217;s add some type constraints on our data:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">object</span> <span class="nc">Persons</span> <span class="k">extends</span> <span class="nc">ReactiveMongoAutoSourceController</span><span class="o">[</span><span class="kt">JsObject</span><span class="o">]</span> <span class="o">{</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">coll</span> <span class="k">=</span> <span class="n">db</span><span class="o">.</span><span class="n">collection</span><span class="o">[</span><span class="kt">JSONCollection</span><span class="o">](</span><span class="s">&quot;persons&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// we validate the received Json as JsObject because the autosource type is JsObject</span>
+</span><span class='line'>  <span class="c1">// and we add classic validations on types</span>
+</span><span class='line'>  <span class="k">override</span> <span class="k">val</span> <span class="n">reader</span> <span class="k">=</span> <span class="nc">__</span><span class="o">.</span><span class="n">read</span><span class="o">[</span><span class="kt">JsObject</span><span class="o">]</span> <span class="n">keepAnd</span> <span class="o">(</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;name&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="n">and</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;age&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Int</span><span class="o">](</span><span class="nc">Reads</span><span class="o">.</span><span class="n">min</span><span class="o">(</span><span class="mi">0</span><span class="o">)</span> <span class="n">keepAnd</span> <span class="nc">Reads</span><span class="o">.</span><span class="n">max</span><span class="o">(</span><span class="mi">117</span><span class="o">))</span>
+</span><span class='line'>  <span class="o">).</span><span class="n">tupled</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Try it now:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">curl</span> <span class="o">-</span><span class="n">X</span> <span class="nc">POST</span> <span class="o">-</span><span class="n">d</span> <span class="err">&#39;</span><span class="o">{</span> <span class="s">&quot;nameXXX&quot;</span><span class="k">:</span><span class="err">&quot;</span><span class="kt">bob</span><span class="err">&quot;</span><span class="o">,</span> <span class="s">&quot;age&quot;</span><span class="k">:</span><span class="err">25</span> <span class="o">}</span><span class="err">&#39;</span> <span class="o">--</span><span class="n">header</span> <span class="s">&quot;Content-Type:application/json&quot;</span> <span class="n">http</span><span class="o">://</span><span class="n">localhost</span><span class="k">:</span><span class="err">9000</span><span class="kt">/person</span> <span class="kt">--include</span>
+</span><span class='line'>
+</span><span class='line'><span class="nc">HTTP</span><span class="o">/</span><span class="mf">1.1</span> <span class="mi">400</span> <span class="nc">Bad</span> <span class="nc">Request</span>
+</span><span class='line'><span class="nc">Content</span><span class="o">-</span><span class="nc">Type</span><span class="k">:</span> <span class="kt">application/json</span><span class="o">;</span> <span class="n">charset</span><span class="k">=</span><span class="n">utf</span><span class="o">-</span><span class="mi">8</span>
+</span><span class='line'><span class="nc">Content</span><span class="o">-</span><span class="nc">Length</span><span class="k">:</span> <span class="err">62</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">{</span><span class="err">&quot;</span><span class="kt">obj.name</span><span class="err">&quot;</span><span class="kt">:</span><span class="o">[{</span><span class="err">&quot;</span><span class="kt">msg</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">validate.error.missing-path</span><span class="err">&quot;</span>,<span class="err">&quot;</span><span class="kt">args</span><span class="err">&quot;</span><span class="kt">:</span><span class="o">[]}]}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>You can add progressively constraints on your data in a few lines. With <code>AutoSource</code>, you don&#8217;t need to determine immediately the exact shape of your models and you can work with <code>JsObject</code> directly as long as you need. Sometimes, you&#8217;ll even discover that you don&#8217;t even need a structured model and <code>JsObject</code> will be enough. (<em>but I also advise to design a bit things before implementing ;)</em>)</p>
+
+<blockquote><p>Keep in mind that our sample is based on an implementation for <em>ReactiveMongo</em> so using Json is natural. For other DB, other data structure might be more idiomatic&#8230;</p></blockquote>
+
+<br/>
+
+
+<br/>
+
+
+<h2>Use typesafe models</h2>
+
+<blockquote><p>Now you tell me: &#8220;Funny but but but <code>JsObject</code> is evil because it&#8217;s not strict enough. I&#8217;m a OO developer (maybe abused by ORM gurus when I was young) and my models are case-classes&#8230;&#8221;</p></blockquote>
+
+<p>Yes you&#8217;re right, sometimes, you need more business logic or you want to separate concerns very strictly and your model will be shaped as case-classes.</p>
+
+<p>So let&#8217;s replace our nice little <code>JsObject</code> by a more serious <code>case class</code>.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// the model</span>
+</span><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">Person</span><span class="o">(</span><span class="n">name</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">age</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)</span>
+</span><span class='line'><span class="k">object</span> <span class="nc">Person</span><span class="o">{</span>
+</span><span class='line'>  <span class="c1">// the famous Json Macro which generates at compile-time a Reads[Person] in a one-liner</span>
+</span><span class='line'>  <span class="k">implicit</span> <span class="k">val</span> <span class="n">fmt</span> <span class="k">=</span> <span class="nc">Json</span><span class="o">.</span><span class="n">format</span><span class="o">[</span><span class="kt">Person</span><span class="o">]</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// The autosource... shorter than before</span>
+</span><span class='line'><span class="k">object</span> <span class="nc">Persons</span> <span class="k">extends</span> <span class="nc">ReactiveMongoAutoSourceController</span><span class="o">[</span><span class="kt">Person</span><span class="o">]</span> <span class="o">{</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">coll</span> <span class="k">=</span> <span class="n">db</span><span class="o">.</span><span class="n">collection</span><span class="o">[</span><span class="kt">JSONCollection</span><span class="o">](</span><span class="s">&quot;persons&quot;</span><span class="o">)</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Please note that I removed the validations I had introduced before because there are not useful anymore: using Json macros, I created an implicit <code>Format[Person]</code> which is used implicitly by AutoSource.</p>
+
+<blockquote><p>So, now you can see why I consider AutoSource as a <em>typesafe datasource</em>.</p></blockquote>
+
+<br/>
+
+
+<br/>
+
+
+<h2>Let&#8217;s be front-sexy with AngularJS</h2>
+
+<p>You all know that <a href="http://www.angularjs.org/">AngularJS</a> is the new kid on the block and that you must use it if you want to be sexy nowadays.</p>
+
+<p>I&#8217;m already sexy so I must be able to use it without understanding anything to it and that&#8217;s exactly what I&#8217;ve done: in 30mn without knowing anything about Angular (but a few concepts), I wrote a dumb CRUD front page plugged on my wonderful <code>AutoSource</code>.</p>
+
+<br/>
+
+
+<h3>Client DS in assets/javascripts/persons.js</h3>
+
+<p>This is the most important part of this sample: we need to call our CRUD autosource endpoints from angularJS.</p>
+
+<p>We are going to use <em>Angular resources</em> for it even if it&#8217;s not really the best feature of AngularJS. Anyway, in a few lines, it works pretty well in my raw case.</p>
+
+<p><em>(thanks to Paul Dijou for reviewing this code because I repeat I don&#8217;t know angularJS at all and I wrote this in 20mn without trying to understand anything :D)</em></p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+</pre></td><td class='code'><pre><code class='javascript'><span class='line'><span class="kd">var</span> <span class="nx">app</span> <span class="o">=</span>
+</span><span class='line'>  <span class="c1">// injects ngResource</span>
+</span><span class='line'>  <span class="nx">angular</span><span class="p">.</span><span class="nx">module</span><span class="p">(</span><span class="s2">&quot;app&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;ngResource&quot;</span><span class="p">])</span>
+</span><span class='line'>  <span class="c1">// creates the Person factory backed by our autosource</span>
+</span><span class='line'>  <span class="c1">// Please remark the url person/:id which will use transparently our CRUD AutoSource endpoints</span>
+</span><span class='line'>  <span class="p">.</span><span class="nx">factory</span><span class="p">(</span><span class="s1">&#39;Person&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;$resource&quot;</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">$resource</span><span class="p">){</span>
+</span><span class='line'>    <span class="k">return</span> <span class="nx">$resource</span><span class="p">(</span><span class="s1">&#39;person/:id&#39;</span><span class="p">,</span> <span class="p">{</span> <span class="s2">&quot;id&quot;</span> <span class="o">:</span> <span class="s2">&quot;@id&quot;</span> <span class="p">});</span>
+</span><span class='line'>  <span class="p">}])</span>
+</span><span class='line'>  <span class="c1">// creates a controller</span>
+</span><span class='line'>  <span class="p">.</span><span class="nx">controller</span><span class="p">(</span><span class="s2">&quot;PersonCtrl&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;$scope&quot;</span><span class="p">,</span> <span class="s2">&quot;Person&quot;</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">$scope</span><span class="p">,</span> <span class="nx">Person</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="nx">$scope</span><span class="p">.</span><span class="nx">createForm</span> <span class="o">=</span> <span class="p">{};</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="c1">// retrieves all persons</span>
+</span><span class='line'>    <span class="nx">$scope</span><span class="p">.</span><span class="nx">persons</span> <span class="o">=</span> <span class="nx">Person</span><span class="p">.</span><span class="nx">query</span><span class="p">();</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="c1">// creates a person using createForm and refreshes list</span>
+</span><span class='line'>    <span class="nx">$scope</span><span class="p">.</span><span class="nx">create</span> <span class="o">=</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+</span><span class='line'>      <span class="kd">var</span> <span class="nx">person</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Person</span><span class="p">({</span><span class="nx">name</span><span class="o">:</span> <span class="nx">$scope</span><span class="p">.</span><span class="nx">createForm</span><span class="p">.</span><span class="nx">name</span><span class="p">,</span> <span class="nx">age</span><span class="o">:</span> <span class="nx">$scope</span><span class="p">.</span><span class="nx">createForm</span><span class="p">.</span><span class="nx">age</span><span class="p">});</span>
+</span><span class='line'>      <span class="nx">person</span><span class="p">.</span><span class="nx">$save</span><span class="p">(</span><span class="kd">function</span><span class="p">(){</span>
+</span><span class='line'>        <span class="nx">$scope</span><span class="p">.</span><span class="nx">createForm</span> <span class="o">=</span> <span class="p">{};</span>
+</span><span class='line'>        <span class="nx">$scope</span><span class="p">.</span><span class="nx">persons</span> <span class="o">=</span> <span class="nx">Person</span><span class="p">.</span><span class="nx">query</span><span class="p">();</span>
+</span><span class='line'>      <span class="p">})</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="c1">// removes a person and refreshes list</span>
+</span><span class='line'>    <span class="nx">$scope</span><span class="p">.</span><span class="nx">remove</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">person</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>      <span class="nx">person</span><span class="p">.</span><span class="nx">$remove</span><span class="p">(</span><span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+</span><span class='line'>        <span class="nx">$scope</span><span class="p">.</span><span class="nx">persons</span> <span class="o">=</span> <span class="nx">Person</span><span class="p">.</span><span class="nx">query</span><span class="p">();</span>
+</span><span class='line'>      <span class="p">})</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="c1">// updates a person and refreshes list</span>
+</span><span class='line'>    <span class="nx">$scope</span><span class="p">.</span><span class="nx">update</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">person</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>      <span class="nx">person</span><span class="p">.</span><span class="nx">$save</span><span class="p">(</span><span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+</span><span class='line'>        <span class="nx">$scope</span><span class="p">.</span><span class="nx">persons</span> <span class="o">=</span> <span class="nx">Person</span><span class="p">.</span><span class="nx">query</span><span class="p">();</span>
+</span><span class='line'>      <span class="p">})</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'><span class="p">}]);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>CRUD UI in index.scala.html</h3>
+
+<p>Now let&#8217;s create our CRUD UI page using angular directives. We need to be able to:</p>
+
+<ul>
+<li>list persons</li>
+<li>update/delete each person</li>
+<li>create new persons</li>
+</ul>
+
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+</pre></td><td class='code'><pre><code class='html'><span class='line'>@(message: String)
+</span><span class='line'>
+</span><span class='line'>@main(&quot;Welcome to Play 2.1&quot;) {
+</span><span class='line'>
+</span><span class='line'>    <span class="nt">&lt;div</span> <span class="na">ng-controller=</span><span class="s">&quot;PersonCtrl&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>      <span class="c">&lt;!-- create form --&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;label</span> <span class="na">for=</span><span class="s">&quot;name&quot;</span><span class="nt">&gt;</span>name:<span class="nt">&lt;/label&gt;&lt;input</span> <span class="na">ng-model=</span><span class="s">&quot;createForm.name&quot;</span><span class="nt">/&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;label</span> <span class="na">for=</span><span class="s">&quot;age&quot;</span><span class="nt">&gt;</span>age:<span class="nt">&lt;/label&gt;&lt;input</span> <span class="na">ng-model=</span><span class="s">&quot;createForm.age&quot;</span> <span class="na">type=</span><span class="s">&quot;number&quot;</span><span class="nt">/&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;button</span> <span class="na">ng-click=</span><span class="s">&quot;create()&quot;</span><span class="nt">&gt;</span>Create new person<span class="nt">&lt;/button&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;hr/&gt;</span>
+</span><span class='line'>      <span class="c">&lt;!-- List of persons with update/delete buttons --&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;table&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;thead&gt;&lt;th&gt;</span>name<span class="nt">&lt;/th&gt;&lt;th&gt;</span>age<span class="nt">&lt;/th&gt;&lt;td&gt;</span>actions<span class="nt">&lt;/td&gt;&lt;/thead&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;tbody</span> <span class="na">ng-repeat=</span><span class="s">&quot;person in persons&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;tr&gt;</span>
+</span><span class='line'>          <span class="nt">&lt;td&gt;&lt;input</span> <span class="na">ng-model=</span><span class="s">&quot;person.name&quot;</span><span class="nt">/&gt;&lt;/td&gt;</span>
+</span><span class='line'>          <span class="nt">&lt;td&gt;&lt;input</span> <span class="na">type=</span><span class="s">&quot;number&quot;</span> <span class="na">ng-model=</span><span class="s">&quot;person.age&quot;</span><span class="nt">/&gt;&lt;/td&gt;</span>
+</span><span class='line'>          <span class="nt">&lt;td&gt;&lt;button</span> <span class="na">ng-click=</span><span class="s">&quot;update(person)&quot;</span><span class="nt">&gt;</span>Update<span class="nt">&lt;/button&gt;&lt;button</span> <span class="na">ng-click=</span><span class="s">&quot;remove(person)&quot;</span><span class="nt">&gt;</span>Delete<span class="nt">&lt;/button&gt;&lt;/td&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;/tr&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;/tbody&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;/div&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;/div&gt;</span>
+</span><span class='line'>
+</span><span class='line'>}
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>Import Angular in main.scala.html</h3>
+
+<p>We need to import angularjs in our application and create angular application using <code>ng-app</code></p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+</pre></td><td class='code'><pre><code class='html'><span class='line'>@(title: String)(content: Html)
+</span><span class='line'>
+</span><span class='line'><span class="cp">&lt;!DOCTYPE html&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="c">&lt;!-- please note the directive ng-app to initialize angular app--&gt;</span>
+</span><span class='line'><span class="nt">&lt;html</span> <span class="na">ng-app=</span><span class="s">&quot;html&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;head&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;title&gt;</span>@title<span class="nt">&lt;/title&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;link</span> <span class="na">rel=</span><span class="s">&quot;stylesheet&quot;</span> <span class="na">media=</span><span class="s">&quot;screen&quot;</span> <span class="na">href=</span><span class="s">&quot;@routes.Assets.at(&quot;</span><span class="na">stylesheets</span><span class="err">/</span><span class="na">main</span><span class="err">.</span><span class="na">css</span><span class="err">&quot;)&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;link</span> <span class="na">rel=</span><span class="s">&quot;shortcut icon&quot;</span> <span class="na">type=</span><span class="s">&quot;image/png&quot;</span> <span class="na">href=</span><span class="s">&quot;@routes.Assets.at(&quot;</span><span class="na">images</span><span class="err">/</span><span class="na">favicon</span><span class="err">.</span><span class="na">png</span><span class="err">&quot;)&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;script </span><span class="na">src=</span><span class="s">&quot;@routes.Assets.at(&quot;</span><span class="na">javascripts</span><span class="err">/</span><span class="na">jquery-1</span><span class="err">.</span><span class="na">9</span><span class="err">.</span><span class="na">0</span><span class="err">.</span><span class="na">min</span><span class="err">.</span><span class="na">js</span><span class="err">&quot;)&quot;</span> <span class="na">type=</span><span class="s">&quot;text/javascript&quot;</span><span class="nt">&gt;&lt;/script&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;script </span><span class="na">src=</span><span class="s">&quot;https://ajax.googleapis.com/ajax/libs/angularjs/1.1.5/angular.min.js&quot;</span><span class="nt">&gt;&lt;/script&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;script </span><span class="na">src=</span><span class="s">&quot;https://ajax.googleapis.com/ajax/libs/angularjs/1.1.5/angular-resource.min.js&quot;</span><span class="nt">&gt;&lt;/script&gt;</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="nt">&lt;script </span><span class="na">src=</span><span class="s">&quot;@routes.Assets.at(&quot;</span><span class="na">javascripts</span><span class="err">/</span><span class="na">person</span><span class="err">.</span><span class="na">js</span><span class="err">&quot;)&quot;</span> <span class="na">type=</span><span class="s">&quot;text/javascript&quot;</span><span class="nt">&gt;&lt;/script&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;/head&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;body&gt;</span>
+</span><span class='line'>        @content
+</span><span class='line'>    <span class="nt">&lt;/body&gt;</span>
+</span><span class='line'><span class="nt">&lt;/html&gt;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>What else??? Oh yes Security&#8230;</h2>
+
+<blockquote><p>I know what you think: &#8220;Uhuh, the poor guy who exposes his DB directly on the network and who is able to delete everything without any security&#8221;</p></blockquote>
+
+<p>Once again, you&#8217;re right. <em>(yes I know I love flattery)</em></p>
+
+<p>Autosource is by default not secured in any way and actually I don&#8217;t really care about security because this is your job to secure your exposed APIs and there are so many ways to secure services that I prefer to let you choose the one you want.</p>
+
+<p>Anyway, I&#8217;m a nice boy and I&#8217;m going to show you how you could secure the <code>DELETE</code> endpoint using the authentication action composition sample given in <a href="http://www.playframework.com/documentation/2.1.1/ScalaActionsComposition">Play Framework documentation</a>.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// FAKE USER class to simulate a user extracted from DB.</span>
+</span><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">User</span><span class="o">(</span><span class="n">name</span><span class="k">:</span> <span class="kt">String</span><span class="o">)</span>
+</span><span class='line'><span class="k">object</span> <span class="nc">User</span> <span class="o">{</span>
+</span><span class='line'>  <span class="k">def</span> <span class="n">find</span><span class="o">(</span><span class="n">name</span><span class="k">:</span> <span class="kt">String</span><span class="o">)</span> <span class="k">=</span> <span class="nc">Some</span><span class="o">(</span><span class="nc">User</span><span class="o">(</span><span class="n">name</span><span class="o">))</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">object</span> <span class="nc">Persons</span> <span class="k">extends</span> <span class="nc">ReactiveMongoAutoSourceController</span><span class="o">[</span><span class="kt">Person</span><span class="o">]</span> <span class="o">{</span>
+</span><span class='line'>  <span class="c1">// The action composite directly copied for PlayFramework doc</span>
+</span><span class='line'>  <span class="k">def</span> <span class="nc">Authenticated</span><span class="o">(</span><span class="n">action</span><span class="k">:</span> <span class="kt">User</span> <span class="o">=&gt;</span> <span class="nc">EssentialAction</span><span class="o">)</span><span class="k">:</span> <span class="kt">EssentialAction</span> <span class="o">=</span> <span class="o">{</span>
+</span><span class='line'>    <span class="c1">// Let&#39;s define a helper function to retrieve a User</span>
+</span><span class='line'>    <span class="k">def</span> <span class="n">getUser</span><span class="o">(</span><span class="n">request</span><span class="k">:</span> <span class="kt">RequestHeader</span><span class="o">)</span><span class="k">:</span> <span class="kt">Option</span><span class="o">[</span><span class="kt">User</span><span class="o">]</span> <span class="k">=</span> <span class="o">{</span>
+</span><span class='line'>      <span class="n">request</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">get</span><span class="o">(</span><span class="s">&quot;user&quot;</span><span class="o">).</span><span class="n">flatMap</span><span class="o">(</span><span class="n">u</span> <span class="k">=&gt;</span> <span class="nc">User</span><span class="o">.</span><span class="n">find</span><span class="o">(</span><span class="n">u</span><span class="o">))</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="c1">// Now let&#39;s define the new Action</span>
+</span><span class='line'>    <span class="nc">EssentialAction</span> <span class="o">{</span> <span class="n">request</span> <span class="k">=&gt;</span>
+</span><span class='line'>      <span class="n">getUser</span><span class="o">(</span><span class="n">request</span><span class="o">).</span><span class="n">map</span><span class="o">(</span><span class="n">u</span> <span class="k">=&gt;</span> <span class="n">action</span><span class="o">(</span><span class="n">u</span><span class="o">)(</span><span class="n">request</span><span class="o">)).</span><span class="n">getOrElse</span> <span class="o">{</span>
+</span><span class='line'>        <span class="nc">Done</span><span class="o">(</span><span class="nc">Unauthorized</span><span class="o">)</span>
+</span><span class='line'>      <span class="o">}</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">val</span> <span class="n">coll</span> <span class="k">=</span> <span class="n">db</span><span class="o">.</span><span class="n">collection</span><span class="o">[</span><span class="kt">JSONCollection</span><span class="o">](</span><span class="s">&quot;persons&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// &gt;&gt;&gt; IMPORTANT PART &lt;&lt;&lt;</span>
+</span><span class='line'>  <span class="c1">// We simply override the delete action</span>
+</span><span class='line'>  <span class="c1">// If authenticated, we call the original action</span>
+</span><span class='line'>  <span class="k">override</span> <span class="k">def</span> <span class="n">delete</span><span class="o">(</span><span class="n">id</span><span class="k">:</span> <span class="kt">BSONObjectID</span><span class="o">)</span> <span class="k">=</span> <span class="nc">Authenticated</span> <span class="o">{</span> <span class="k">_</span> <span class="k">=&gt;</span>
+</span><span class='line'>    <span class="k">super</span><span class="o">.</span><span class="n">delete</span><span class="o">(</span><span class="n">id</span><span class="o">)</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">def</span> <span class="n">index</span> <span class="k">=</span> <span class="nc">Action</span> <span class="o">{</span>
+</span><span class='line'>    <span class="nc">Ok</span><span class="o">(</span><span class="n">views</span><span class="o">.</span><span class="n">html</span><span class="o">.</span><span class="n">index</span><span class="o">(</span><span class="s">&quot;ok&quot;</span><span class="o">))</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// the login action which log any user</span>
+</span><span class='line'>  <span class="k">def</span> <span class="n">login</span><span class="o">(</span><span class="n">name</span><span class="k">:</span> <span class="kt">String</span><span class="o">)</span> <span class="k">=</span> <span class="nc">Action</span> <span class="o">{</span>
+</span><span class='line'>    <span class="nc">Ok</span><span class="o">(</span><span class="s">&quot;logged in&quot;</span><span class="o">).</span><span class="n">withSession</span><span class="o">(</span><span class="s">&quot;user&quot;</span> <span class="o">-&gt;</span> <span class="n">name</span><span class="o">)</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// the logout action which log out any user</span>
+</span><span class='line'>  <span class="k">def</span> <span class="n">logout</span> <span class="k">=</span> <span class="nc">Action</span> <span class="o">{</span>
+</span><span class='line'>    <span class="nc">Ok</span><span class="o">(</span><span class="s">&quot;logged out&quot;</span><span class="o">).</span><span class="n">withNewSession</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Nothing to complicated here.
+If you need to add headers in your responses and params to querystring, it&#8217;s easy to wrap autosource actions. Please refer to Play Framework doc for more info&#8230;</p>
+
+<blockquote><p>I won&#8217;t try it here, the article is already too long but it should work&#8230;</p></blockquote>
+
+<br/>
+
+
+<br/>
+
+
+<h2>Play-Autosource is DB agnostic</h2>
+
+<p><code>Play-Autosource</code> Core is independent of the DB and provides Reactive (Async/Nonblocking) APIs to fulfill PlayFramework requirements.</p>
+
+<p>Naturally this 1st implementation uses <a href="http://www.reactivemongo.org">ReactiveMongo</a> which is one of the best sample of DB reactive driver. MongoDB fits very well in this concept too because document records are really compliant to JSON datasources.</p>
+
+<p>But other implementations for other DB can be done and I count on you people to contribute them.</p>
+
+<blockquote><p>DB implementation contributions are welcome (Play-Autosource is just <em>Apache2 licensed</em>) and AutoSource API are subject to evolutions if they appear to be erroneous.</p></blockquote>
+
+<br/>
+
+
+<br/>
+
+
+<h2>Conclusion</h2>
+
+<p>Play-Autosource provides a very fast &amp; lightweight way to create a REST CRUD typesafe datasource in your Play/Scala application. You can begin with blob data such as <code>JsObject</code> and then elaborate the model of your data progressively by adding constraints or types to it.</p>
+
+<p>There would be many more things to say about <code>Play/Autosource</code>:</p>
+
+<ul>
+<li>you can also override writers to change output format</li>
+<li>you have some alpha streaming API also</li>
+<li>etc&#8230;</li>
+</ul>
+
+
+<p>There are also lots of features to improve/add because it&#8217;s still a very draft module.</p>
+
+<p>If you like it and have ideas, don&#8217;t hesitate to discuss, to contribute, to improve etc&#8230;</p>
+
+<p><code>curl -X POST -d "{ "coding" : "Have fun"} http://localhost:9000/developer</code></p>
+
+<br/>
+
+
+<br/>
+
+
+<br/>
+
+
+<br/>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Reactive Json Crafting : JsZipper + ReactiveMongo + multiple Async WS calls]]></title>
