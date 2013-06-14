@@ -92,7 +92,7 @@ object Persons extends ReactiveMongoAutoSourceController[JsObject] {
 ### 50' : Add AutoSource routes at beginning `conf/routes`
 
 {% codeblock lang:scala %}
-->      /person                     controllers.Person
+->      /person                     controllers.Persons
 {% endcodeblock %}
 
 ### 60' : Create `conf/play.plugins` to initialize ReactiveMongo Plugin
@@ -328,7 +328,7 @@ You all know that [AngularJS](http://www.angularjs.org/) is the new kid on the b
 I'm already sexy so I must be able to use it without understanding anything to it and that's exactly what I've done: in 30mn without knowing anything about Angular (but a few concepts), I wrote a dumb CRUD front page plugged on my wonderful `AutoSource`.
 
 <br/>
-### Client DS in assets/javascripts/persons.js
+### Client DS in app/assets/javascripts/persons.js
 
 This is the most important part of this sample: we need to call our CRUD autosource endpoints from angularJS.
 
@@ -423,7 +423,7 @@ We need to import angularjs in our application and create angular application us
 <!DOCTYPE html>
 
 <!-- please note the directive ng-app to initialize angular app-->
-<html ng-app="html">
+<html ng-app="app">
     <head>
         <title>@title</title>
         <link rel="stylesheet" media="screen" href="@routes.Assets.at("stylesheets/main.css")">
@@ -529,10 +529,11 @@ There would be many more things to say about `Play/Autosource`:
 
 There are also lots of features to improve/add because it's still a very draft module.
 
-
 If you like it and have ideas, don't hesitate to discuss, to contribute, to improve etc...
 
 `curl -X POST -d "{ "coding" : "Have fun"} http://localhost:9000/developer`
+
+PS: Thanks to James Roper for his [article about advanced routing in Play Framework which I copied shamefully XD](http://jazzy.id.au/default/2013/05/08/advanced_routing_in_play_framework.html)
 
 <br/>
 <br/>
