@@ -4,7 +4,7 @@
   <title><![CDATA[Mandubian Blog]]></title>
   <link href="http://www.mandubian.com/atom.xml" rel="self"/>
   <link href="http://www.mandubian.com/"/>
-  <updated>2013-06-14T08:35:33+02:00</updated>
+  <updated>2013-06-14T08:36:59+02:00</updated>
   <id>http://www.mandubian.com/</id>
   <author>
     <name><![CDATA[Pascal Voitot]]></name>
@@ -889,7 +889,7 @@ If you need to add headers in your responses and params to querystring, it&#8217
 
 <p><code>curl -X POST -d "{ "coding" : "Have fun"} http://localhost:9000/developer</code></p>
 
-<p>PS: Thanks to James Roper for his [article about advanced routing in Play Framework] which I copied shamefully XD](http://jazzy.id.au/default/2013/05/08/advanced_routing_in_play_framework.html)</p>
+<p>PS: Thanks to James Roper for his <a href="http://jazzy.id.au/default/2013/05/08/advanced_routing_in_play_framework.html">article about advanced routing in Play Framework which I copied shamefully XD</a></p>
 
 <br/>
 
