@@ -286,7 +286,7 @@
 <h3>50&#8217; : Add AutoSource routes at beginning <code>conf/routes</code></h3>
 
 <figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="o">-&gt;</span>      <span class="o">/</span><span class="n">person</span>                     <span class="n">controllers</span><span class="o">.</span><span class="nc">Person</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="o">-&gt;</span>      <span class="o">/</span><span class="n">person</span>                     <span class="n">controllers</span><span class="o">.</span><span class="nc">Persons</span>
 </span></code></pre></td></tr></table></div></figure>
 
 
@@ -665,7 +665,7 @@
 <br/>
 
 
-<h3>Client DS in assets/javascripts/persons.js</h3>
+<h3>Client DS in app/assets/javascripts/persons.js</h3>
 
 <p>This is the most important part of this sample: we need to call our CRUD autosource endpoints from angularJS.</p>
 
@@ -1011,6 +1011,8 @@ If you need to add headers in your responses and params to querystring, it&#8217
 <p>If you like it and have ideas, don&#8217;t hesitate to discuss, to contribute, to improve etc&#8230;</p>
 
 <p><code>curl -X POST -d "{ "coding" : "Have fun"} http://localhost:9000/developer</code></p>
+
+<p>PS: Thanks to James Roper for his [article about advanced routing in Play Framework] which I copied shamefully XD](http://jazzy.id.au/default/2013/05/08/advanced_routing_in_play_framework.html)</p>
 
 <br/>
 
