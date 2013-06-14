@@ -4,7 +4,7 @@
   <title><![CDATA[Mandubian Blog]]></title>
   <link href="http://www.mandubian.com/atom.xml" rel="self"/>
   <link href="http://www.mandubian.com/"/>
-  <updated>2013-06-14T08:36:59+02:00</updated>
+  <updated>2013-06-14T17:45:22+02:00</updated>
   <id>http://www.mandubian.com/</id>
   <author>
     <name><![CDATA[Pascal Voitot]]></name>
@@ -722,7 +722,7 @@
 </span><span class='line'><span class="cp">&lt;!DOCTYPE html&gt;</span>
 </span><span class='line'>
 </span><span class='line'><span class="c">&lt;!-- please note the directive ng-app to initialize angular app--&gt;</span>
-</span><span class='line'><span class="nt">&lt;html</span> <span class="na">ng-app=</span><span class="s">&quot;html&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'><span class="nt">&lt;html</span> <span class="na">ng-app=</span><span class="s">&quot;app&quot;</span><span class="nt">&gt;</span>
 </span><span class='line'>    <span class="nt">&lt;head&gt;</span>
 </span><span class='line'>        <span class="nt">&lt;title&gt;</span>@title<span class="nt">&lt;/title&gt;</span>
 </span><span class='line'>        <span class="nt">&lt;link</span> <span class="na">rel=</span><span class="s">&quot;stylesheet&quot;</span> <span class="na">media=</span><span class="s">&quot;screen&quot;</span> <span class="na">href=</span><span class="s">&quot;@routes.Assets.at(&quot;</span><span class="na">stylesheets</span><span class="err">/</span><span class="na">main</span><span class="err">.</span><span class="na">css</span><span class="err">&quot;)&quot;</span><span class="nt">&gt;</span>
