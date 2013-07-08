@@ -4,7 +4,7 @@
   <title><![CDATA[Mandubian Blog]]></title>
   <link href="http://www.mandubian.com/atom.xml" rel="self"/>
   <link href="http://www.mandubian.com/"/>
-  <updated>2013-06-14T17:45:22+02:00</updated>
+  <updated>2013-07-08T14:49:38+02:00</updated>
   <id>http://www.mandubian.com/</id>
   <author>
     <name><![CDATA[Pascal Voitot]]></name>
@@ -12,6 +12,382 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Play2 Json Interpolation & Pattern Matching]]></title>
+    <link href="http://www.mandubian.com/2013/07/04/json-interpolation-pattern-matching/"/>
+    <updated>2013-07-04T08:08:00+02:00</updated>
+    <id>http://www.mandubian.com/2013/07/04/json-interpolation-pattern-matching</id>
+    <content type="html"><![CDATA[<h4>EXPERIMENTAL / DRAFT</h4>
+
+<br/>
+
+
+
+
+<div class="well">
+<p>Do you remember <code>JsPath</code> pattern matching presented in <a href="http://mandubian.com/2013/05/01/jspath-pattern-matching/">this article</a> ?</p>
+<p>Let&#8217;s now go further with something that you should enjoy even more: <b>Json Interpolation &amp; Pattern Matching</b>.</p>
+
+<p>I&#8217;ve had the idea of these features for some time in my mind but let&#8217;s render unto Caesar what is Caesar&#8217;s : <a href="http://rapture.io/jsonSupport">Rapture.io</a> proved that it could be done quite easily and I must say I <del>stole</del> got inspired by a few implementation details from them! (<i>specially the @inline implicit conversion for string interpolation class which is required due to a ValueClass limitation that should be removed in further Scala versions</i>)
+</div>
+
+
+<p>First of all, code samples as usual&#8230;</p>
+
+<h2>Create JsValue using String interpolation</h2>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">js</span> <span class="k">=</span> <span class="n">json</span><span class="s">&quot;&quot;&quot;{ &quot;foo&quot; : &quot;bar&quot;, &quot;foo2&quot; : 123 }&quot;&quot;&quot;</span>
+</span><span class='line'><span class="n">js</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsValue</span> <span class="o">=</span> <span class="o">{</span><span class="s">&quot;foo&quot;</span><span class="k">:</span><span class="err">&quot;</span><span class="kt">bar</span><span class="err">&quot;</span><span class="o">,</span><span class="s">&quot;foo2&quot;</span><span class="k">:</span><span class="err">123</span><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="n">js</span> <span class="o">==</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span><span class="s">&quot;foo&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;bar&quot;</span><span class="o">,</span> <span class="s">&quot;foo2&quot;</span> <span class="o">-&gt;</span> <span class="mi">123</span><span class="o">)</span>
+</span><span class='line'><span class="n">res1</span><span class="k">:</span> <span class="kt">Boolean</span> <span class="o">=</span> <span class="kc">true</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">js</span> <span class="k">=</span> <span class="n">json</span><span class="s">&quot;&quot;&quot;[ 1, true, &quot;foo&quot;, 345.234]&quot;&quot;&quot;</span>
+</span><span class='line'><span class="n">js</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsValue</span> <span class="o">=</span> <span class="o">[</span><span class="err">1</span>,<span class="kt">true</span>,<span class="err">&quot;</span><span class="kt">foo</span><span class="err">&quot;</span>,<span class="err">345</span><span class="kt">.</span><span class="err">234</span><span class="o">]</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="n">js</span> <span class="o">==</span> <span class="nc">Json</span><span class="o">.</span><span class="n">arr</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span> <span class="kc">true</span><span class="o">,</span> <span class="s">&quot;foo&quot;</span><span class="o">,</span> <span class="mf">345.234</span><span class="o">)</span>
+</span><span class='line'><span class="n">res2</span><span class="k">:</span> <span class="kt">Boolean</span> <span class="o">=</span> <span class="kc">true</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Yes, pure Json in a string&#8230;</p>
+
+<p>How does it work? Using <a href="http://docs.scala-lang.org/overviews/core/string-interpolation.html">String interpolation</a> introduced in Scala 2.10.0 and Jackson for the parsing&#8230;</p>
+
+<p>In String interpolation, you can also put Scala variables directly in the interpolated string. You can do the same in Json interpolation.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">alpha</span> <span class="k">=</span> <span class="s">&quot;foo&quot;</span>
+</span><span class='line'><span class="n">alpha</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=</span> <span class="n">foo</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">beta</span> <span class="k">=</span> <span class="mi">123L</span>
+</span><span class='line'><span class="n">beta</span><span class="k">:</span> <span class="kt">Long</span> <span class="o">=</span> <span class="mi">123</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">js</span> <span class="k">=</span> <span class="n">json</span><span class="s">&quot;&quot;&quot;{ &quot;alpha&quot; : &quot;$alpha&quot;, &quot;beta&quot; : $beta}&quot;&quot;&quot;</span>
+</span><span class='line'><span class="n">js</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsValue</span> <span class="o">=</span> <span class="o">{</span><span class="s">&quot;alpha&quot;</span><span class="k">:</span><span class="err">&quot;</span><span class="kt">foo</span><span class="err">&quot;</span><span class="o">,</span><span class="s">&quot;beta&quot;</span><span class="k">:</span><span class="err">123</span><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">gamma</span> <span class="k">=</span> <span class="nc">Json</span><span class="o">.</span><span class="n">arr</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span> <span class="mi">2</span><span class="o">,</span> <span class="mi">3</span><span class="o">)</span>
+</span><span class='line'><span class="n">gamma</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsArray</span> <span class="o">=</span> <span class="o">[</span><span class="err">1</span>,<span class="err">2</span>,<span class="err">3</span><span class="o">]</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">delta</span> <span class="k">=</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span><span class="s">&quot;key1&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;value1&quot;</span><span class="o">,</span> <span class="s">&quot;key2&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;value2&quot;</span><span class="o">)</span>
+</span><span class='line'><span class="n">delta</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsObject</span> <span class="o">=</span> <span class="o">{</span><span class="s">&quot;key1&quot;</span><span class="k">:</span><span class="err">&quot;</span><span class="kt">value1</span><span class="err">&quot;</span><span class="o">,</span><span class="s">&quot;key2&quot;</span><span class="k">:</span><span class="err">&quot;</span><span class="kt">value2</span><span class="err">&quot;</span><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">js</span> <span class="k">=</span> <span class="n">json</span><span class="s">&quot;&quot;&quot;</span>
+</span><span class='line'><span class="s">     |         {</span>
+</span><span class='line'><span class="s">     |           &quot;alpha&quot; : &quot;$alpha&quot;,</span>
+</span><span class='line'><span class="s">     |           &quot;beta&quot; : $beta,</span>
+</span><span class='line'><span class="s">     |           &quot;gamma&quot; : $gamma,</span>
+</span><span class='line'><span class="s">     |           &quot;delta&quot; : $delta,</span>
+</span><span class='line'><span class="s">     |           &quot;eta&quot; : {</span>
+</span><span class='line'><span class="s">     |             &quot;foo&quot; : &quot;bar&quot;,</span>
+</span><span class='line'><span class="s">     |             &quot;foo2&quot; : [ &quot;bar21&quot;, 123, true, null ]</span>
+</span><span class='line'><span class="s">     |           }</span>
+</span><span class='line'><span class="s">     |         }</span>
+</span><span class='line'><span class="s">     |       &quot;&quot;&quot;</span>
+</span><span class='line'><span class="n">js</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsValue</span> <span class="o">=</span> <span class="o">{</span><span class="s">&quot;alpha&quot;</span><span class="k">:</span><span class="err">&quot;</span><span class="kt">foo</span><span class="err">&quot;</span><span class="o">,</span><span class="s">&quot;beta&quot;</span><span class="k">:</span><span class="err">123</span><span class="o">,</span><span class="s">&quot;gamma&quot;</span><span class="k">:</span><span class="err">[1</span><span class="o">,</span><span class="mi">2</span><span class="o">,</span><span class="mi">3</span><span class="err">]</span><span class="o">,</span><span class="s">&quot;delta&quot;</span><span class="k">:</span><span class="o">{</span><span class="err">&quot;</span><span class="kt">key1</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">value1</span><span class="err">&quot;</span><span class="o">,</span><span class="err">&quot;</span><span class="kt">key2</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">value2</span><span class="err">&quot;</span><span class="o">},</span><span class="s">&quot;eta&quot;</span><span class="k">:</span><span class="o">{</span><span class="err">&quot;</span><span class="kt">foo</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">bar</span><span class="err">&quot;</span><span class="o">,</span><span class="err">&quot;</span><span class="kt">foo2</span><span class="err">&quot;</span><span class="kt">:</span><span class="o">[</span><span class="err">&quot;</span><span class="kt">bar21</span><span class="err">&quot;</span>,<span class="err">123</span>,<span class="kt">true</span>,<span class="kt">null</span><span class="o">]}}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><em>Please note that string variables must be put between <code>"..."</code> because without it the parser will complain.</em></p>
+
+<p>Ok, so now it&#8217;s really trivial to write Json, isn&#8217;t it?</p>
+
+<p>String interpolation just replaces the string you write in your code by some Scala code concatenating pieces of strings with variables as you would write yourself. Kind-of: <code>s"toto ${v1} tata" =&gt; "toto + v1 + " tata" + ...</code></p>
+
+<p>But at compile-time, it doesn&#8217;t compile your String into Json: the Json parsing is done at runtime with string interpolation. So using Json interpolation doesn&#8217;t provide you with compile-time type safety and parsing for now.</p>
+
+<blockquote><p>In the future, I may replace String interpolation by a real Macro which will also parse the string at compile-time. Meanwhile, if you want to rely on type-safety, go on using <code>Json.obj / Json.arr</code> API.</p></blockquote>
+
+<br/>
+
+
+<h2>Json pattern matching</h2>
+
+<p>What is one of the first feature that you discover when learning Scala and that makes you say immediately: &#8220;Whoaa Cool feature&#8221;? <strong>Pattern Matching</strong>.</p>
+
+<p>You can write:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">opt</span> <span class="k">=</span> <span class="nc">Option</span><span class="o">(</span><span class="s">&quot;toto&quot;</span><span class="o">)</span>
+</span><span class='line'><span class="n">opt</span><span class="k">:</span> <span class="kt">Option</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="k">=</span> <span class="nc">Some</span><span class="o">(</span><span class="n">toto</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="n">opt</span> <span class="k">match</span> <span class="o">{</span>
+</span><span class='line'>  <span class="k">case</span> <span class="nc">Some</span><span class="o">(</span><span class="n">s</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="n">s</span><span class="s">&quot;not empty option:$s&quot;</span>
+</span><span class='line'>  <span class="k">case</span> <span class="nc">None</span>    <span class="k">=&gt;</span> <span class="s">&quot;empty option&quot;</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'><span class="n">res2</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=</span> <span class="n">not</span> <span class="n">empty</span> <span class="n">option</span><span class="k">:</span><span class="kt">toto</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// or direct variable assignement using pattern matching</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="nc">Some</span><span class="o">(</span><span class="n">s</span><span class="o">)</span> <span class="k">=</span> <span class="n">opt</span>
+</span><span class='line'><span class="n">s</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=</span> <span class="n">toto</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Why not doing this with Json?</p>
+
+<p>And&#8230;. Here it is with Json pattern matching!!!</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">js</span> <span class="k">=</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span><span class="s">&quot;foo&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;bar&quot;</span><span class="o">,</span> <span class="s">&quot;foo2&quot;</span> <span class="o">-&gt;</span> <span class="mi">123L</span><span class="o">)</span>
+</span><span class='line'><span class="n">js</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsObject</span> <span class="o">=</span> <span class="o">{</span><span class="s">&quot;foo&quot;</span><span class="k">:</span><span class="err">&quot;</span><span class="kt">bar</span><span class="err">&quot;</span><span class="o">,</span><span class="s">&quot;foo2&quot;</span><span class="k">:</span><span class="err">123</span><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="n">js</span> <span class="k">match</span> <span class="o">{</span>
+</span><span class='line'>  <span class="k">case</span> <span class="n">json</span><span class="s">&quot;&quot;&quot;{ &quot;foo&quot; : $a, &quot;foo2&quot; : $b }&quot;&quot;&quot;</span> <span class="k">=&gt;</span> <span class="nc">Some</span><span class="o">(</span><span class="n">a</span> <span class="o">-&gt;</span> <span class="n">b</span><span class="o">)</span>
+</span><span class='line'>  <span class="k">case</span> <span class="k">_</span> <span class="k">=&gt;</span> <span class="nc">None</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'><span class="n">res5</span><span class="k">:</span> <span class="kt">Option</span><span class="o">[(</span><span class="kt">play.api.libs.json.JsValue</span>, <span class="kt">play.api.libs.json.JsValue</span><span class="o">)]</span> <span class="k">=</span>
+</span><span class='line'><span class="nc">Some</span><span class="o">((</span><span class="s">&quot;bar&quot;</span><span class="o">,</span><span class="mi">123</span><span class="o">))</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">json</span><span class="s">&quot;&quot;&quot;{ &quot;foo&quot; : $a, &quot;foo2&quot; : $b}&quot;&quot;&quot;</span> <span class="k">=</span> <span class="n">json</span><span class="s">&quot;&quot;&quot; { &quot;foo&quot; : &quot;bar&quot;, &quot;foo2&quot; : 123 }&quot;&quot;&quot;</span>
+</span><span class='line'><span class="n">a</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsValue</span> <span class="o">=</span> <span class="s">&quot;bar&quot;</span>
+</span><span class='line'><span class="n">b</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsValue</span> <span class="o">=</span> <span class="mi">123</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">json</span><span class="s">&quot;[ $v1, 2, $v2, 4 ]&quot;</span> <span class="k">=</span> <span class="nc">Json</span><span class="o">.</span><span class="n">arr</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span> <span class="mi">2</span><span class="o">,</span> <span class="mi">3</span><span class="o">,</span> <span class="mi">4</span><span class="o">)</span>
+</span><span class='line'><span class="n">v1</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsValue</span> <span class="o">=</span> <span class="mi">1</span>
+</span><span class='line'><span class="n">v2</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsValue</span> <span class="o">=</span> <span class="mi">3</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Magical?</p>
+
+<p>Not at all&#8230; Just <code>unapplySeq</code> using the tool that enables this kind of Json manipulation as trees: <code>JsZipper</code>&#8230;</p>
+
+<blockquote><p>The more I use JsZippers, the more I find fields where I can use them ;)</p></blockquote>
+
+<br/>
+
+
+<h2>More complex Json pattern matching</h2>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">js</span> <span class="k">=</span> <span class="n">json</span><span class="s">&quot;&quot;&quot;{</span>
+</span><span class='line'><span class="s">    &quot;key1&quot; : &quot;value1&quot;,</span>
+</span><span class='line'><span class="s">    &quot;key2&quot; : [</span>
+</span><span class='line'><span class="s">      &quot;alpha&quot;,</span>
+</span><span class='line'><span class="s">      { &quot;foo&quot; : &quot;bar&quot;,</span>
+</span><span class='line'><span class="s">        &quot;foo2&quot; : {</span>
+</span><span class='line'><span class="s">          &quot;key21&quot; : &quot;value21&quot;,</span>
+</span><span class='line'><span class="s">          &quot;key22&quot; : [ &quot;value221&quot;, 123, false ]</span>
+</span><span class='line'><span class="s">        }</span>
+</span><span class='line'><span class="s">      },</span>
+</span><span class='line'><span class="s">      true,</span>
+</span><span class='line'><span class="s">      123.45</span>
+</span><span class='line'><span class="s">    ]</span>
+</span><span class='line'><span class="s">  }&quot;&quot;&quot;</span>
+</span><span class='line'><span class="n">js</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsValue</span> <span class="o">=</span> <span class="o">{</span><span class="s">&quot;key1&quot;</span><span class="k">:</span><span class="err">&quot;</span><span class="kt">value1</span><span class="err">&quot;</span><span class="o">,</span><span class="s">&quot;key2&quot;</span><span class="k">:</span><span class="err">[&quot;</span><span class="kt">alpha</span><span class="err">&quot;</span><span class="o">,{</span><span class="s">&quot;foo&quot;</span><span class="k">:</span><span class="err">&quot;</span><span class="kt">bar</span><span class="err">&quot;</span><span class="o">,</span><span class="s">&quot;foo2&quot;</span><span class="k">:</span><span class="o">{</span><span class="err">&quot;</span><span class="kt">key21</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">value21</span><span class="err">&quot;</span><span class="o">,</span><span class="err">&quot;</span><span class="kt">key22</span><span class="err">&quot;</span><span class="kt">:</span><span class="o">[</span><span class="err">&quot;</span><span class="kt">value221</span><span class="err">&quot;</span>,<span class="err">123</span>,<span class="kt">false</span><span class="o">]}},</span><span class="kc">true</span><span class="o">,</span><span class="mf">123.45</span><span class="err">]</span><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">json</span><span class="s">&quot;&quot;&quot;{ &quot;key1&quot; : $v1, &quot;key2&quot; : [&quot;alpha&quot;, $v2, true, $v3] }&quot;&quot;&quot;</span> <span class="k">=</span> <span class="n">js</span>
+</span><span class='line'><span class="n">v1</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsValue</span> <span class="o">=</span> <span class="s">&quot;value1&quot;</span>
+</span><span class='line'><span class="n">v2</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsValue</span> <span class="o">=</span> <span class="o">{</span><span class="s">&quot;foo&quot;</span><span class="k">:</span><span class="err">&quot;</span><span class="kt">bar</span><span class="err">&quot;</span><span class="o">,</span><span class="s">&quot;foo2&quot;</span><span class="k">:</span><span class="o">{</span><span class="err">&quot;</span><span class="kt">key21</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">value21</span><span class="err">&quot;</span><span class="o">,</span><span class="err">&quot;</span><span class="kt">key22</span><span class="err">&quot;</span><span class="kt">:</span><span class="o">[</span><span class="err">&quot;</span><span class="kt">value221</span><span class="err">&quot;</span>,<span class="err">123</span>,<span class="kt">false</span><span class="o">]}}</span>
+</span><span class='line'><span class="n">v3</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsValue</span> <span class="o">=</span> <span class="mf">123.45</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="n">js</span> <span class="k">match</span> <span class="o">{</span>
+</span><span class='line'>    <span class="k">case</span> <span class="n">json</span><span class="s">&quot;&quot;&quot;{</span>
+</span><span class='line'><span class="s">      &quot;key1&quot; : &quot;value1&quot;,</span>
+</span><span class='line'><span class="s">      &quot;key2&quot; : [&quot;alpha&quot;, $v1, true, $v2]</span>
+</span><span class='line'><span class="s">    }&quot;&quot;&quot;</span>   <span class="k">=&gt;</span> <span class="nc">Some</span><span class="o">(</span><span class="n">v1</span><span class="o">,</span> <span class="n">v2</span><span class="o">)</span>
+</span><span class='line'>    <span class="k">case</span> <span class="k">_</span> <span class="k">=&gt;</span> <span class="nc">None</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="n">res9</span><span class="k">:</span> <span class="kt">Option</span><span class="o">[(</span><span class="kt">play.api.libs.json.JsValue</span>, <span class="kt">play.api.libs.json.JsValue</span><span class="o">)]</span> <span class="k">=</span>
+</span><span class='line'><span class="nc">Some</span><span class="o">(({</span><span class="s">&quot;foo&quot;</span><span class="k">:</span><span class="err">&quot;</span><span class="kt">bar</span><span class="err">&quot;</span><span class="o">,</span><span class="s">&quot;foo2&quot;</span><span class="k">:</span><span class="o">{</span><span class="err">&quot;</span><span class="kt">key21</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">value21</span><span class="err">&quot;</span><span class="o">,</span><span class="err">&quot;</span><span class="kt">key22</span><span class="err">&quot;</span><span class="kt">:</span><span class="o">[</span><span class="err">&quot;</span><span class="kt">value221</span><span class="err">&quot;</span>,<span class="err">123</span>,<span class="kt">false</span><span class="o">]}},</span><span class="mf">123.45</span><span class="o">))</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// A non matching example maybe ? ;)</span>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span>  <span class="n">js</span> <span class="k">match</span> <span class="o">{</span>
+</span><span class='line'>    <span class="k">case</span> <span class="n">json</span><span class="s">&quot;&quot;&quot;{</span>
+</span><span class='line'><span class="s">      &quot;key1&quot; : &quot;value1&quot;,</span>
+</span><span class='line'><span class="s">      &quot;key2&quot; : [&quot;alpha&quot;, $v1, false, $v2]</span>
+</span><span class='line'><span class="s">    }&quot;&quot;&quot;</span>   <span class="k">=&gt;</span> <span class="nc">Some</span><span class="o">(</span><span class="n">v1</span><span class="o">,</span> <span class="n">v2</span><span class="o">)</span>
+</span><span class='line'>    <span class="k">case</span> <span class="k">_</span> <span class="k">=&gt;</span> <span class="nc">None</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="n">res10</span><span class="k">:</span> <span class="kt">Option</span><span class="o">[(</span><span class="kt">play.api.libs.json.JsValue</span>, <span class="kt">play.api.libs.json.JsValue</span><span class="o">)]</span> <span class="k">=</span> <span class="nc">None</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>If you like that, please tell it so that I know whether it&#8217;s worth pushing it to Play Framework!</p>
+
+<br/>
+
+
+<h2>Using these features right now in a Scala/SBT project</h2>
+
+<p>These features are part of my experimental project JsZipper presented in <a href="http://mandubian.com/2013/05/01/JsZipper/">this article</a>.</p>
+
+<p>To use it, add following lines to your SBT <code>Build.scala</code>:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">object</span> <span class="nc">ApplicationBuild</span> <span class="k">extends</span> <span class="nc">Build</span> <span class="o">{</span>
+</span><span class='line'>  <span class="o">...</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">mandubianRepo</span> <span class="k">=</span> <span class="nc">Seq</span><span class="o">(</span>
+</span><span class='line'>    <span class="s">&quot;Mandubian repository snapshots&quot;</span> <span class="n">at</span> <span class="s">&quot;https://github.com/mandubian/mandubian-mvn/raw/master/snapshots/&quot;</span><span class="o">,</span>
+</span><span class='line'>    <span class="s">&quot;Mandubian repository releases&quot;</span> <span class="n">at</span> <span class="s">&quot;https://github.com/mandubian/mandubian-mvn/raw/master/releases/&quot;</span>
+</span><span class='line'>  <span class="o">)</span>
+</span><span class='line'>  <span class="o">...</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">val</span> <span class="n">main</span> <span class="k">=</span> <span class="n">play</span><span class="o">.</span><span class="nc">Project</span><span class="o">(</span><span class="n">appName</span><span class="o">,</span> <span class="n">appVersion</span><span class="o">,</span> <span class="n">appDependencies</span><span class="o">).</span><span class="n">settings</span><span class="o">(</span>
+</span><span class='line'>    <span class="n">resolvers</span> <span class="o">++=</span> <span class="n">mandubianRepo</span><span class="o">,</span>
+</span><span class='line'>    <span class="n">libraryDependencies</span> <span class="o">++=</span> <span class="nc">Seq</span><span class="o">(</span>
+</span><span class='line'>      <span class="o">...</span>
+</span><span class='line'>      <span class="s">&quot;play-json-zipper&quot;</span>  <span class="o">%%</span> <span class="s">&quot;play-json-zipper&quot;</span>    <span class="o">%</span> <span class="s">&quot;0.1-SNAPSHOT&quot;</span><span class="o">,</span>
+</span><span class='line'>      <span class="o">...</span>
+</span><span class='line'>    <span class="o">)</span>
+</span><span class='line'>  <span class="o">)</span>
+</span><span class='line'>  <span class="o">...</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>In your Scala code, import following packages</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">syntax._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.functional.syntax._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json.extensions._</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>PatternMatch your fun!</p>
+
+<br/>
+
+
+<br/>
+
+
+<br/>
+
+
+<br/>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Play AutoSource : 2'30 Kickstart Full REST & CRUD Datasource in Play App (demo'ed with ReactiveMongo + AngularJS)]]></title>
@@ -10814,251 +11190,6 @@ Don&#8217;t focus on those operators right now, there are just aliases of real e
 I&#8217;ll try to write an article about those operators to demystify them. With practice, some people will find the code with operators clearer and more compact, some people will prefer words.</p></blockquote>
 
 <p>Have fun</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[xmlsoap-ersatz]]></title>
-    <link href="http://www.mandubian.com/2012/07/14/xmlsoap-ersatz/"/>
-    <updated>2012-07-14T00:59:00+02:00</updated>
-    <id>http://www.mandubian.com/2012/07/14/xmlsoap-ersatz</id>
-    <content type="html"><![CDATA[<h1>XML/SOAP to/from scala structures with <em>xmlsoap-ersatz</em></h1>
-
-<blockquote><p><a href="https://github.com/mandubian/scala-xmlsoap-ersatz">xmlsoap-ersatz</a> is a toolset to help people serialize/deserialize XML/SOAP with Scala. It doesn&#8217;t try to respect any standard but it allows to interprete and generate any XML format with any standard you require.</p></blockquote>
-
-<p>It was developed to be used with <a href="http://www.playframework.org">Play2/Scala</a> but it can work standalone as it doesn&#8217;t depend on any other library.</p>
-
-<p>xmlsoap-ersatz uses the same design as Play2 Json serialization/deserialization based on <strong>implicit typeclasses</strong>. This mechanism is very clean, robust and generic. Please note that implicits are NOT used as implicit CONVERSIONS which are often tricky and sometimes dangerous!</p>
-
-<p><em>xmlsoap-ersatz is still draft library so if you discover anything wrong, don&#8217;t hesitate to tell it</em></p>
-
-<blockquote><p>xmlsoap-ersatz is an <a href="https://github.com/mandubian/scala-xmlsoap-ersatz">opensource public github</a> so don&#8217;t hesitate to contribute and give ideas :)</p>
-
-<p>Full doc is in <a href="https://github.com/mandubian/scala-xmlsoap-ersatz/wiki">Github Wiki</a></p></blockquote>
-
-<br/>
-
-
-<h1>XML Scala serialization/deserialization</h1>
-
-<h3>Imagine you want to map this XML to a case class</h3>
-
-<pre><code>val fooXml = &lt;foo&gt;
-    &lt;id&gt;1234&lt;/id&gt;
-    &lt;name&gt;brutus&lt;/name&gt;
-    &lt;age&gt;23&lt;/age&gt;
-&lt;/foo&gt;
-</code></pre>
-
-<br/>
-
-
-<h3>You want to map it to:</h3>
-
-<pre><code>case class Foo(id: Long, name: String, age: Option[Int])
-Foo(id=1234L, name="brutus", age=Some(23))
-</code></pre>
-
-<ul>
-<li>case class is a sample but the mechanism also works with any structure in Scala such as tuples</li>
-<li><code>age</code> field is <code>Option[Int]</code> meaning it might not appear in the XML (<code>None</code> in this case)</li>
-</ul>
-
-
-<br/>
-
-
-<h3>So how would you write that with <em>xmlsoap ersatz</em>?</h3>
-
-<pre><code>import play2.tools.xml._
-import play2.tools.xml.DefaultImplicits._
-[...]
-val foo = EXML.fromXML[Foo](fooXml)
-assert(foo == Foo(1234L, "brutus", Some(23)))
-
-val fooXml2 = EXML.toXML(foo)
-assert(fooXml2 == fooXml)
-</code></pre>
-
-<p>As you may imagine, this is not so simple as <code>fromXML</code>/<code>toXML</code> signatures are the following:</p>
-
-<pre><code>object EXML {
-    def toXML[T](t: T, base: xml.NodeSeq = xml.NodeSeq.Empty)(implicit w: XMLWriter[T]): xml.NodeSeq
-    def fromXML[T](x: xml.NodeSeq)(implicit r: XMLReader[T]): Option[T] 
-}
-</code></pre>
-
-<p>You can see the <strong>implicit typeclasses <code>XMLReader</code>/<code>XMLWriter</code></strong> which define the mapper to/from XML to your case class.
-So in order <code>EXML.fromXML</code>/<code>EXML.toXML</code> to work properly, you should define an implicit XML reader/writer for your specific structure in your scope.
-It can be done at once by extending <code>XMLFormatter[T]</code>:</p>
-
-<pre><code>trait XMLFormatter[T] extends XMLReader[T] with XMLWriter[T] {
-    def read(x: xml.NodeSeq): Option[T]
-    def write(f: T, base: xml.NodeSeq): xml.NodeSeq
-}
-</code></pre>
-
-<br/>
-
-
-<h3>Defining the implicit  for your case class</h3>
-
-<pre><code>implicit object FooXMLF extends XMLFormatter[Foo] {
-  def read(x: xml.NodeSeq): Option[Foo] = {
-    for( 
-      id &lt;- EXML.fromXML[Long](x \ "id");
-      name &lt;- EXML.fromXML[String](x \ "name");
-      age &lt;- EXML.fromXML[Option[Int]](x \ "age")
-    ) yield(Foo(id, name, age))
-  }
-
-  def write(f: Foo, base: xml.NodeSeq): xml.NodeSeq = {
-    &lt;foo&gt;
-      &lt;id&gt;{ f.id }&lt;/id&gt;
-      &lt;name&gt;{ f.name }&lt;/name&gt;
-      { EXML.toXML(f.age, &lt;age/&gt;) }
-    &lt;/foo&gt;
-  }
-}
-</code></pre>
-
-<p>You may think this is a bit tedious to write but this is quite easy after a few tries and the most important:</p>
-
-<blockquote><p>This mechanism provides a very precise and simple control on what you want to do.</p></blockquote>
-
-<p>Please note:</p>
-
-<ul>
-<li>the <code>write</code> function uses Scala XML literals simply.</li>
-<li>the <code>implicit</code> is important: you can declare it once in your scope and that&#8217;s all.</li>
-<li><p>the <code>age</code> field in <code>write</code> requires a special syntax:</p>
-
-<p>  <code>{ EXML.toXML(f.age, &lt;age/&gt;) }</code> means: <code>&lt;age/&gt;</code> is used as the base node and will generate following XML:</p>
-
-<ul>
-<li>if age is <code>Some(23)</code>: <code>&lt;age&gt;23&lt;/age&gt;</code></li>
-<li>if age is <code>None</code>: <code>&lt;age xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:nil="true" /&gt;</code> (<em>standards defines this but you can redefine it as you want</em>)</li>
-</ul>
-</li>
-<li><p>the <code>base</code> field in <code>write</code> function can be used to pass a parent context node to the writer. It is helpful in case you need to add attributes to parent node for ex as in the case of <code>age: Option[Int]</code> field.</p>
-
-<blockquote><p>But don&#8217;t forget that Scala XML nodes are immutable and that you can just copy the nodes you pass to a function.</p></blockquote></li>
-<li><p>the <em>for-comprehension</em> is just a shortcut but you could write it using flatMap/map also:</p></li>
-</ul>
-
-
-<p>For ex:</p>
-
-<pre><code>def read(x: xml.NodeSeq): Option[Foo] = {
-  EXML.fromXML[Long](x \ "id").flatMap{ id =&gt;
-    EXML.fromXML[String](x \ "name").flatMap { name =&gt;
-      EXML.fromXML[Int](x \ "age").map{ age =&gt;
-        Foo(id, name, age)
-      }
-    }
-  }
-}
-</code></pre>
-
-<br/>
-
-
-<h3>The complete code</h3>
-
-<pre><code>import play2.tools.xml._
-import play2.tools.xml.DefaultImplicits._
-
-implicit object FooXMLF extends XMLFormatter[Foo] {
-  def read(x: xml.NodeSeq): Option[Foo] = {
-    for( 
-      id &lt;- EXML.fromXML[Long](x \ "id");
-      name &lt;- EXML.fromXML[String](x \ "name");
-      age &lt;- EXML.fromXML[Option[Int]](x \ "age");
-    ) yield(Foo(id, name, age))
-  }
-
-  def write(f: Foo, base: xml.NodeSeq): xml.NodeSeq = {
-    &lt;foo&gt;
-      &lt;id&gt;{ f.id }&lt;/id&gt;
-      &lt;name&gt;{ f.name }&lt;/name&gt;
-      { EXML.toXML(f.age, &lt;age/&gt;) }
-    &lt;/foo&gt;
-  }
-}
-
-val foo = EXML.fromXML[Foo](fooXml)
-assert(foo == Foo(1234L, "albert", 23)
-
-val fooXml = EXML.toXML(foo)
-assert(fooXml == fooXml)
-</code></pre>
-
-<h1>Integrate with Play2/Scala</h1>
-
-<h2>Add xmlsoap-ersatz to your configuration (ersatz is deployed as a maven repo on github)</h2>
-
-<pre><code>object ApplicationBuild extends Build {
-
-  val appName         = "play2-xmlsoap"
-  val appVersion      = "1.0-SNAPSHOT"
-
-  val appDependencies = Seq(
-    "play2.tools.xml" %% "xmlsoap-ersatz" % "0.1-SNAPSHOT"
-  )  
-
-  val main = PlayProject(appName, appVersion, appDependencies, mainLang = SCALA).settings(
-    resolvers += ("mandubian-mvn snapshots" at "https://github.com/mandubian/mandubian-mvn/raw/master/snapshots")
-  )
-}
-</code></pre>
-
-<h2>Use xmlsoap-ersatz in your controller</h2>
-
-<pre><code>package controllers
-
-import play.api._
-import play.api.mvc._
-import play2.tools.xml._
-import play2.tools.xml.DefaultImplicits._
-
-object Application extends Controller {
-   case class Foo(id: Long, name: String, age: Option[Int])
-
-   implicit object FooXMLF extends XMLFormatter[Foo] {
-      def read(x: xml.NodeSeq): Option[Foo] = {
-      for( 
-          id &lt;- EXML.fromXML[Long](x \ "id");
-          name &lt;- EXML.fromXML[String](x \ "name");
-          age &lt;- EXML.fromXML[Option[Int]](x \ "age")
-        ) yield(Foo(id, name, age))
-      }
-
-      def write(f: Foo, base: xml.NodeSeq): xml.NodeSeq = {
-        &lt;foo&gt;
-          &lt;id&gt;{ f.id }&lt;/id&gt;
-          &lt;name&gt;{ f.name }&lt;/name&gt;
-          { EXML.toXML(f.age, &lt;age/&gt;) }
-        &lt;/foo&gt;
-     }
-  }  
-
-  def foo = Action(parse.xml) { request =&gt;
-    EXML.fromXML[Foo](request.body).map { foo =&gt;
-      Ok(EXML.toXML(foo))
-    }.getOrElse{
-      BadRequest("Expecting Foo XML data")
-    }
-  }
-
-}
-</code></pre>
-
-<h2>Finally the route in <code>conf/routes</code></h2>
-
-<pre><code>POST    /foo    controllers.Application.foo
-</code></pre>
-
-<p>Have fun and don&#8217;t hesitate to contribute</p>
 ]]></content>
   </entry>
   
