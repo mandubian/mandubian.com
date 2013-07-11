@@ -9,23 +9,7 @@
   <meta name="author" content="Pascal Voitot">
 
   
-  <meta name="description" content="Play2 Json Interpolation & Pattern Matching
-    
-    
-      
-        
-
-
-
-
-
-
-
-
-  
-
-
-Jul 4th, 2013 &hellip;">
+  <meta name="description" content="Play AutoSource & Datomisca: Proofing the Concept on Datomic, a Schema DB &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -126,6 +110,526 @@ Jul 4th, 2013 &hellip;">
     <div class="row-fluid">
       <div class="span9">
   
+  
+  
+    <article>
+      
+  <header class="page-header">
+    
+      <h1 class="entry-title"><a href="/2013/07/11/play-autosource-datomisca/">Play AutoSource & Datomisca: Proofing the Concept on Datomic, a Schema DB</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-11T18:18:00+02:00" pubdate data-updated="true">Jul 11<span>th</span>, 2013</time>
+        
+         | <a href="/2013/07/11/play-autosource-datomisca/#disqus_thread">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>The code for all autosources &amp; sample apps can be found on Github <a href="https://github.com/mandubian/play-autosource/tree/master/datomisca">here</a></p>
+
+<div class="well">
+  <h3>Brand New Autosources</h3>
+  Play AutoSource now have 2 more implementations : 
+  <ul>
+    <li><b><a href="http://www.datomic.com">Datomic</a> based on <a href="http://pellucidanalytics.github.io/datomisca/">Datomisca</a></b>, the Scala API I developed with Daniel James (<a href="https://twitter.com/dwhjames">@dwhjames</a>) sponsored by Pellucid Analytics & Zenexity which is presented in this article</li>
+    <li><b><a href="http://www.couchbase.com/">CouchBase</a></b> contributed by Mathieu Ancelin <a href="https://twitter.com/TrevorReznik">@TrevorReznik</a></li>
+  </ul>
+</div>
+
+
+<blockquote><p>One month ago, I&#8217;ve demo&#8217;ed the concept of Autosource for Play2/Scala with ReactiveMongo in <a href="http://mandubian.com/2013/06/11/play-autosource/">this article</a>. ReactiveMongo was the perfect target for this idea because it accepts Json structures almost natively for both documents manipulation and queries.</p>
+
+<p>But how does the concept behave when applied on a DB for which data are constrained by a schema and for which queries aren&#8217;t Json.</p></blockquote>
+
+<br/>
+
+
+<h2>Using Datomisca-Autosource in your Play project</h2>
+
+<p>Add following lines to your <code>project/Build.scala</code></p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">mandubianRepo</span> <span class="k">=</span> <span class="nc">Seq</span><span class="o">(</span>
+</span><span class='line'>  <span class="s">&quot;Mandubian repository snapshots&quot;</span> <span class="n">at</span> <span class="s">&quot;https://github.com/mandubian/mandubian-mvn/raw/master/snapshots/&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;Mandubian repository releases&quot;</span> <span class="n">at</span> <span class="s">&quot;https://github.com/mandubian/mandubian-mvn/raw/master/releases/&quot;</span>
+</span><span class='line'><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">appDependencies</span> <span class="k">=</span> <span class="nc">Seq</span><span class="o">()</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">main</span> <span class="k">=</span> <span class="n">play</span><span class="o">.</span><span class="nc">Project</span><span class="o">(</span><span class="n">appName</span><span class="o">,</span> <span class="n">appVersion</span><span class="o">,</span> <span class="n">appDependencies</span><span class="o">).</span><span class="n">settings</span><span class="o">(</span>
+</span><span class='line'>  <span class="n">resolvers</span> <span class="o">++=</span> <span class="n">mandubianRepo</span><span class="o">,</span>
+</span><span class='line'>  <span class="n">libraryDependencies</span> <span class="o">++=</span> <span class="nc">Seq</span><span class="o">(</span>
+</span><span class='line'>    <span class="s">&quot;play-autosource&quot;</span>   <span class="o">%%</span> <span class="s">&quot;datomisca&quot;</span>       <span class="o">%</span> <span class="s">&quot;0.1-SNAPSHOT&quot;</span><span class="o">,</span>
+</span><span class='line'>    <span class="o">...</span>
+</span><span class='line'>  <span class="o">)</span>
+</span><span class='line'><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<h2>Create your Model + Schema</h2>
+
+<p>With ReactiveMongo Autosource, you could create a pure blob Autosource using <code>JsObject</code> without any supplementary information. But with Datomic, it&#8217;s not possible because Datomic forces to use a schema for your data.</p>
+
+<p>We could create a schema and manipulate <code>JsObject</code> directly with Datomic and some Json validators. But I&#8217;m going to focus on the static models because this is the way people traditionally interact with a Schema-constrained DB.</p>
+
+<p>Let&#8217;s create our model and schema.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// The Model (with characters pointing on Datomic named entities)</span>
+</span><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">Person</span><span class="o">(</span><span class="n">name</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">age</span><span class="k">:</span> <span class="kt">Long</span><span class="o">,</span> <span class="n">characters</span><span class="k">:</span> <span class="kt">Set</span><span class="o">[</span><span class="kt">DRef</span><span class="o">])</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// The Schema written with Datomisca</span>
+</span><span class='line'><span class="k">object</span> <span class="nc">Person</span> <span class="o">{</span>
+</span><span class='line'>  <span class="c1">// Namespaces</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">person</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">Namespace</span><span class="o">(</span><span class="s">&quot;person&quot;</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>    <span class="k">val</span> <span class="n">characters</span> <span class="k">=</span> <span class="nc">Namespace</span><span class="o">(</span><span class="s">&quot;person.characters&quot;</span><span class="o">)</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// Attributes</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">name</span>       <span class="k">=</span> <span class="nc">Attribute</span><span class="o">(</span><span class="n">person</span> <span class="o">/</span> <span class="s">&quot;name&quot;</span><span class="o">,</span>       <span class="nc">SchemaType</span><span class="o">.</span><span class="n">string</span><span class="o">,</span> <span class="nc">Cardinality</span><span class="o">.</span><span class="n">one</span><span class="o">)</span> <span class="o">.</span><span class="n">withDoc</span><span class="o">(</span><span class="s">&quot;Person&#39;s name&quot;</span><span class="o">)</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">age</span>        <span class="k">=</span> <span class="nc">Attribute</span><span class="o">(</span><span class="n">person</span> <span class="o">/</span> <span class="s">&quot;age&quot;</span><span class="o">,</span>        <span class="nc">SchemaType</span><span class="o">.</span><span class="n">long</span><span class="o">,</span>   <span class="nc">Cardinality</span><span class="o">.</span><span class="n">one</span><span class="o">)</span> <span class="o">.</span><span class="n">withDoc</span><span class="o">(</span><span class="s">&quot;Person&#39;s age&quot;</span><span class="o">)</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">characters</span> <span class="k">=</span> <span class="nc">Attribute</span><span class="o">(</span><span class="n">person</span> <span class="o">/</span> <span class="s">&quot;characters&quot;</span><span class="o">,</span> <span class="nc">SchemaType</span><span class="o">.</span><span class="n">ref</span><span class="o">,</span>    <span class="nc">Cardinality</span><span class="o">.</span><span class="n">many</span><span class="o">).</span><span class="n">withDoc</span><span class="o">(</span><span class="s">&quot;Person&#39;s characterS&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// Characters named entities</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">violent</span> <span class="k">=</span> <span class="nc">AddIdent</span><span class="o">(</span><span class="n">person</span><span class="o">.</span><span class="n">characters</span> <span class="o">/</span> <span class="s">&quot;violent&quot;</span><span class="o">)</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">weak</span>    <span class="k">=</span> <span class="nc">AddIdent</span><span class="o">(</span><span class="n">person</span><span class="o">.</span><span class="n">characters</span> <span class="o">/</span> <span class="s">&quot;weak&quot;</span><span class="o">)</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">clever</span>  <span class="k">=</span> <span class="nc">AddIdent</span><span class="o">(</span><span class="n">person</span><span class="o">.</span><span class="n">characters</span> <span class="o">/</span> <span class="s">&quot;clever&quot;</span><span class="o">)</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">dumb</span>    <span class="k">=</span> <span class="nc">AddIdent</span><span class="o">(</span><span class="n">person</span><span class="o">.</span><span class="n">characters</span> <span class="o">/</span> <span class="s">&quot;dumb&quot;</span><span class="o">)</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">stupid</span>  <span class="k">=</span> <span class="nc">AddIdent</span><span class="o">(</span><span class="n">person</span><span class="o">.</span><span class="n">characters</span> <span class="o">/</span> <span class="s">&quot;stupid&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// Schema</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">schema</span> <span class="k">=</span> <span class="nc">Seq</span><span class="o">(</span>
+</span><span class='line'>    <span class="n">name</span><span class="o">,</span> <span class="n">age</span><span class="o">,</span> <span class="n">characters</span><span class="o">,</span>
+</span><span class='line'>    <span class="n">violent</span><span class="o">,</span> <span class="n">weak</span><span class="o">,</span> <span class="n">clever</span><span class="o">,</span> <span class="n">dumb</span><span class="o">,</span> <span class="n">stupid</span>
+</span><span class='line'>  <span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<h2>Create Datomisca Autosource</h2>
+
+<p>Now that we have our schema, let&#8217;s write the autosource.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">datomisca._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">Datomic._</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">import</span> <span class="nn">play.autosource.datomisca._</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">import</span> <span class="nn">play.modules.datomisca._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">Implicits._</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">import</span> <span class="nn">scala.concurrent.ExecutionContext.Implicits.global</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">play.api.Play.current</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">import</span> <span class="nn">models._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">Person._</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">object</span> <span class="nc">Persons</span> <span class="k">extends</span> <span class="nc">DatomiscaAutoSourceController</span><span class="o">[</span><span class="kt">Person</span><span class="o">]</span> <span class="o">{</span>
+</span><span class='line'>  <span class="c1">// gets the Datomic URI from application.conf</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">uri</span> <span class="k">=</span> <span class="nc">DatomicPlugin</span><span class="o">.</span><span class="n">uri</span><span class="o">(</span><span class="s">&quot;mem&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// ugly DB initialization ONLY for test purpose</span>
+</span><span class='line'>  <span class="nc">Datomic</span><span class="o">.</span><span class="n">createDatabase</span><span class="o">(</span><span class="n">uri</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// Datomic connection is required</span>
+</span><span class='line'>  <span class="k">override</span> <span class="k">implicit</span> <span class="k">val</span> <span class="n">conn</span> <span class="k">=</span> <span class="nc">Datomic</span><span class="o">.</span><span class="n">connect</span><span class="o">(</span><span class="n">uri</span><span class="o">)</span>
+</span><span class='line'>  <span class="c1">// Datomic partition in which you store your entities</span>
+</span><span class='line'>  <span class="k">override</span> <span class="k">val</span> <span class="n">partition</span> <span class="k">=</span> <span class="nc">Partition</span><span class="o">.</span><span class="nc">USER</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// more than ugly schema provisioning, ONLY for test purpose</span>
+</span><span class='line'>  <span class="nc">Await</span><span class="o">.</span><span class="n">result</span><span class="o">(</span>
+</span><span class='line'>    <span class="nc">Datomic</span><span class="o">.</span><span class="n">transact</span><span class="o">(</span><span class="nc">Person</span><span class="o">.</span><span class="n">schema</span><span class="o">),</span>
+</span><span class='line'>    <span class="nc">Duration</span><span class="o">(</span><span class="s">&quot;10 seconds&quot;</span><span class="o">)</span>
+</span><span class='line'>  <span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>Implementing Json <-> Person <-> Datomic transformers</h2>
+
+<p>If you compile previous code, you should have following error:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">could</span> <span class="n">not</span> <span class="n">find</span> <span class="k">implicit</span> <span class="n">value</span> <span class="k">for</span> <span class="n">parameter</span> <span class="n">datomicReader</span><span class="k">:</span> <span class="kt">datomisca.EntityReader</span><span class="o">[</span><span class="kt">models.Person</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Actually, Datomisca Autosource requires 4 elements to work:</p>
+
+<ul>
+<li><code>Json.Format[Person]</code> to convert <code>Person</code> instances from/to Json (network interface)</li>
+<li><code>EntityReader[Person]</code> to convert <code>Person</code> instances from Datomic entities (Datomic interface)</li>
+<li><code>PartialAddEntityWriter[Person]</code> to convert <code>Person</code> instances to Datomic entities (Datomic interface)</li>
+<li><code>Reads[PartialAddEntity]</code> to convert Json to <code>PartialAddEntity</code> which is actually a simple map of fields/values to partially update an existing entity (one single field for ex).</li>
+</ul>
+
+
+<p>It might seem more complicated than in ReactiveMongo but there is nothing different. The autosource converts <code>Person</code> from/to Json and then converts <code>Person</code> from/to Datomic structure ie <code>PartialAddEntity</code>. In ReactiveMongo, the only difference is that it understands Json so well that static model becomes unnecessary sometimes ;)&#8230;</p>
+
+<p>Let&#8217;s define those elements in <code>Person</code> companion object.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">object</span> <span class="nc">Person</span> <span class="o">{</span>
+</span><span class='line'><span class="o">...</span>
+</span><span class='line'>  <span class="c1">// Classic Play2 Json Reads/Writes</span>
+</span><span class='line'>  <span class="k">implicit</span> <span class="k">val</span> <span class="n">personFormat</span> <span class="k">=</span> <span class="nc">Json</span><span class="o">.</span><span class="n">format</span><span class="o">[</span><span class="kt">Person</span><span class="o">]</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// Partial entity update : Json to PartialAddEntity Reads</span>
+</span><span class='line'>  <span class="k">implicit</span> <span class="k">val</span> <span class="n">partialUpdate</span><span class="k">:</span> <span class="kt">Reads</span><span class="o">[</span><span class="kt">PartialAddEntity</span><span class="o">]</span> <span class="k">=</span> <span class="o">(</span>
+</span><span class='line'>    <span class="o">((</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;name</span><span class="o">).</span><span class="n">read</span><span class="o">(</span><span class="n">readAttr</span><span class="o">[</span><span class="kt">String</span><span class="o">](</span><span class="nc">Person</span><span class="o">.</span><span class="n">name</span><span class="o">))</span> <span class="n">orElse</span> <span class="nc">Reads</span><span class="o">.</span><span class="n">pure</span><span class="o">(</span><span class="nc">PartialAddEntity</span><span class="o">(</span><span class="nc">Map</span><span class="o">.</span><span class="n">empty</span><span class="o">)))</span> <span class="n">and</span>
+</span><span class='line'>    <span class="o">((</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;age</span><span class="o">)</span> <span class="o">.</span><span class="n">read</span><span class="o">(</span><span class="n">readAttr</span><span class="o">[</span><span class="kt">Long</span><span class="o">](</span><span class="nc">Person</span><span class="o">.</span><span class="n">age</span><span class="o">))</span> <span class="n">orElse</span> <span class="nc">Reads</span><span class="o">.</span><span class="n">pure</span><span class="o">(</span><span class="nc">PartialAddEntity</span><span class="o">(</span><span class="nc">Map</span><span class="o">.</span><span class="n">empty</span><span class="o">)))</span>  <span class="n">and</span>
+</span><span class='line'>    <span class="c1">// need to specify type because a ref/many can be a list of dref or entities so need to tell it explicitly</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;characters</span><span class="o">).</span><span class="n">read</span><span class="o">(</span> <span class="n">readAttr</span><span class="o">[</span><span class="kt">Set</span><span class="o">[</span><span class="kt">DRef</span><span class="o">]](</span><span class="nc">Person</span><span class="o">.</span><span class="n">characters</span><span class="o">)</span> <span class="o">)</span>
+</span><span class='line'>    <span class="n">reduce</span>
+</span><span class='line'>  <span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// Entity Reads (looks like Json combinators but it&#39;s Datomisca combinators)</span>
+</span><span class='line'>  <span class="k">implicit</span> <span class="k">val</span> <span class="n">entity2Person</span><span class="k">:</span> <span class="kt">EntityReader</span><span class="o">[</span><span class="kt">Person</span><span class="o">]</span> <span class="k">=</span> <span class="o">(</span>
+</span><span class='line'>    <span class="n">name</span>      <span class="o">.</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span>   <span class="n">and</span>
+</span><span class='line'>    <span class="n">age</span>       <span class="o">.</span><span class="n">read</span><span class="o">[</span><span class="kt">Long</span><span class="o">]</span>     <span class="n">and</span>
+</span><span class='line'>    <span class="n">characters</span><span class="o">.</span><span class="n">read</span><span class="o">[</span><span class="kt">Set</span><span class="o">[</span><span class="kt">DRef</span><span class="o">]]</span>
+</span><span class='line'>  <span class="o">)(</span><span class="nc">Person</span><span class="o">.</span><span class="n">apply</span> <span class="k">_</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// Entity Writes (looks like Json combinators but it&#39;s Datomisca combinators)</span>
+</span><span class='line'>  <span class="k">implicit</span> <span class="k">val</span> <span class="n">person2Entity</span><span class="k">:</span> <span class="kt">PartialAddEntityWriter</span><span class="o">[</span><span class="kt">Person</span><span class="o">]</span> <span class="k">=</span> <span class="o">(</span>
+</span><span class='line'>    <span class="n">name</span>      <span class="o">.</span><span class="n">write</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span>   <span class="n">and</span>
+</span><span class='line'>    <span class="n">age</span>       <span class="o">.</span><span class="n">write</span><span class="o">[</span><span class="kt">Long</span><span class="o">]</span>     <span class="n">and</span>
+</span><span class='line'>    <span class="n">characters</span><span class="o">.</span><span class="n">write</span><span class="o">[</span><span class="kt">Set</span><span class="o">[</span><span class="kt">DRef</span><span class="o">]]</span>
+</span><span class='line'>  <span class="o">)(</span><span class="nc">DatomicMapping</span><span class="o">.</span><span class="n">unlift</span><span class="o">(</span><span class="nc">Person</span><span class="o">.</span><span class="n">unapply</span><span class="o">))</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">...</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Now we have everything to work except a few configurations.</p>
+
+<h3>Add AutoSource routes at beginning <code>conf/routes</code></h3>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="o">-&gt;</span>      <span class="o">/</span><span class="n">person</span>                     <span class="n">controllers</span><span class="o">.</span><span class="nc">Persons</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>Create <code>conf/play.plugins</code> to initialize Datomisca Plugin</h3>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="mi">400</span><span class="k">:</span><span class="kt">play.modules.datomisca.DatomicPlugin</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>Append to <code>conf/application.conf</code> to initialize MongoDB connection</h3>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">datomisca</span><span class="o">.</span><span class="n">uri</span><span class="o">.</span><span class="n">mem</span><span class="o">=</span><span class="s">&quot;datomic:mem://mem&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>Insert your first 2 persons with Curl</h3>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="o">&gt;</span><span class="n">curl</span> <span class="o">-</span><span class="n">X</span> <span class="nc">POST</span> <span class="o">-</span><span class="n">d</span> <span class="err">&#39;</span><span class="o">{</span> <span class="s">&quot;name&quot;</span><span class="k">:</span><span class="err">&quot;</span><span class="kt">bob</span><span class="err">&quot;</span><span class="o">,</span> <span class="s">&quot;age&quot;</span><span class="k">:</span><span class="err">25</span><span class="o">,</span> <span class="s">&quot;characters&quot;</span><span class="k">:</span> <span class="err">[&quot;</span><span class="kt">person.characters/stupid</span><span class="err">&quot;</span><span class="o">,</span> <span class="s">&quot;person.characters/violent&quot;</span><span class="err">]</span> <span class="o">}</span><span class="err">&#39;</span> <span class="o">--</span><span class="n">header</span> <span class="s">&quot;Content-Type:application/json&quot;</span> <span class="n">http</span><span class="o">://</span><span class="n">localhost</span><span class="k">:</span><span class="err">9000</span><span class="kt">/persons</span> <span class="kt">--include</span>
+</span><span class='line'>
+</span><span class='line'><span class="nc">HTTP</span><span class="o">/</span><span class="mf">1.1</span> <span class="mi">200</span> <span class="nc">OK</span>
+</span><span class='line'><span class="nc">Content</span><span class="o">-</span><span class="nc">Type</span><span class="k">:</span> <span class="kt">application/json</span><span class="o">;</span> <span class="n">charset</span><span class="k">=</span><span class="n">utf</span><span class="o">-</span><span class="mi">8</span>
+</span><span class='line'><span class="nc">Content</span><span class="o">-</span><span class="nc">Length</span><span class="k">:</span> <span class="err">21</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">{</span><span class="err">&quot;</span><span class="kt">id</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">17592186045423</span><span class="o">}</span> <span class="kt">-&gt;</span> <span class="kt">oh</span> <span class="kt">a</span> <span class="kt">Datomic</span> <span class="kt">ID</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&gt;</span><span class="n">curl</span> <span class="o">-</span><span class="n">X</span> <span class="nc">POST</span> <span class="o">-</span><span class="n">d</span> <span class="err">&#39;</span><span class="o">{</span> <span class="s">&quot;name&quot;</span><span class="k">:</span><span class="err">&quot;</span><span class="kt">john</span><span class="err">&quot;</span><span class="o">,</span> <span class="s">&quot;age&quot;</span><span class="k">:</span><span class="err">43</span><span class="o">,</span> <span class="s">&quot;characters&quot;</span><span class="k">:</span> <span class="err">[&quot;</span><span class="kt">person.characters/clever</span><span class="err">&quot;</span><span class="o">,</span> <span class="s">&quot;person.characters/weak&quot;</span><span class="err">]</span> <span class="o">}</span><span class="err">&#39;</span> <span class="o">--</span><span class="n">header</span> <span class="s">&quot;Content-Type:application/json&quot;</span> <span class="n">http</span><span class="o">://</span><span class="n">localhost</span><span class="k">:</span><span class="err">9000</span><span class="kt">/persons</span> <span class="kt">--include</span>
+</span><span class='line'>
+</span><span class='line'><span class="nc">HTTP</span><span class="o">/</span><span class="mf">1.1</span> <span class="mi">200</span> <span class="nc">OK</span>
+</span><span class='line'><span class="nc">Content</span><span class="o">-</span><span class="nc">Type</span><span class="k">:</span> <span class="kt">application/json</span><span class="o">;</span> <span class="n">charset</span><span class="k">=</span><span class="n">utf</span><span class="o">-</span><span class="mi">8</span>
+</span><span class='line'><span class="nc">Content</span><span class="o">-</span><span class="nc">Length</span><span class="k">:</span> <span class="err">21</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">{</span><span class="err">&quot;</span><span class="kt">id</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">17592186045425</span><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>Querying is the biggest difference in Datomic</h3>
+
+<p>In Datomic, you can&#8217;t do a <code>getAll</code> without providing a Datomic Query.</p>
+
+<p>But what is a Datomic query? It&#8217;s inspired by <code>Datalog</code> which uses predicates to express the constraints on the searched entities. You can combine predicates together.</p>
+
+<p>With Datomisca Autosource, you can directly send datalog queries in the query parameter <code>q</code> for GET or in body for POST with one restriction: your query can&#8217;t accept input parameters and must return only the entity ID. For ex:</p>
+
+<p><code>[ :find ?e :where [ ?e :person/name "john"] ] --&gt; OK</code></p>
+
+<p><code>[ :find ?e ?name :where [ ?e :person/name ?name] ] --&gt; KO</code></p>
+
+<p>Let&#8217;s use it by finding all persons.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="o">&gt;</span><span class="n">curl</span> <span class="o">-</span><span class="n">X</span> <span class="nc">POST</span> <span class="o">--</span><span class="n">header</span> <span class="s">&quot;Content-Type:text/plain&quot;</span> <span class="o">-</span><span class="n">d</span> <span class="err">&#39;</span><span class="o">[</span><span class="kt">:find</span> <span class="kt">?e</span> <span class="kt">:where</span> <span class="o">[</span><span class="kt">?e</span> <span class="kt">:person/name</span><span class="o">]]</span><span class="sc">&#39; &#39;</span><span class="n">http</span><span class="o">://</span><span class="n">localhost</span><span class="k">:</span><span class="err">9000</span><span class="kt">/persons/find</span><span class="err">&#39;</span> <span class="kt">--include</span>
+</span><span class='line'>
+</span><span class='line'><span class="nc">HTTP</span><span class="o">/</span><span class="mf">1.1</span> <span class="mi">200</span> <span class="nc">OK</span>
+</span><span class='line'><span class="nc">Content</span><span class="o">-</span><span class="nc">Type</span><span class="k">:</span> <span class="kt">application/json</span><span class="o">;</span> <span class="n">charset</span><span class="k">=</span><span class="n">utf</span><span class="o">-</span><span class="mi">8</span>
+</span><span class='line'><span class="nc">Content</span><span class="o">-</span><span class="nc">Length</span><span class="k">:</span> <span class="err">231</span>
+</span><span class='line'>
+</span><span class='line'><span class="err">[</span>
+</span><span class='line'>    <span class="o">{</span>
+</span><span class='line'>        <span class="err">&quot;</span><span class="kt">name</span><span class="err">&quot;</span><span class="kt">:</span> <span class="err">&quot;</span><span class="kt">bob</span><span class="err">&quot;</span><span class="o">,</span>
+</span><span class='line'>        <span class="err">&quot;</span><span class="kt">age</span><span class="err">&quot;</span><span class="kt">:</span> <span class="err">25</span><span class="o">,</span>
+</span><span class='line'>        <span class="s">&quot;characters&quot;</span><span class="k">:</span> <span class="err">[</span>
+</span><span class='line'>            <span class="err">&quot;</span><span class="kt">:person.characters/violent</span><span class="err">&quot;</span><span class="o">,</span>
+</span><span class='line'>            <span class="s">&quot;:person.characters/stupid&quot;</span>
+</span><span class='line'>        <span class="err">]</span><span class="o">,</span>
+</span><span class='line'>        <span class="s">&quot;id&quot;</span><span class="k">:</span> <span class="err">17592186045423</span>
+</span><span class='line'>    <span class="o">},</span>
+</span><span class='line'>    <span class="o">{</span>
+</span><span class='line'>        <span class="s">&quot;name&quot;</span><span class="k">:</span> <span class="err">&quot;</span><span class="kt">john</span><span class="err">&quot;</span><span class="o">,</span>
+</span><span class='line'>        <span class="s">&quot;age&quot;</span><span class="k">:</span> <span class="err">43</span><span class="o">,</span>
+</span><span class='line'>        <span class="s">&quot;characters&quot;</span><span class="k">:</span> <span class="err">[</span>
+</span><span class='line'>            <span class="err">&quot;</span><span class="kt">:person.characters/clever</span><span class="err">&quot;</span><span class="o">,</span>
+</span><span class='line'>            <span class="s">&quot;:person.characters/weak&quot;</span>
+</span><span class='line'>        <span class="err">]</span><span class="o">,</span>
+</span><span class='line'>        <span class="s">&quot;id&quot;</span><span class="k">:</span> <span class="err">17592186045425</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="err">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>Please note the use of POST here instead of GET because Curl doesn&#8217;t like <code>[]</code> in URL even using <code>-g</code> option</p></blockquote>
+
+<p>Now you can use all other routes provided by Autosource</p>
+
+<h2>Autosource Standard Routes</h2>
+
+<h3>Get / Find / Stream</h3>
+
+<ul>
+<li>GET /persons?&#8230;    -> Find by query</li>
+<li>GET /persons/ID     -> Find by ID</li>
+<li>GET /persons/stream -> Find by query &amp; stream result by page</li>
+</ul>
+
+
+<h3>Insert / Batch / Find</h3>
+
+<ul>
+<li>POST /persons + BODY -> Insert</li>
+<li>POST /persons/find + BODY -> find by query (when query is too complex to be in a GET)</li>
+<li>POST /persons/batch  + BODY -> batch insert (multiple)</li>
+</ul>
+
+
+<h3>Update / batch</h3>
+
+<ul>
+<li>PUT  /persons/ID   + BODY  -> Update by ID</li>
+<li>PUT  /persons/ID/partial   + BODY  -> Update partially by ID</li>
+<li>PUT  /persons/batch   -> batch update (multiple)</li>
+</ul>
+
+
+<h3>Delete / Batch</h3>
+
+<ul>
+<li>DELETE /persons/ID    -> delete by ID</li>
+<li>DELETE /persons/batch + BODY -> batch delete (multiple)</li>
+</ul>
+
+
+<br/>
+
+
+<br/>
+
+
+<h2>Conclusion</h2>
+
+<p>Play-Autosource&#8217;s ambition was to be DB agnostic (as much as possible) and showing that the concept can be applied to schemaless DB (ReactiveMongo &amp; CouchDB) and schema DB (Datomic) is a good sign it can work. Naturally, there are a few more elements to provide for Datomic than in ReactiveMongo but it&#8217;s useful anyway.</p>
+
+<p>Thank to <a href="https://twitter.com/TrevorReznik">@TrevorReznik</a> for his contribution of CouchBase Autosource.</p>
+
+<p>I hope to see soon one for Slick and a few more ;)</p>
+
+<p>Have Autofun!</p>
+
+<br/>
+
+
+<br/>
+
+
+<br/>
+
+
+<br/>
+
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -3808,284 +4312,6 @@ Suggestions are welcome too</p>
 
     </article>
   
-  
-    <article>
-      
-  <header class="page-header">
-    
-      <h1 class="entry-title"><a href="/2013/02/22/scala-future-fatal-exception/">Being Aware Scala 2.10.0 Futures Conceal Fatal Exceptions</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-02-22T14:14:00+01:00" pubdate data-updated="true">Feb 22<span>nd</span>, 2013</time>
-        
-         | <a href="/2013/02/22/scala-future-fatal-exception/#disqus_thread">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>A short article to talk about <strong>an interesting issue concerning Scala 2.10.0 Future that might interest you</strong>.</p>
-
-<div class="well">
-<h3>Summary</h3><br/>
-<p>When a <code>Fatal</code> exception is thrown in your <code>Future</code> callback, it&#8217;s not caught by the <code>Future</code> and is thrown to the provided <code>ExecutionContext</code>.</p>
-<p><i>But the current default Scala global <code>ExecutionContext</code> doesn&#8217;t register an <code>UncaughtExceptionHandler</code> for these fatal exceptions and your <code>Future</code> just hangs forever without notifying anything to anybody.</i></p>
-</div>
-
-
-<blockquote><p>This issue is well <a href="https://issues.scala-lang.org/browse/SI-7029">known</a> and a solution to the problem has already been <a href="https://github.com/scala/scala/pull/2044">merged</a> into branch 2.10.x. But this issue is present in Scala 2.10.0 so it&#8217;s interesting to keep this issue in mind IMHO. Let&#8217;s explain clearly about it.</p></blockquote>
-
-<h2>Exceptions can be contained by Future</h2>
-
-<p>Let&#8217;s write some stupid code with Futures.</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">import</span> <span class="nn">scala.concurrent._</span>
-</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">import</span> <span class="nn">scala.concurrent.duration._</span>
-</span><span class='line'>
-</span><span class='line'><span class="c1">// Take default Scala global ExecutionContext which is a ForkJoin Thread Pool</span>
-</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">ec</span> <span class="k">=</span> <span class="n">scala</span><span class="o">.</span><span class="n">concurrent</span><span class="o">.</span><span class="nc">ExecutionContext</span><span class="o">.</span><span class="n">global</span>
-</span><span class='line'><span class="n">ec</span><span class="k">:</span> <span class="kt">scala.concurrent.ExecutionContextExecutor</span> <span class="o">=</span> <span class="n">scala</span><span class="o">.</span><span class="n">concurrent</span><span class="o">.</span><span class="n">impl</span><span class="o">.</span><span class="nc">ExecutionContextImpl</span><span class="k">@</span><span class="mi">15</span><span class="n">f445b7</span>
-</span><span class='line'>
-</span><span class='line'><span class="c1">// Create an immediately redeemed Future with a simple RuntimeException</span>
-</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">f</span> <span class="k">=</span> <span class="n">future</span><span class="o">(</span> <span class="k">throw</span> <span class="k">new</span> <span class="nc">RuntimeException</span><span class="o">(</span><span class="s">&quot;foo&quot;</span><span class="o">)</span> <span class="o">)(</span><span class="n">ec</span><span class="o">)</span>
-</span><span class='line'><span class="n">f</span><span class="k">:</span> <span class="kt">scala.concurrent.Future</span><span class="o">[</span><span class="kt">Nothing</span><span class="o">]</span> <span class="k">=</span> <span class="n">scala</span><span class="o">.</span><span class="n">concurrent</span><span class="o">.</span><span class="n">impl</span><span class="o">.</span><span class="nc">Promise$DefaultPromise</span><span class="k">@</span><span class="mi">27380357</span>
-</span><span class='line'>
-</span><span class='line'><span class="c1">// Access brutally the value to show that the Future contains my RuntimeException</span>
-</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="n">f</span><span class="o">.</span><span class="n">value</span>
-</span><span class='line'><span class="n">res22</span><span class="k">:</span> <span class="kt">Option</span><span class="o">[</span><span class="kt">scala.util.Try</span><span class="o">[</span><span class="kt">Nothing</span><span class="o">]]</span> <span class="k">=</span> <span class="nc">Some</span><span class="o">(</span><span class="nc">Failure</span><span class="o">(</span><span class="n">java</span><span class="o">.</span><span class="n">lang</span><span class="o">.</span><span class="nc">RuntimeException</span><span class="k">:</span> <span class="kt">foo</span><span class="o">))</span>
-</span><span class='line'>
-</span><span class='line'><span class="c1">// Use blocking await to get Future result</span>
-</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="nc">Await</span><span class="o">.</span><span class="n">result</span><span class="o">(</span><span class="n">f</span><span class="o">,</span> <span class="mi">2</span> <span class="n">seconds</span><span class="o">)</span>
-</span><span class='line'><span class="n">warning</span><span class="k">:</span> <span class="kt">there</span> <span class="kt">were</span> <span class="err">1</span> <span class="kt">feature</span> <span class="kt">warnings</span><span class="o">;</span> <span class="n">re</span><span class="o">-</span><span class="n">run</span> <span class="k">with</span> <span class="o">-</span><span class="n">feature</span> <span class="k">for</span> <span class="n">details</span>
-</span><span class='line'><span class="n">java</span><span class="o">.</span><span class="n">lang</span><span class="o">.</span><span class="nc">RuntimeException</span><span class="k">:</span> <span class="kt">foo</span>
-</span><span class='line'>  <span class="n">at</span> <span class="nc">$anonfun$1</span><span class="o">.</span><span class="n">apply</span><span class="o">(&lt;</span><span class="n">console</span><span class="k">&gt;:</span><span class="mi">14</span><span class="o">)</span>
-</span><span class='line'>  <span class="n">at</span> <span class="nc">$anonfun$1</span><span class="o">.</span><span class="n">apply</span><span class="o">(&lt;</span><span class="n">console</span><span class="k">&gt;:</span><span class="mi">14</span><span class="o">)</span>
-</span><span class='line'>  <span class="o">...</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<blockquote><p>You can see that a <code>Future</code> can contain an <code>Exception</code> (or more generally <code>Throwable</code>).</p></blockquote>
-
-<br/>
-
-
-<h2>Fatal Exceptions can&#8217;t be contained by Future</h2>
-
-<p>If you look in <a href="https://github.com/scala/scala/blob/v2.10.0/src/library/scala/concurrent/Future.scala#L53">Scala 2.10.0 Future.scala</a>, in the scaladoc, you can find:</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class='plain'><span class='line'>* The following throwable objects are not contained in the future:
-</span><span class='line'>* - `Error` - errors are not contained within futures
-</span><span class='line'>* - `InterruptedException` - not contained within futures
-</span><span class='line'>* - all `scala.util.control.ControlThrowable` except `NonLocalReturnControl` - not contained within futures</span></code></pre></td></tr></table></div></figure>
-
-
-<p>and in the code, in several places, in <code>map</code> or <code>flatMap</code> for example, you can read:</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">try</span> <span class="o">{</span>
-</span><span class='line'><span class="o">...</span>
-</span><span class='line'><span class="o">}</span> <span class="k">catch</span> <span class="o">{</span>
-</span><span class='line'>  <span class="k">case</span> <span class="nc">NonFatal</span><span class="o">(</span><span class="n">t</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="n">p</span> <span class="n">failure</span> <span class="n">t</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<blockquote><p>This means that every <code>Throwable</code> that is Fatal can&#8217;t be contained in the <code>Future.Failure</code>.</p></blockquote>
-
-<br/>
-
-
-<h2>What&#8217;s a <em>Fatal</em> Throwable?</h2>
-
-<p>To define what&#8217;s fatal, let&#8217;s see what&#8217;s declared as non-fatal in <a href="http://www.scala-lang.org/archives/downloads/distrib/files/nightly/docs/library/index.html#scala.util.control.NonFatal$">NonFatal ScalaDoc</a>.</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class='plain'><span class='line'>* Extractor of non-fatal Throwables.  
-</span><span class='line'>* Will not match fatal errors like VirtualMachineError  
-</span><span class='line'>* (for example, OutOfMemoryError, a subclass of VirtualMachineError),  
-</span><span class='line'>* ThreadDeath, LinkageError, InterruptedException, ControlThrowable, or NotImplementedError. 
-</span><span class='line'>*
-</span><span class='line'>* Note that [[scala.util.control.ControlThrowable]], an internal Throwable, is not matched by
-</span><span class='line'>* `NonFatal` (and would therefore be thrown).</span></code></pre></td></tr></table></div></figure>
-
-
-<blockquote><p>Let&#8217;s consider Fatal exceptions are just critical errors that can&#8217;t be recovered in general.</p></blockquote>
-
-<h2>So what&#8217;s the problem?</h2>
-
-<p>It seems right not to catch fatal errors in the `Future, isn&#8217;t it?</p>
-
-<p>But, look at following code:</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// Let&#39;s throw a simple Fatal exception</span>
-</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">f</span> <span class="k">=</span> <span class="n">future</span><span class="o">(</span> <span class="k">throw</span> <span class="k">new</span> <span class="nc">NotImplementedError</span><span class="o">()</span> <span class="o">)(</span><span class="n">ec</span><span class="o">)</span>
-</span><span class='line'><span class="n">f</span><span class="k">:</span> <span class="kt">scala.concurrent.Future</span><span class="o">[</span><span class="kt">Nothing</span><span class="o">]</span> <span class="k">=</span> <span class="n">scala</span><span class="o">.</span><span class="n">concurrent</span><span class="o">.</span><span class="n">impl</span><span class="o">.</span><span class="nc">Promise$DefaultPromise</span><span class="k">@</span><span class="mi">59747</span><span class="n">b17</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="n">f</span><span class="o">.</span><span class="n">value</span>
-</span><span class='line'><span class="n">res0</span><span class="k">:</span> <span class="kt">Option</span><span class="o">[</span><span class="kt">scala.util.Try</span><span class="o">[</span><span class="kt">Nothing</span><span class="o">]]</span> <span class="k">=</span> <span class="nc">None</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Ok, the <code>Future</code> doesn&#8217;t contain the Fatal Exception as expected.</p>
-
-<p><strong>But where is my Fatal Exception if it&#8217;s not caught??? No crash, notification or whatever?</strong></p>
-
-<p>There should be an `UncaughtExceptionHandler at least notifying it!</p>
-
-<br/>
-
-
-<h2>The problem is in the default Scala <code>ExecutionContext</code>.</h2>
-
-<p>As explained in this <a href="https://issues.scala-lang.org/browse/SI-7029">issue</a>, the exception is lost due to the implementation of the default global <code>ExecutionContext</code> provided in Scala.</p>
-
-<p>This is a simple ForkJoin pool of threads but it has no <code>UncaughtExceptionHandler</code>. Have a look at code in <a href="https://github.com/scala/scala/blob/v2.10.0/src/library/scala/concurrent/impl/ExecutionContextImpl.scala#L72">Scala 2.10.0 ExecutionContextImpl.scala</a></p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">try</span> <span class="o">{</span>
-</span><span class='line'>      <span class="k">new</span> <span class="nc">ForkJoinPool</span><span class="o">(</span>
-</span><span class='line'>        <span class="n">desiredParallelism</span><span class="o">,</span>
-</span><span class='line'>        <span class="n">threadFactory</span><span class="o">,</span>
-</span><span class='line'>        <span class="kc">null</span><span class="o">,</span> <span class="c1">//FIXME we should have an UncaughtExceptionHandler, see what Akka does</span>
-</span><span class='line'>        <span class="kc">true</span><span class="o">)</span> <span class="c1">// Async all the way baby</span>
-</span><span class='line'>    <span class="o">}</span> <span class="k">catch</span> <span class="o">{</span>
-</span><span class='line'>      <span class="k">case</span> <span class="nc">NonFatal</span><span class="o">(</span><span class="n">t</span><span class="o">)</span> <span class="k">=&gt;</span>
-</span><span class='line'>        <span class="o">...</span>
-</span><span class='line'>    <span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<blockquote><p>Here it&#8217;s quite clear: there is no registered `UncaughtExceptionHandler.</p>
-
-<p>What&#8217;s the consequence?</p></blockquote>
-
-<h2>Your Future hangs forever</h2>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="nc">Await</span><span class="o">.</span><span class="n">result</span><span class="o">(</span><span class="n">f</span><span class="o">,</span> <span class="mi">30</span> <span class="n">seconds</span><span class="o">)</span>
-</span><span class='line'><span class="n">warning</span><span class="k">:</span> <span class="kt">there</span> <span class="kt">were</span> <span class="err">1</span> <span class="kt">feature</span> <span class="kt">warnings</span><span class="o">;</span> <span class="n">re</span><span class="o">-</span><span class="n">run</span> <span class="k">with</span> <span class="o">-</span><span class="n">feature</span> <span class="k">for</span> <span class="n">details</span>
-</span><span class='line'><span class="n">java</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">concurrent</span><span class="o">.</span><span class="nc">TimeoutException</span><span class="k">:</span> <span class="kt">Futures</span> <span class="kt">timed</span> <span class="kt">out</span> <span class="kt">after</span> <span class="o">[</span><span class="err">30</span> <span class="kt">seconds</span><span class="o">]</span>
-</span><span class='line'>  <span class="n">at</span> <span class="n">scala</span><span class="o">.</span><span class="n">concurrent</span><span class="o">.</span><span class="n">impl</span><span class="o">.</span><span class="nc">Promise$DefaultPromise</span><span class="o">.</span><span class="n">ready</span><span class="o">(</span><span class="nc">Promise</span><span class="o">.</span><span class="n">scala</span><span class="k">:</span><span class="err">96</span><span class="o">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>As you can see, you can wait as long as you want, the Future is never redeemed properly, it just hangs forever and you don&#8217;t even know that a Fatal Exception has been thrown.</p>
-
-<p>As explained in the issue, please note, if you use a custom <code>ExecutionContext</code> based on <code>SingleThreadExecutor</code>, this issue doesn&#8217;t appear!</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">es</span> <span class="k">=</span> <span class="n">java</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">concurrent</span><span class="o">.</span><span class="nc">Executors</span><span class="o">.</span><span class="n">newSingleThreadExecutor</span>
-</span><span class='line'><span class="n">es</span><span class="k">:</span> <span class="kt">java.util.concurrent.ExecutorService</span> <span class="o">=</span> <span class="n">java</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">concurrent</span><span class="o">.</span><span class="nc">Executors$FinalizableDelegatedExecutorService</span><span class="k">@</span><span class="mi">1</span><span class="n">e336f59</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">ec</span> <span class="k">=</span> <span class="nc">ExecutionContext</span><span class="o">.</span><span class="n">fromExecutorService</span><span class="o">(</span><span class="n">es</span><span class="o">)</span>
-</span><span class='line'><span class="n">ec</span><span class="k">:</span> <span class="kt">scala.concurrent.ExecutionContextExecutorService</span> <span class="o">=</span> <span class="n">scala</span><span class="o">.</span><span class="n">concurrent</span><span class="o">.</span><span class="n">impl</span><span class="o">.</span><span class="nc">ExecutionContextImpl$$anon$1</span><span class="k">@</span><span class="mi">34</span><span class="n">f43dac</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span>  <span class="k">val</span> <span class="n">f</span> <span class="k">=</span> <span class="nc">Future</span><span class="o">[</span><span class="kt">Unit</span><span class="o">](</span><span class="k">throw</span> <span class="k">new</span> <span class="nc">NotImplementedError</span><span class="o">())(</span><span class="n">ec</span><span class="o">)</span>
-</span><span class='line'><span class="nc">Exception</span> <span class="n">in</span> <span class="n">thread</span> <span class="s">&quot;pool-1-thread-1&quot;</span> <span class="n">f</span><span class="k">:</span> <span class="kt">scala.concurrent.Future</span><span class="o">[</span><span class="kt">Unit</span><span class="o">]</span> <span class="k">=</span> <span class="n">scala</span><span class="o">.</span><span class="n">concurrent</span><span class="o">.</span><span class="n">impl</span><span class="o">.</span><span class="nc">Promise$DefaultPromise</span><span class="k">@</span><span class="mi">7</span><span class="n">d01f935</span>
-</span><span class='line'><span class="n">scala</span><span class="o">.</span><span class="nc">NotImplementedError</span><span class="k">:</span> <span class="kt">an</span> <span class="kt">implementation</span> <span class="kt">is</span> <span class="kt">missing</span>
-</span><span class='line'>  <span class="n">at</span> <span class="nc">$line41</span><span class="o">.</span><span class="nc">$read$$iw$$iw$$iw$$iw$$iw$$iw$$anonfun$1</span><span class="o">.</span><span class="n">apply</span><span class="o">(&lt;</span><span class="n">console</span><span class="k">&gt;:</span><span class="mi">15</span><span class="o">)</span>
-</span><span class='line'>  <span class="n">at</span> <span class="nc">$line41</span><span class="o">.</span><span class="nc">$read$$iw$$iw$$iw$$iw$$iw$$iw$$anonfun$1</span><span class="o">.</span><span class="n">apply</span><span class="o">(&lt;</span><span class="n">console</span><span class="k">&gt;:</span><span class="mi">15</span><span class="o">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>Conclusion</h2>
-
-<p><strong>In Scala 2.10.0, if you have a Fatal Exception in a Future callback, your Future just trashes the Fatal Exception and hangs forever without notifying anything.</strong></p>
-
-<p>Hopefully, due to this <a href="https://github.com/scala/scala/pull/2044">already merged PR</a>, in a future delivery of Scala 2.10.x, this problem should be corrected.</p>
-
-<p>To finish, in the same old good <a href="https://issues.scala-lang.org/browse/SI-7029">issue</a>, Viktor Klang also raised the question of what should be considered as fatal or not:</p>
-
-<blockquote><p>there&#8217;s a bigger topic at hand here, the one whether NotImplementedError, InterruptedException and ControlThrowable are to be considered fatal or not.</p></blockquote>
-
-<p>Meanwhile, be aware and take care ;)</p>
-
-<p>Have <code>Promise[NonFatal]</code>!</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <ul class="pager">
     
     <li class="previous"><a href="/blog/page/2/">&larr; Older</a></li>
@@ -4101,6 +4327,10 @@ Suggestions are welcome too</p>
     <li class="nav-header">Recent Posts</li>
     
       <li class="post">
+        <a href="/2013/07/11/play-autosource-datomisca/">Play AutoSource & Datomisca: Proofing the concept on Datomic, a Schema DB</a>
+      </li>
+    
+      <li class="post">
         <a href="/2013/07/04/json-interpolation-pattern-matching/">Play2 Json Interpolation & Pattern Matching</a>
       </li>
     
@@ -4114,10 +4344,6 @@ Suggestions are welcome too</p>
     
       <li class="post">
         <a href="/2013/05/01/jspath-pattern-matching/">Play2 Json Path Pattern Matching</a>
-      </li>
-    
-      <li class="post">
-        <a href="/2013/05/01/JsZipper/">JsZipper : Play2 Json advanced (& monadic) manipulations</a>
       </li>
     
   </ul>
