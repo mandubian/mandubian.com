@@ -4,7 +4,7 @@
   <title><![CDATA[Mandubian Blog]]></title>
   <link href="http://www.mandubian.com/atom.xml" rel="self"/>
   <link href="http://www.mandubian.com/"/>
-  <updated>2013-08-22T13:20:20+02:00</updated>
+  <updated>2013-09-22T17:02:29+02:00</updated>
   <id>http://www.mandubian.com/</id>
   <author>
     <name><![CDATA[Pascal Voitot]]></name>
@@ -12,6 +12,696 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Play 2.2 Actor Room: websocket (&more) room manager only with actors]]></title>
+    <link href="http://www.mandubian.com/2013/09/22/play-actor-room/"/>
+    <updated>2013-09-22T17:17:00+02:00</updated>
+    <id>http://www.mandubian.com/2013/09/22/play-actor-room</id>
+    <content type="html"><![CDATA[<p>The code &amp; sample apps can be found on Github <a href="https://github.com/mandubian/play-actor-room">here</a></p>
+
+<br/>
+
+
+
+
+<div class="well">
+<b>Actor-Room</b> makes it easy to:
+
+<ul>
+  <li>create any group of connected entities (people or not) (chatroom, forum, broadcast pivot&#8230;).</li>
+  <li>manage connections, disconnections, broadcast, targetted message through actor and nothing else.</li>
+</ul>
+
+For now, members can be:
+<ul>
+  <li>websocket endpoints through actors without taking care of Iteratees/Enumerators&#8230;</li>
+  <li>Bots to simulate members</li>
+</ul>
+</div>
+
+
+
+
+<br/>
+
+
+<h2>Reminders on websockets in Play</h2>
+
+<p>Here is the function Play provides to create a websocket:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">def</span> <span class="n">async</span><span class="o">[</span><span class="kt">A</span><span class="o">](</span>
+</span><span class='line'>  <span class="n">f</span><span class="k">:</span> <span class="kt">RequestHeader</span> <span class="o">=&gt;</span> <span class="nc">Future</span><span class="o">[(</span><span class="kt">Iteratee</span><span class="o">[</span><span class="kt">A</span>, <span class="k">_</span><span class="o">]</span>, <span class="kt">Enumerator</span><span class="o">[</span><span class="kt">A</span><span class="o">])]</span>
+</span><span class='line'><span class="o">)(</span><span class="k">implicit</span> <span class="n">frameFormatter</span><span class="k">:</span> <span class="kt">FrameFormatter</span><span class="o">[</span><span class="kt">A</span><span class="o">])</span><span class="k">:</span> <span class="kt">WebSocket</span><span class="o">[</span><span class="kt">A</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>A websocket is a persistent bi-directional channel of communication (in/out) and is created with:</p>
+
+<ul>
+<li>an <code>Iteratee[A, _]</code> to manage all frames received by the websocket endpoint</li>
+<li>an <code>Enumerator[A]</code> to send messages through the websocket</li>
+<li>an implicit <code>FrameFormatter[A]</code> to parse frame content to type <code>A</code> (Play provides default FrameFormatter for String or JsValue)</li>
+</ul>
+
+
+<p>Here is how you traditionally create a websocket endpoint in Play:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">object</span> <span class="nc">MyController</span> <span class="k">extends</span> <span class="nc">Controller</span> <span class="o">{</span>
+</span><span class='line'>    <span class="k">def</span> <span class="n">connect</span> <span class="k">=</span> <span class="nc">Websocket</span><span class="o">.</span><span class="n">async</span><span class="o">[</span><span class="kt">JsValue</span><span class="o">]{</span> <span class="n">rh</span> <span class="k">=&gt;</span>
+</span><span class='line'>        <span class="c1">// the iteratee to manage received messages</span>
+</span><span class='line'>        <span class="k">val</span> <span class="n">iteratee</span> <span class="k">=</span> <span class="nc">Iteratee</span><span class="o">.</span><span class="n">foreach</span><span class="o">[</span><span class="kt">JsValue</span><span class="o">](</span> <span class="n">js</span> <span class="k">=&gt;</span> <span class="o">...)</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="c1">// the enumerator to be able to send messages</span>
+</span><span class='line'>        <span class="k">val</span> <span class="n">enumerator</span> <span class="k">=</span> <span class="c1">// generally a PushEnumerator</span>
+</span><span class='line'>        <span class="o">(</span><span class="n">iteratee</span><span class="o">,</span> <span class="n">enumerator</span><span class="o">)</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Generally, the <code>Enumerator[A]</code> is created using <code>Concurrent.broadcast[A]</code> and <code>Concurrent.unicast[A]</code> which are very powerful tools but not so easy to understand exactly (the edge-cases of connection close, errors are always tricky).</p>
+
+<p>You often want to:</p>
+
+<ul>
+<li>manage multiple client connections at the same time</li>
+<li>parse messages received from websockets,</li>
+<li>do something with the message payload</li>
+<li>send messages to a given client</li>
+<li>broadcast messages to all connected members</li>
+<li>create bots to be able to simulate fake connected members</li>
+<li>etc&#8230;</li>
+</ul>
+
+
+<p>To do that in Play non-blocking/async architecture, you often end developing an Actor topology managing all events/messages on top of the previous <code>Iteratee/Enumerator</code>.</p>
+
+<p>The <code>Iteratee/Enumerator</code> is quite generic but always not so easy to write.</p>
+
+<p>The actor topology is quite generic because there are administration messages that are almost always the same:</p>
+
+<ul>
+<li>Connection/Forbidden/Disconnection</li>
+<li>Broadcast/Send</li>
+</ul>
+
+
+<br/>
+
+
+<blockquote><p><strong>Actor Room</strong> is a helper managing all of this for you.
+So you can just focus on message management using actors and nothing else. It provides all default behaviors and all behaviors can be overriden if needed. It exposes only actors and nothing else.</p></blockquote>
+
+<br/>
+
+
+<p><em>The code is based on the chatroom sample (and a cool sample by Julien Tournay) from Play Framework pushed far further and in a more generic way.</em></p>
+
+<br/>
+
+
+<br/>
+
+
+<h2>What is Actor Room?</h2>
+
+<p>An actor room manages a group of connected members which are supervised by a supervisor</p>
+
+<h3>Member = 2 actors (receiver/sender)</h3>
+
+<p>Each member is represented by 2 actors (1 receiver &amp; 1 sender):</p>
+
+<ul>
+<li><p><strong>You MUST create at least a Receiver Actor because it&#8217;s your job to manage your own message format</strong></p></li>
+<li><p>The Sender Actor has a default implementation but you can override it.</p></li>
+</ul>
+
+
+<br/>
+
+
+<h3>Supervisor = 1 actor</h3>
+
+<p>All actors are managed by 1 supervisor which have two roles:</p>
+
+<ul>
+<li><p>Creates/supervises all receiver/sender actors</p></li>
+<li><p>Manages administration messages (routing, forwarding, broadcasting etc&#8230;)</p></li>
+</ul>
+
+
+<br/>
+
+
+<br/>
+
+
+<h1>Code sample step by step</h1>
+
+<h2>Create the Actor Room</h2>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// default constructor</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">room</span> <span class="k">=</span> <span class="nc">Room</span><span class="o">()</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// constructor with custom supervisor</span>
+</span><span class='line'>  <span class="c1">// custom supervisor are described later</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">room</span> <span class="k">=</span> <span class="nc">Room</span><span class="o">(</span><span class="nc">Props</span><span class="o">(</span><span class="n">classOf</span><span class="o">[</span><span class="kt">CustomSupervisor</span><span class="o">]))</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The room creates the Supervisor actor for you and delegates the creation of receiver/sender actors to it.</p>
+
+<p>If you want to broadcast a message or target a precise member, you should use the supervisor.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">room</span><span class="o">.</span><span class="n">supervisor</span> <span class="o">!</span> <span class="nc">Broadcast</span><span class="o">(</span><span class="s">&quot;fromId&quot;</span><span class="o">,</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span><span class="s">&quot;foo&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;bar&quot;</span><span class="o">))</span>
+</span><span class='line'>  <span class="n">room</span><span class="o">.</span><span class="n">supervisor</span> <span class="o">!</span> <span class="nc">Send</span><span class="o">(</span><span class="s">&quot;fromId&quot;</span><span class="o">,</span> <span class="s">&quot;toId&quot;</span><span class="o">,</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span><span class="s">&quot;foo&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;bar&quot;</span><span class="o">))</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>You can manage several rooms in the same project.</p></blockquote>
+
+<br/>
+
+
+<h2>Create the mandatory Receiver Actor</h2>
+
+<p>There is only one message to manage:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="cm">/** Message received and parsed to type A</span>
+</span><span class='line'><span class="cm">  * @param from the ID of the sender</span>
+</span><span class='line'><span class="cm">  * @param payload the content of the message</span>
+</span><span class='line'><span class="cm">  */</span>
+</span><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">Received</span><span class="o">[</span><span class="kt">A</span><span class="o">](</span><span class="n">from</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">payload</span><span class="k">:</span> <span class="kt">A</span><span class="o">)</span> <span class="k">extends</span> <span class="nc">Message</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>If your websocket frames contain Json, then it should be <code>Received[JsValue]</code>.</p>
+
+<p>You just have to create a simple actor:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// Create an actor to receive messages from websocket</span>
+</span><span class='line'><span class="k">class</span> <span class="nc">Receiver</span> <span class="k">extends</span> <span class="nc">Actor</span> <span class="o">{</span>
+</span><span class='line'>  <span class="k">def</span> <span class="n">receive</span> <span class="k">=</span> <span class="o">{</span>
+</span><span class='line'>    <span class="c1">// Received(fromId, js) is the only Message to manage in receiver</span>
+</span><span class='line'>    <span class="k">case</span> <span class="nc">Received</span><span class="o">(</span><span class="n">from</span><span class="o">,</span> <span class="n">js</span><span class="k">:</span> <span class="kt">JsValue</span><span class="o">)</span> <span class="k">=&gt;</span>
+</span><span class='line'>      <span class="o">(</span><span class="n">js</span> <span class="o">\</span> <span class="s">&quot;msg&quot;</span><span class="o">).</span><span class="n">asOpt</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="k">match</span> <span class="o">{</span>
+</span><span class='line'>        <span class="k">case</span> <span class="nc">None</span> <span class="k">=&gt;</span>
+</span><span class='line'>          <span class="n">play</span><span class="o">.</span><span class="nc">Logger</span><span class="o">.</span><span class="n">error</span><span class="o">(</span><span class="s">&quot;couldn&#39;t msg in websocket event&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="k">case</span> <span class="nc">Some</span><span class="o">(</span><span class="n">s</span><span class="o">)</span> <span class="k">=&gt;</span>
+</span><span class='line'>          <span class="n">play</span><span class="o">.</span><span class="nc">Logger</span><span class="o">.</span><span class="n">info</span><span class="o">(</span><span class="n">s</span><span class="s">&quot;received $s&quot;</span><span class="o">)</span>
+</span><span class='line'>          <span class="c1">// broadcast message to all connected members</span>
+</span><span class='line'>          <span class="n">context</span><span class="o">.</span><span class="n">parent</span> <span class="o">!</span> <span class="nc">Broadcast</span><span class="o">(</span><span class="n">from</span><span class="o">,</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span><span class="s">&quot;msg&quot;</span> <span class="o">-&gt;</span> <span class="n">s</span><span class="o">))</span>
+</span><span class='line'>      <span class="o">}</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Please note the Receiver Actor is supervised by the <code>Supervisor</code> actor. So, within the Receiver Actor, <code>context.parent</code> is the <code>Supervisor</code> and you can use it to send/broadcast message as following:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">context</span><span class="o">.</span><span class="n">parent</span> <span class="o">!</span> <span class="nc">Send</span><span class="o">(</span><span class="n">fromId</span><span class="o">,</span> <span class="n">toId</span><span class="o">,</span> <span class="n">mymessage</span><span class="o">)</span>
+</span><span class='line'><span class="n">context</span><span class="o">.</span><span class="n">parent</span> <span class="o">!</span> <span class="nc">Broadcast</span><span class="o">(</span><span class="n">fromId</span><span class="o">,</span> <span class="n">mymessage</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// The 2 messages</span>
+</span><span class='line'><span class="cm">/** Sends a message from a member to another member */</span>
+</span><span class='line'><span class="k">case</span> <span class="k">class</span>   <span class="nc">Send</span><span class="o">[</span><span class="kt">A</span><span class="o">](</span><span class="n">from</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">to</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">payload</span><span class="k">:</span> <span class="kt">A</span><span class="o">)</span> <span class="k">extends</span> <span class="nc">Message</span>
+</span><span class='line'>
+</span><span class='line'><span class="cm">/** Broadcasts a message from a member */</span>
+</span><span class='line'><span class="k">case</span> <span class="k">class</span>   <span class="nc">Broadcast</span><span class="o">[</span><span class="kt">A</span><span class="o">](</span><span class="n">from</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">payload</span><span class="k">:</span> <span class="kt">A</span><span class="o">)</span> <span class="k">extends</span> <span class="nc">Message</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<h2>Create your Json websocket endpoint</h2>
+
+<p>Please note that each member is identified by a string that you define yourself.</p>
+
+<p>import org.mandubian.actorroom._</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">class</span> <span class="nc">Receiver</span> <span class="k">extends</span> <span class="nc">Actor</span> <span class="o">{</span>
+</span><span class='line'>  <span class="k">def</span> <span class="n">receive</span> <span class="k">=</span> <span class="o">{</span>
+</span><span class='line'>    <span class="o">...</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">object</span> <span class="nc">Application</span> <span class="k">extends</span> <span class="nc">Controller</span> <span class="o">{</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">room</span> <span class="k">=</span> <span class="nc">Room</span><span class="o">()</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="cm">/** websocket requires :</span>
+</span><span class='line'><span class="cm">    * - the type of the Receiver actor</span>
+</span><span class='line'><span class="cm">    * - the type of the payload</span>
+</span><span class='line'><span class="cm">    */</span>
+</span><span class='line'>  <span class="k">def</span> <span class="n">connect</span><span class="o">(</span><span class="n">id</span><span class="k">:</span> <span class="kt">String</span><span class="o">)</span> <span class="k">=</span> <span class="n">room</span><span class="o">.</span><span class="n">websocket</span><span class="o">[</span><span class="kt">Receiver</span>, <span class="kt">JsValue</span><span class="o">](</span><span class="n">id</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// or</span>
+</span><span class='line'>  <span class="k">def</span> <span class="n">connect</span><span class="o">(</span><span class="n">id</span><span class="k">:</span> <span class="kt">String</span><span class="o">)</span> <span class="k">=</span> <span class="n">room</span><span class="o">.</span><span class="n">websocket</span><span class="o">[</span><span class="kt">JsValue</span><span class="o">](</span><span class="n">id</span><span class="o">,</span> <span class="nc">Props</span><span class="o">[</span><span class="kt">Receiver</span><span class="o">])</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<h2>All together</h2>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">akka.actor._</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">import</span> <span class="nn">play.api._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">play.api.mvc._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json._</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Implicits</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">play.api.Play.current</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.concurrent.Execution.Implicits._</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">import</span> <span class="nn">org.mandubian.actorroom._</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">class</span> <span class="nc">Receiver</span> <span class="k">extends</span> <span class="nc">Actor</span> <span class="o">{</span>
+</span><span class='line'>  <span class="k">def</span> <span class="n">receive</span> <span class="k">=</span> <span class="o">{</span>
+</span><span class='line'>    <span class="k">case</span> <span class="nc">Received</span><span class="o">(</span><span class="n">from</span><span class="o">,</span> <span class="n">js</span><span class="k">:</span> <span class="kt">JsValue</span><span class="o">)</span> <span class="k">=&gt;</span>
+</span><span class='line'>      <span class="o">(</span><span class="n">js</span> <span class="o">\</span> <span class="s">&quot;msg&quot;</span><span class="o">).</span><span class="n">asOpt</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="k">match</span> <span class="o">{</span>
+</span><span class='line'>        <span class="k">case</span> <span class="nc">None</span> <span class="k">=&gt;</span> <span class="n">play</span><span class="o">.</span><span class="nc">Logger</span><span class="o">.</span><span class="n">error</span><span class="o">(</span><span class="s">&quot;couldn&#39;t msg in websocket event&quot;</span><span class="o">)</span>
+</span><span class='line'>        <span class="k">case</span> <span class="nc">Some</span><span class="o">(</span><span class="n">s</span><span class="o">)</span> <span class="k">=&gt;</span>
+</span><span class='line'>          <span class="n">play</span><span class="o">.</span><span class="nc">Logger</span><span class="o">.</span><span class="n">info</span><span class="o">(</span><span class="n">s</span><span class="s">&quot;received $s&quot;</span><span class="o">)</span>
+</span><span class='line'>          <span class="n">context</span><span class="o">.</span><span class="n">parent</span> <span class="o">!</span> <span class="nc">Broadcast</span><span class="o">(</span><span class="n">from</span><span class="o">,</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span><span class="s">&quot;msg&quot;</span> <span class="o">-&gt;</span> <span class="n">s</span><span class="o">))</span>
+</span><span class='line'>      <span class="o">}</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">object</span> <span class="nc">Application</span> <span class="k">extends</span> <span class="nc">Controller</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">val</span> <span class="n">room</span> <span class="k">=</span> <span class="nc">Room</span><span class="o">()</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">def</span> <span class="n">websocket</span><span class="o">(</span><span class="n">id</span><span class="k">:</span> <span class="kt">String</span><span class="o">)</span> <span class="k">=</span> <span class="n">room</span><span class="o">.</span><span class="n">websocket</span><span class="o">[</span><span class="kt">Receiver</span>, <span class="kt">JsValue</span><span class="o">](</span><span class="n">id</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<br/>
+
+
+<h1>Extend default behaviors</h1>
+
+<h2>Override the administration message format</h2>
+
+<p><code>AdminMsgFormatter</code> typeclass is used by ActorRoom to format administration messages (Connected, Disconnected and Error) by default.</p>
+
+<p><code>AdminMsgFormatter[JsValue]</code> and <code>AdminMsgFormatter[String]</code> are provided by default.</p>
+
+<p>You can override the format as following:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// put this implicit in the same scope where you create your websocket endpoint</span>
+</span><span class='line'><span class="k">implicit</span> <span class="k">val</span> <span class="n">msgFormatter</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">AdminMsgFormatter</span><span class="o">[</span><span class="kt">JsValue</span><span class="o">]{</span>
+</span><span class='line'>    <span class="k">def</span> <span class="n">connected</span><span class="o">(</span><span class="n">id</span><span class="k">:</span> <span class="kt">String</span><span class="o">)</span> <span class="k">=</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span><span class="s">&quot;kind&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;connected&quot;</span><span class="o">,</span> <span class="s">&quot;id&quot;</span> <span class="o">-&gt;</span> <span class="n">id</span><span class="o">)</span>
+</span><span class='line'>    <span class="k">def</span> <span class="n">disconnected</span><span class="o">(</span><span class="n">id</span><span class="k">:</span> <span class="kt">String</span><span class="o">)</span> <span class="k">=</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span><span class="s">&quot;kind&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;disconnected&quot;</span><span class="o">,</span> <span class="s">&quot;id&quot;</span> <span class="o">-&gt;</span> <span class="n">id</span><span class="o">)</span>
+</span><span class='line'>    <span class="k">def</span> <span class="n">error</span><span class="o">(</span><span class="n">id</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">msg</span><span class="k">:</span> <span class="kt">String</span><span class="o">)</span> <span class="k">=</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span><span class="s">&quot;kind&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;error&quot;</span><span class="o">,</span> <span class="s">&quot;id&quot;</span> <span class="o">-&gt;</span> <span class="n">id</span><span class="o">,</span> <span class="s">&quot;msg&quot;</span> <span class="o">-&gt;</span> <span class="n">msg</span><span class="o">)</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// then this msgFormatter will be used for all administration messages  </span>
+</span><span class='line'><span class="k">def</span> <span class="n">websocket</span><span class="o">(</span><span class="n">id</span><span class="k">:</span> <span class="kt">String</span><span class="o">)</span> <span class="k">=</span> <span class="n">room</span><span class="o">.</span><span class="n">websocket</span><span class="o">[</span><span class="kt">Receiver</span>, <span class="kt">JsValue</span><span class="o">](</span><span class="n">id</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<h2>Override the Sender Actor</h2>
+
+<p>You just have to create a new actor as following:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">class</span> <span class="nc">MyCustomSender</span> <span class="k">extends</span> <span class="nc">Actor</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">def</span> <span class="n">receive</span> <span class="k">=</span> <span class="o">{</span>
+</span><span class='line'>    <span class="k">case</span> <span class="n">s</span><span class="k">:</span> <span class="kt">Send</span><span class="o">[</span><span class="kt">JsValue</span><span class="o">]</span>        <span class="k">=&gt;</span> <span class="c1">// message send from a member to another one</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">case</span> <span class="n">b</span><span class="k">:</span> <span class="kt">Broadcast</span><span class="o">[</span><span class="kt">JsValue</span><span class="o">]</span>   <span class="k">=&gt;</span> <span class="c1">// message broadcast by a member</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">case</span> <span class="nc">Connected</span><span class="o">(</span><span class="n">id</span><span class="o">)</span>           <span class="k">=&gt;</span> <span class="c1">// member &quot;id&quot; has connected</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">case</span> <span class="nc">Disconnected</span><span class="o">(</span><span class="n">id</span><span class="o">)</span>        <span class="k">=&gt;</span> <span class="c1">// member &quot;id&quot; has disconnected</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">case</span> <span class="nc">Init</span><span class="o">(</span><span class="n">id</span><span class="o">,</span> <span class="n">receiverActor</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="c1">// Message sent when sender actor is initialized by ActorRoom</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Then you must initialize your websocket with it</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">def</span> <span class="n">connect</span><span class="o">(</span><span class="n">id</span><span class="k">:</span> <span class="kt">String</span><span class="o">)</span> <span class="k">=</span> <span class="n">room</span><span class="o">.</span><span class="n">websocket</span><span class="o">[</span><span class="kt">JsValue</span><span class="o">](</span><span class="n">id</span><span class="o">,</span> <span class="nc">Props</span><span class="o">[</span><span class="kt">Receiver</span><span class="o">],</span> <span class="nc">Props</span><span class="o">[</span><span class="kt">MyCustomSender</span><span class="o">])</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>You can override the following messages:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// public sender messages</span>
+</span><span class='line'><span class="cm">/** Sender actor is initialized by Supervisor */</span>
+</span><span class='line'><span class="k">case</span> <span class="k">class</span>   <span class="nc">Init</span><span class="o">(</span><span class="n">id</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">receiverActor</span><span class="k">:</span> <span class="kt">ActorRef</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="cm">/** Sends a message from a member to another member */</span>
+</span><span class='line'><span class="k">case</span> <span class="k">class</span>   <span class="nc">Send</span><span class="o">[</span><span class="kt">A</span><span class="o">](</span><span class="n">from</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">to</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">payload</span><span class="k">:</span> <span class="kt">A</span><span class="o">)</span> <span class="k">extends</span> <span class="nc">Message</span>
+</span><span class='line'>
+</span><span class='line'><span class="cm">/** Broadcasts a message from a member */</span>
+</span><span class='line'><span class="k">case</span> <span class="k">class</span>   <span class="nc">Broadcast</span><span class="o">[</span><span class="kt">A</span><span class="o">](</span><span class="n">from</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">payload</span><span class="k">:</span> <span class="kt">A</span><span class="o">)</span> <span class="k">extends</span> <span class="nc">Message</span>
+</span><span class='line'>
+</span><span class='line'><span class="cm">/** member with ID has connected */</span>
+</span><span class='line'><span class="k">case</span> <span class="k">class</span>   <span class="nc">Connected</span><span class="o">(</span><span class="n">id</span><span class="k">:</span> <span class="kt">String</span><span class="o">)</span> <span class="k">extends</span> <span class="nc">Message</span>
+</span><span class='line'>
+</span><span class='line'><span class="cm">/** member with ID has disconnected */</span>
+</span><span class='line'><span class="k">case</span> <span class="k">class</span>   <span class="nc">Disconnected</span><span class="o">(</span><span class="n">id</span><span class="k">:</span> <span class="kt">String</span><span class="o">)</span> <span class="k">extends</span> <span class="nc">Message</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<h2>Override the Supervisor Actor</h2>
+
+<p>Please note <code>Supervisor</code> is an actor which manages a internal state containing all members:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">var</span> <span class="n">members</span> <span class="k">=</span> <span class="nc">Map</span><span class="o">.</span><span class="n">empty</span><span class="o">[</span><span class="kt">String</span>, <span class="kt">Member</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>You can override the default Supervisor as following:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">class</span> <span class="nc">CustomSupervisor</span> <span class="k">extends</span> <span class="nc">Supervisor</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">def</span> <span class="n">customBroadcast</span><span class="k">:</span> <span class="kt">Receive</span> <span class="o">=</span> <span class="o">{</span>
+</span><span class='line'>      <span class="k">case</span> <span class="nc">Broadcast</span><span class="o">(</span><span class="n">from</span><span class="o">,</span> <span class="n">js</span><span class="k">:</span> <span class="kt">JsObject</span><span class="o">)</span> <span class="k">=&gt;</span>
+</span><span class='line'>        <span class="c1">// adds members to all messages</span>
+</span><span class='line'>        <span class="k">val</span> <span class="n">ids</span> <span class="k">=</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span><span class="s">&quot;members&quot;</span> <span class="o">-&gt;</span> <span class="n">members</span><span class="o">.</span><span class="n">map</span><span class="o">(</span><span class="k">_</span><span class="o">.</span><span class="n">_1</span><span class="o">))</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">members</span><span class="o">.</span><span class="n">foreach</span> <span class="o">{</span>
+</span><span class='line'>          <span class="k">case</span> <span class="o">(</span><span class="n">id</span><span class="o">,</span> <span class="n">member</span><span class="o">)</span> <span class="k">=&gt;</span>
+</span><span class='line'>            <span class="n">member</span><span class="o">.</span><span class="n">sender</span> <span class="o">!</span> <span class="nc">Broadcast</span><span class="o">(</span><span class="n">from</span><span class="o">,</span> <span class="n">js</span> <span class="o">++</span> <span class="n">ids</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>          <span class="k">case</span> <span class="k">_</span> <span class="k">=&gt;</span> <span class="o">()</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">override</span> <span class="k">def</span> <span class="n">receive</span> <span class="k">=</span> <span class="n">customBroadcast</span> <span class="n">orElse</span> <span class="k">super</span><span class="o">.</span><span class="n">receive</span>
+</span><span class='line'>  <span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<h2>Create a bot to simulate member</h2>
+
+<p>A bot is a fake member that you can use to communicate with other members. It&#8217;s identified by an ID as any member.</p>
+
+<p>You create a bot with these API:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">Member</span><span class="o">(</span><span class="n">id</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="k">val</span> <span class="n">receiver</span><span class="k">:</span> <span class="kt">ActorRef</span><span class="o">,</span> <span class="k">val</span> <span class="n">sender</span><span class="k">:</span> <span class="kt">ActorRef</span><span class="o">)</span> <span class="k">extends</span> <span class="nc">Message</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">def</span> <span class="n">bot</span><span class="o">[</span><span class="kt">Payload</span><span class="o">](</span><span class="n">id</span><span class="k">:</span> <span class="kt">String</span><span class="o">)</span>
+</span><span class='line'>    <span class="o">(</span><span class="k">implicit</span> <span class="n">msgFormatter</span><span class="k">:</span> <span class="kt">AdminMsgFormatter</span><span class="o">[</span><span class="kt">Payload</span><span class="o">])</span><span class="k">:</span> <span class="kt">Future</span><span class="o">[</span><span class="kt">Member</span><span class="o">]</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">def</span> <span class="n">bot</span><span class="o">[</span><span class="kt">Payload</span><span class="o">](</span>
+</span><span class='line'>    <span class="n">id</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span>
+</span><span class='line'>    <span class="n">senderProps</span><span class="k">:</span> <span class="kt">Props</span>
+</span><span class='line'>  <span class="o">)(</span><span class="k">implicit</span> <span class="n">msgFormatter</span><span class="k">:</span> <span class="kt">AdminMsgFormatter</span><span class="o">[</span><span class="kt">Payload</span><span class="o">])</span><span class="k">:</span> <span class="kt">Future</span><span class="o">[</span><span class="kt">Member</span><span class="o">]</span>
+</span><span class='line'>
+</span><span class='line'>
+</span><span class='line'><span class="k">def</span> <span class="n">bot</span><span class="o">[</span><span class="kt">Payload</span><span class="o">](</span>
+</span><span class='line'>    <span class="n">id</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span>
+</span><span class='line'>    <span class="n">receiverProps</span><span class="k">:</span> <span class="kt">Props</span><span class="o">,</span>
+</span><span class='line'>    <span class="n">senderProps</span><span class="k">:</span> <span class="kt">Props</span><span class="o">)</span><span class="k">:</span> <span class="kt">Future</span><span class="o">[</span><span class="kt">Member</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Then with returned <code>Member</code>, you can simulate messages:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">room</span> <span class="k">=</span> <span class="nc">Room</span><span class="o">()</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">bot</span> <span class="k">=</span> <span class="n">room</span><span class="o">.</span><span class="n">bot</span><span class="o">[</span><span class="kt">JsValue</span><span class="o">](</span><span class="s">&quot;robot&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// simulate a received message</span>
+</span><span class='line'><span class="n">bot</span><span class="o">.</span><span class="n">receiver</span> <span class="o">!</span> <span class="nc">Received</span><span class="o">(</span><span class="n">bod</span><span class="o">.</span><span class="n">id</span><span class="o">,</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span><span class="s">&quot;foo&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;bar&quot;</span><span class="o">))</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Naturally, you can override the Bot Sender Actor</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="cm">/** The default actor sender for Bots */</span>
+</span><span class='line'><span class="k">class</span> <span class="nc">BotSender</span> <span class="k">extends</span> <span class="nc">Actor</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">def</span> <span class="n">receive</span> <span class="k">=</span> <span class="o">{</span>
+</span><span class='line'>    <span class="k">case</span> <span class="n">s</span> <span class="k">=&gt;</span>
+</span><span class='line'>      <span class="n">play</span><span class="o">.</span><span class="nc">Logger</span><span class="o">.</span><span class="n">info</span><span class="o">(</span><span class="n">s</span><span class="s">&quot;Bot should have sent ${s}&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">bot</span> <span class="k">=</span> <span class="n">room</span><span class="o">.</span><span class="n">bot</span><span class="o">[</span><span class="kt">JsValue</span><span class="o">](</span><span class="s">&quot;robot&quot;</span><span class="o">,</span> <span class="nc">Props</span><span class="o">[</span><span class="kt">BotSender</span><span class="o">])</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>So what else???
+Everything you can override and everything that I didn&#8217;t implement yet&#8230;</p>
+
+<p>On <a href="https://github.com/mandubian/play-actor-room/tree/master/samples">github project</a>, you will find 2 samples:</p>
+
+<ul>
+<li><code>simplest</code> which is a very simple working sample.</li>
+<li><code>websocket-chat</code> which is just the Play Framework ChatRoom sample rewritten with <code>ActorRoom</code>.</li>
+</ul>
+
+
+<p>Have fun!</p>
+
+<br/>
+
+
+<br/>
+
+
+<br/>
+
+
+<br/>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Scalaz-Stream Plug'n'Play2 Iteratee/WS + Recursive streaming]]></title>
@@ -9626,762 +10316,6 @@ Personnally, I&#8217;ve begun using it in projects and I don&#8217;t yet see the
 <blockquote><p>Next article coming soon: an applied example of a webapp following <em>Json coast-to-coast design</em> with <a href="http://www.reactivemongo.org">ReactiveMongo</a></p></blockquote>
 
 <p>Have fun ;););)</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Unveiling Play 2.1 Json API - Part 2 : Writes/Format combinators]]></title>
-    <link href="http://www.mandubian.com/2012/10/01/unveiling-play-2-dot-1-json-api-part2-writes-format-combinators/"/>
-    <updated>2012-10-01T11:10:00+02:00</updated>
-    <id>http://www.mandubian.com/2012/10/01/unveiling-play-2-dot-1-json-api-part2-writes-format-combinators</id>
-    <content type="html"><![CDATA[<blockquote><p>In <a href="http://www.mandubian.com/2012/09/08/unveiling-play-2-dot-1-json-api-part1-jspath-reads-combinators/">Part 1 article</a>, we gave a quick overview of new Play2.1 JSON API features around JsPath and Reads combinators. It&#8217;s funny to be able to read JSON to Scala structures but it&#8217;s better to be able to <strong>write Scala structures to JSON (<code>Writes[T]</code>)</strong> and it&#8217;s even better to <strong>mix Reads and Writes (<code>Format[T]</code>)</strong> sometimes.</p></blockquote>
-
-<p><strong>Now let&#8217;s focus on Writes and Format in the details ;)</strong></p>
-
-<br/>
-
-
-<br/>
-
-
-<h1><a name="writes">Writes[T] hasn&#8217;t changed (except combinators)</a></h1>
-
-<h2><a name="writes-2_0">Writes in Play2.0.x</a></h2>
-
-<p>Do you remember how you had to write a Json <code>Writes[T]</code> in <code>Play2.0.x</code> ?<br/>
-You had to override the <code>writes</code> function.</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">trait</span> <span class="nc">Writes</span><span class="o">[</span><span class="kt">-A</span><span class="o">]</span> <span class="o">{</span>
-</span><span class='line'>  <span class="n">self</span> <span class="k">=&gt;</span>
-</span><span class='line'>  <span class="cm">/**</span>
-</span><span class='line'><span class="cm">   * Convert the object into a JsValue</span>
-</span><span class='line'><span class="cm">   */</span>
-</span><span class='line'>  <span class="k">def</span> <span class="n">writes</span><span class="o">(</span><span class="n">o</span><span class="k">:</span> <span class="kt">A</span><span class="o">)</span><span class="k">:</span> <span class="kt">JsValue</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Take the same simple case class we used in Part 1:</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">Creature</span><span class="o">(</span>
-</span><span class='line'>  <span class="n">name</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span>
-</span><span class='line'>  <span class="n">isDead</span><span class="k">:</span> <span class="kt">Boolean</span><span class="o">,</span>
-</span><span class='line'>  <span class="n">weight</span><span class="k">:</span> <span class="kt">Float</span>
-</span><span class='line'><span class="o">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>In <code>Play2.0.x</code>, you would write your <code>Writes[Creature]</code> as following (using new Json syntax to re-show it even if it didn&#8217;t exist in Play2.0.x ;) ):</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json._</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">implicit</span> <span class="k">val</span> <span class="n">creatureWrites</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">Writes</span><span class="o">[</span><span class="kt">Creature</span><span class="o">]</span> <span class="o">{</span>
-</span><span class='line'>  <span class="k">def</span> <span class="n">writes</span><span class="o">(</span><span class="n">c</span><span class="k">:</span> <span class="kt">Creature</span><span class="o">)</span><span class="k">:</span> <span class="kt">JsValue</span> <span class="o">=</span> <span class="o">{</span>
-</span><span class='line'>    <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span>
-</span><span class='line'>      <span class="s">&quot;name&quot;</span> <span class="o">-&gt;</span> <span class="n">c</span><span class="o">.</span><span class="n">name</span><span class="o">,</span>
-</span><span class='line'>      <span class="s">&quot;isDead&quot;</span> <span class="o">-&gt;</span> <span class="n">c</span><span class="o">.</span><span class="n">isDead</span><span class="o">,</span>
-</span><span class='line'>      <span class="s">&quot;weight&quot;</span> <span class="o">-&gt;</span> <span class="n">c</span><span class="o">.</span><span class="n">weight</span>
-</span><span class='line'>    <span class="o">)</span>
-</span><span class='line'>  <span class="o">}</span>
-</span><span class='line'><span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">gizmo</span> <span class="k">=</span> <span class="nc">Creature</span><span class="o">(</span><span class="s">&quot;gremlins&quot;</span><span class="o">,</span> <span class="kc">false</span><span class="o">,</span> <span class="mf">1.0F</span><span class="o">)</span>
-</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">gizmojs</span> <span class="k">=</span> <span class="nc">Json</span><span class="o">.</span><span class="n">toJson</span><span class="o">(</span><span class="n">gizmo</span><span class="o">)</span>
-</span><span class='line'><span class="n">gizmojs</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsValue</span> <span class="o">=</span> <span class="o">{</span><span class="s">&quot;name&quot;</span><span class="k">:</span><span class="err">&quot;</span><span class="kt">gremlins</span><span class="err">&quot;</span><span class="o">,</span><span class="s">&quot;isDead&quot;</span><span class="k">:</span><span class="kt">false</span><span class="o">,</span><span class="s">&quot;weight&quot;</span><span class="k">:</span><span class="err">1</span><span class="kt">.</span><span class="err">0</span><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2><a name="writes-2_1">Writes in Play2.1.x</a></h2>
-
-<p>No suspense to be kept: <strong>in Play2.1, you write Writes exactly in the same way</strong> :D</p>
-
-<p>So what&#8217;s the difference?<br/>
-As presented in Part 1, <code>Reads</code> could be combined using simple logical operators.<br/>
-Using functional Scala power, we were able to <strong>provide combinators for <code>Writes[T]</code></strong>.</p>
-
-<blockquote><p>If you want more theoretical aspects about the way it was implemented based on generic functional structures adapted to our needs, you can read this post <a href="http://sadache.tumblr.com/post/30955704987/applicatives-are-too-restrictive-breaking-applicativesfrom">&#8220;Applicatives are too restrictive, breaking Applicatives and introducing Functional Builders&#8221;</a> written by <a href="http://www.github.com/sadache">@sadache</a></p></blockquote>
-
-<h2><a name="writes-combined">Writes main change: <em>combinators</em></a></h2>
-
-<p>Once again, code first: re-writing previous <code>Writes[T]</code> using combinators.</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// IMPORTANT import this to have the required tools in your scope</span>
-</span><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json._</span>
-</span><span class='line'><span class="c1">// imports required functional generic structures</span>
-</span><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json.util._</span>
-</span><span class='line'><span class="c1">// imports implicit structure for Writes only (always try to import only what you need)</span>
-</span><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json.Writes._</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">implicit</span> <span class="k">val</span> <span class="n">creatureWrites</span> <span class="k">=</span> <span class="o">(</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;name&quot;</span><span class="o">).</span><span class="n">write</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="n">and</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;isDead&quot;</span><span class="o">).</span><span class="n">write</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span> <span class="n">and</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;weight&quot;</span><span class="o">).</span><span class="n">write</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span>
-</span><span class='line'><span class="o">)(</span><span class="n">unlift</span><span class="o">(</span><span class="nc">Creature</span><span class="o">.</span><span class="n">unapply</span><span class="o">))</span>
-</span><span class='line'>
-</span><span class='line'><span class="c1">// or using the operators inspired by Scala parser combinators for those who know them</span>
-</span><span class='line'><span class="k">implicit</span> <span class="k">val</span> <span class="n">creatureWrites</span> <span class="k">=</span> <span class="o">(</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;name&quot;</span><span class="o">).</span><span class="n">write</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="o">~</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;isDead&quot;</span><span class="o">).</span><span class="n">write</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span> <span class="o">~</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;weight&quot;</span><span class="o">).</span><span class="n">write</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span>
-</span><span class='line'><span class="o">)(</span><span class="n">unlift</span><span class="o">(</span><span class="nc">Creature</span><span class="o">.</span><span class="n">unapply</span><span class="o">))</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">c</span> <span class="k">=</span> <span class="nc">Creature</span><span class="o">(</span><span class="s">&quot;gremlins&quot;</span><span class="o">,</span> <span class="kc">false</span><span class="o">,</span> <span class="mf">1.0F</span><span class="o">)</span>
-</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">js</span> <span class="k">=</span> <span class="nc">Json</span><span class="o">.</span><span class="n">toJson</span><span class="o">(</span><span class="n">c</span><span class="o">)</span>
-</span><span class='line'><span class="n">js</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsValue</span> <span class="o">=</span> <span class="o">{</span><span class="s">&quot;name&quot;</span><span class="k">:</span><span class="err">&quot;</span><span class="kt">gremlins</span><span class="err">&quot;</span><span class="o">,</span><span class="s">&quot;isDead&quot;</span><span class="k">:</span><span class="kt">false</span><span class="o">,</span><span class="s">&quot;weight&quot;</span><span class="k">:</span><span class="err">1</span><span class="kt">.</span><span class="err">0</span><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>It looks exactly like <code>Reads[T]</code> except a few things, isn&#8217;t it?<br/>
-Let&#8217;s explain a bit (by copying Reads article changing just a few things… I&#8217;m lazy ;)):</p>
-
-<h5><code>import play.api.libs.json.Writes._</code></h5>
-
-<p>It imports only the required stuff for <code>Writes[T]</code> without interfering with other imports.</p>
-
-<br/>
-
-
-<h5><code>(__ \ "name").write[String]</code></h5>
-
-<p>You apply <code>write[String]</code> on this JsPath (exactly the same as <code>Reads</code>)</p>
-
-<br/>
-
-
-<h5><code>and</code> is just an operator meaning <code>Writes[A] and Writes[B] =&gt; Builder[Writes[A ~ B]]</code></h5>
-
-<ul>
-<li><code>A ~ B</code> just means <code>Combine A and B</code> but it doesn&#8217;t suppose the way it is combined (can be a tuple, an object, whatever…)</li>
-<li><code>Builder</code> is not a real type but I introduce it just to tell that the operator <code>and</code> doesn&#8217;t create directly a <code>Writes[A ~ B]</code> but an intermediate structure that is able to build a <code>Writes[A ~ B]</code> or to combine with another <code>Writes[C]</code></li>
-</ul>
-
-
-<br/>   
-
-
-<h5><code>(…)(unlift(Creature.unapply))</code> builds a <code>Writes[Creature]</code></h5>
-
-<ul>
-<li><code>(__ \ "name").write[String] and (__ \ "isDead").write[Boolean] and (__ \ "weight").write[Float]</code> builds a <code>Builder[Writes[String ~ Boolean ~ Float])]</code> but you want a <code>Writes[Creature]</code>.</li>
-<li>So you apply the <code>Builder[Writes[String ~ Boolean ~ String])]</code> to a function <code>Creature =&gt; (String, Boolean, Float)</code> to finally obtain a <code>Writes[Creature]</code>. Please note that it may seem a bit strange to provide <code>Creature =&gt; (String, Boolean, Float)</code> to obtain a <code>Writes[Creature]</code> from a <code>Builder[Writes[String ~ Boolean ~ String])]</code> but it&#8217;s due to the contravariant nature of <code>Writes[-T]</code>.</li>
-<li>We have <code>Creature.unapply</code> but its signature is <code>Creature =&gt; Option[(String, Boolean, Float)]</code> so we <code>unlift</code> it to obtain <code>Creature =&gt; (String, Boolean, Float)</code>.</li>
-</ul>
-
-
-<br/>
-
-
-<blockquote><p>The only thing you have to keep in mind is this <code>unlift</code> call which might not be natural at first sight!</p></blockquote>
-
-<p>As you can deduce by yourself, the <code>Writes[T]</code> is far easier than the <code>Reads[T]</code> case because when writing, it doesn&#8217;t try to validate so there is no error management at all.</p>
-
-<p>Moreover, due to this, you have to keep in mind that operators provided for <code>Writes[T]</code> are not as rich as for <code>Reads[T]</code>. Do you remind <code>keepAnd</code> and <code>andKeep</code> operators?  They don&#8217;t have any meaning for <code>Writes[T]</code>. When writing <code>A~B</code>, you write <code>A and B</code> but not <code>only A or only B</code>. So <code>and</code> is the only operators provided for <code>Writes[T]</code>.</p>
-
-<h3>Complexifying the case</h3>
-
-<p>Let&#8217;s go back to our more complex sample used in end of Part1.
-Remember that we had imagined that our creature was modelled as following:</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">Creature</span><span class="o">(</span>
-</span><span class='line'>  <span class="n">name</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span>
-</span><span class='line'>  <span class="n">isDead</span><span class="k">:</span> <span class="kt">Boolean</span><span class="o">,</span>
-</span><span class='line'>  <span class="n">weight</span><span class="k">:</span> <span class="kt">Float</span><span class="o">,</span>
-</span><span class='line'>  <span class="n">email</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="c1">// email format and minLength(5)</span>
-</span><span class='line'>  <span class="n">favorites</span><span class="k">:</span> <span class="o">(</span><span class="kt">String</span><span class="o">,</span> <span class="kt">Int</span><span class="o">),</span> <span class="c1">// the stupid favorites</span>
-</span><span class='line'>  <span class="n">friends</span><span class="k">:</span> <span class="kt">List</span><span class="o">[</span><span class="kt">Creature</span><span class="o">]</span> <span class="k">=</span> <span class="nc">Nil</span><span class="o">,</span> <span class="c1">// yes by default it has no friend</span>
-</span><span class='line'>  <span class="n">social</span><span class="k">:</span> <span class="kt">Option</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="k">=</span> <span class="nc">None</span> <span class="c1">// by default, it&#39;s not social</span>
-</span><span class='line'><span class="o">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Let&#8217;s write corresponding <code>Writes[Creature]</code></p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// IMPORTANT import this to have the required tools in your scope</span>
-</span><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json._</span>
-</span><span class='line'><span class="c1">// imports required functional generic structures</span>
-</span><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json.util._</span>
-</span><span class='line'><span class="c1">// imports implicit structure for Writes only (always try to import only what you need)</span>
-</span><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json.Writes._</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">implicit</span> <span class="k">val</span> <span class="n">creatureWrites</span><span class="k">:</span> <span class="kt">Writes</span><span class="o">[</span><span class="kt">Creature</span><span class="o">]</span> <span class="k">=</span> <span class="o">(</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;name&quot;</span><span class="o">).</span><span class="n">write</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="n">and</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;isDead&quot;</span><span class="o">).</span><span class="n">write</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span> <span class="n">and</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;weight&quot;</span><span class="o">).</span><span class="n">write</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span> <span class="n">and</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;email&quot;</span><span class="o">).</span><span class="n">write</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="n">and</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;favorites&quot;</span><span class="o">).</span><span class="n">write</span><span class="o">(</span>
-</span><span class='line'>      <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;string&quot;</span><span class="o">).</span><span class="n">write</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="n">and</span>
-</span><span class='line'>      <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;number&quot;</span><span class="o">).</span><span class="n">write</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span>
-</span><span class='line'>      <span class="n">tupled</span>
-</span><span class='line'>  <span class="o">)</span> <span class="n">and</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;friends&quot;</span><span class="o">).</span><span class="n">lazyWrite</span><span class="o">(</span><span class="nc">Writes</span><span class="o">.</span><span class="n">traversableWrites</span><span class="o">[</span><span class="kt">Creature</span><span class="o">](</span><span class="n">creatureWrites</span><span class="o">))</span> <span class="n">and</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;social&quot;</span><span class="o">).</span><span class="n">write</span><span class="o">[</span><span class="kt">Option</span><span class="o">[</span><span class="kt">String</span><span class="o">]]</span>
-</span><span class='line'><span class="o">)(</span><span class="n">unlift</span><span class="o">(</span><span class="nc">Creature</span><span class="o">.</span><span class="n">unapply</span><span class="o">))</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">val</span> <span class="n">gizmo</span> <span class="k">=</span> <span class="nc">Creature</span><span class="o">(</span><span class="s">&quot;gremlins&quot;</span><span class="o">,</span> <span class="kc">false</span><span class="o">,</span> <span class="mf">1.0F</span><span class="o">,</span> <span class="s">&quot;gizmo@midnight.com&quot;</span><span class="o">,</span> <span class="o">(</span><span class="s">&quot;alpha&quot;</span><span class="o">,</span> <span class="mi">85</span><span class="o">),</span> <span class="nc">List</span><span class="o">(),</span> <span class="nc">Some</span><span class="o">(</span><span class="s">&quot;@gizmo&quot;</span><span class="o">))</span>
-</span><span class='line'><span class="k">val</span> <span class="n">gizmojs</span> <span class="k">=</span> <span class="nc">Json</span><span class="o">.</span><span class="n">toJson</span><span class="o">(</span><span class="n">gizmo</span><span class="o">)</span>
-</span><span class='line'><span class="n">gizmojs</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsValue</span> <span class="o">=</span> <span class="o">{</span><span class="s">&quot;name&quot;</span><span class="k">:</span><span class="err">&quot;</span><span class="kt">gremlins</span><span class="err">&quot;</span><span class="o">,</span><span class="s">&quot;isDead&quot;</span><span class="k">:</span><span class="kt">false</span><span class="o">,</span><span class="s">&quot;weight&quot;</span><span class="k">:</span><span class="err">1</span><span class="kt">.</span><span class="err">0</span><span class="o">,</span><span class="s">&quot;email&quot;</span><span class="k">:</span><span class="err">&quot;</span><span class="kt">gizmo@midnight.com</span><span class="err">&quot;</span><span class="o">,</span><span class="s">&quot;favorites&quot;</span><span class="k">:</span><span class="o">{</span><span class="err">&quot;</span><span class="kt">string</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">alpha</span><span class="err">&quot;</span><span class="o">,</span><span class="err">&quot;</span><span class="kt">number</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">85</span><span class="o">},</span><span class="s">&quot;friends&quot;</span><span class="k">:</span><span class="err">[]</span><span class="o">,</span><span class="s">&quot;social&quot;</span><span class="k">:</span><span class="err">&quot;</span><span class="kt">@gizmo</span><span class="err">&quot;</span><span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">val</span> <span class="n">zombie</span> <span class="k">=</span> <span class="nc">Creature</span><span class="o">(</span><span class="s">&quot;zombie&quot;</span><span class="o">,</span> <span class="kc">true</span><span class="o">,</span> <span class="mf">100.0F</span><span class="o">,</span> <span class="s">&quot;shaun@dead.com&quot;</span><span class="o">,</span> <span class="o">(</span><span class="s">&quot;ain&quot;</span><span class="o">,</span> <span class="mi">2</span><span class="o">),</span> <span class="nc">List</span><span class="o">(</span><span class="n">gizmo</span><span class="o">),</span> <span class="nc">None</span><span class="o">)</span>
-</span><span class='line'><span class="k">val</span> <span class="n">zombiejs</span> <span class="k">=</span> <span class="nc">Json</span><span class="o">.</span><span class="n">toJson</span><span class="o">(</span><span class="n">zombie</span><span class="o">)</span>
-</span><span class='line'><span class="n">zombiejs</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsValue</span> <span class="o">=</span> <span class="o">{</span><span class="s">&quot;name&quot;</span><span class="k">:</span><span class="err">&quot;</span><span class="kt">zombie</span><span class="err">&quot;</span><span class="o">,</span><span class="s">&quot;isDead&quot;</span><span class="k">:</span><span class="kt">true</span><span class="o">,</span><span class="s">&quot;weight&quot;</span><span class="k">:</span><span class="err">100</span><span class="kt">.</span><span class="err">0</span><span class="o">,</span><span class="s">&quot;email&quot;</span><span class="k">:</span><span class="err">&quot;</span><span class="kt">shaun@dead.com</span><span class="err">&quot;</span><span class="o">,</span><span class="s">&quot;favorites&quot;</span><span class="k">:</span><span class="o">{</span><span class="err">&quot;</span><span class="kt">string</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">ain</span><span class="err">&quot;</span><span class="o">,</span><span class="err">&quot;</span><span class="kt">number</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">2</span><span class="o">},</span><span class="s">&quot;friends&quot;</span><span class="k">:</span><span class="err">[</span><span class="o">{</span><span class="err">&quot;</span><span class="kt">name</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">gremlins</span><span class="err">&quot;</span><span class="o">,</span><span class="err">&quot;</span><span class="kt">isDead</span><span class="err">&quot;</span><span class="kt">:false</span><span class="o">,</span><span class="s">&quot;weight&quot;</span><span class="k">:</span><span class="err">1</span><span class="kt">.</span><span class="err">0</span><span class="o">,</span><span class="s">&quot;email&quot;</span><span class="k">:</span><span class="err">&quot;</span><span class="kt">gizmo@midnight.com</span><span class="err">&quot;</span><span class="o">,</span><span class="s">&quot;favorites&quot;</span><span class="k">:</span><span class="o">{</span><span class="err">&quot;</span><span class="kt">string</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">alpha</span><span class="err">&quot;</span><span class="o">,</span><span class="err">&quot;</span><span class="kt">number</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">85</span><span class="o">},</span><span class="s">&quot;friends&quot;</span><span class="k">:</span><span class="err">[]</span><span class="o">,</span><span class="s">&quot;social&quot;</span><span class="k">:</span><span class="err">&quot;</span><span class="kt">@gizmo</span><span class="err">&quot;</span><span class="o">}</span><span class="err">]</span><span class="o">,</span><span class="s">&quot;social&quot;</span><span class="k">:</span><span class="kt">null</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>You can see that it&#8217;s quite straightforward. it&#8217;s far easier than <code>Reads[T]</code> as there are no special operator.
-Here are the few things to explain:</p>
-
-<h5><code>(__ \ "favorites").write(…)</code></h5>
-
-<pre><code>(__ \ "string").write[String] and
-(__ \ "number").write[Int]
-tupled
-</code></pre>
-
-<ul>
-<li>Remember that <code>(__ \ "string").write[String](…) and (__ \ "number").write[Int](…) =&gt; Builder[Writes[String ~ Int]]</code></li>
-<li>What means <code>tupled</code> ? as for <code>Reads[T]</code>, it <em>&#8220;tuplizes&#8221;</em> your Builder: <code>Builder[Writes[A ~ B]].tupled =&gt; Writes[(A, B)]</code></li>
-</ul>
-
-
-<br/>
-
-
-<h5><code>(__ \ "friend").lazyWrite(Writes.traversableWrites[Creature](creatureWrites))</code></h5>
-
-<p>It&#8217;s the symmetric code for <code>lazyRead</code> to treat recursive field on <code>Creature</code> class itself:</p>
-
-<ul>
-<li><code>Writes.traversableWrites[Creature](creatureWrites)</code> creates a <code>Writes[Traversable[Creature]]</code> passing the <code>Writes[Creature]</code> itself for recursion (please note that a <code>list[Creature]</code>should appear very soon ;))</li>
-<li><code>(__ \ "friends").lazyWrite[A](r: =&gt; Writes[A]))</code> : <code>lazyWrite</code> expects a <code>Writes[A]</code> value <em>passed by name</em> to allow the type recursive construction. This is the only refinement that you must keep in mind in this very special recursive case.</li>
-</ul>
-
-
-<blockquote><p>FYI, you may wonder why <code>Writes.traversableWrites[Creature]: Writes[Traversable[Creature]]</code> can replace <code>Writes[List[Creature]]</code>?<br/>
-This is because <code>Writes[-T]</code> is contravariant meaning: if you can write a <code>Traversable[Creature]</code>, you can write a <code>List[Creature]</code> as <code>List</code> inherits <code>Traversable</code> (relation of inheritance is reverted by contravariance).</p></blockquote>
-
-<h2><a name="format">What about combinators for Format?</a></h2>
-
-<p>Remember in Play2.1, there was a feature called <code>Format[T] extends Reads[T] with Writes[T]</code>.<br/>
-It mixed <code>Reads[T]</code> and <code>Writes[T]</code> together to provide serialization/deserialization at the same place.</p>
-
-<p>Play2.1 provide combinators for <code>Reads[T]</code> and <code>Writes[T]</code>. What about combinators for <code>Format[T]</code> ?</p>
-
-<p>Let&#8217;s go back to our very simple sample:</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">Creature</span><span class="o">(</span>
-</span><span class='line'>  <span class="n">name</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span>
-</span><span class='line'>  <span class="n">isDead</span><span class="k">:</span> <span class="kt">Boolean</span><span class="o">,</span>
-</span><span class='line'>  <span class="n">weight</span><span class="k">:</span> <span class="kt">Float</span>
-</span><span class='line'><span class="o">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Here is how you write the <code>Reads[Creature]</code>:</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json.util._</span>
-</span><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json.Reads._</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">val</span> <span class="n">creatureReads</span> <span class="k">=</span> <span class="o">(</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;name&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="n">and</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;isDead&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span> <span class="n">and</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;weight&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span>
-</span><span class='line'><span class="o">)(</span><span class="nc">Creature</span><span class="o">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<blockquote><p>Please remark that I didn&#8217;t use <code>implicit</code> so that there is no implicit <code>Reads[Creature]</code> in the context when I&#8217;ll define <code>Format[T]</code></p></blockquote>
-
-<p>Here is how you write the <code>Writes[Creature]</code>:</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json.util._</span>
-</span><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json.Writes._</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">val</span> <span class="n">creatureWrites</span> <span class="k">=</span> <span class="o">(</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;name&quot;</span><span class="o">).</span><span class="n">write</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="n">and</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;isDead&quot;</span><span class="o">).</span><span class="n">write</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span> <span class="n">and</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;weight&quot;</span><span class="o">).</span><span class="n">write</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span>
-</span><span class='line'><span class="o">)(</span><span class="n">unlift</span><span class="o">(</span><span class="nc">Creature</span><span class="o">.</span><span class="n">unapply</span><span class="o">))</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h3>How to gather both Reads/Writes to create a <code>Format[Creature]</code>?</h3>
-
-<h4><a name="format-1">1st way = create from existing reads/writes</a></h4>
-
-<p>You can reuse existing <code>Reads[T]</code> and <code>Writes[T]</code> to create a <code>Format[T]</code> as following:</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">implicit</span> <span class="k">val</span> <span class="n">creatureFormat</span> <span class="k">=</span> <span class="nc">Format</span><span class="o">(</span><span class="n">creatureReads</span><span class="o">,</span> <span class="n">creatureWrites</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">val</span> <span class="n">gizmojs</span> <span class="k">=</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span>
-</span><span class='line'>  <span class="s">&quot;name&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;gremlins&quot;</span><span class="o">,</span>
-</span><span class='line'>  <span class="s">&quot;isDead&quot;</span> <span class="o">-&gt;</span> <span class="kc">false</span><span class="o">,</span>
-</span><span class='line'>  <span class="s">&quot;weight&quot;</span> <span class="o">-&gt;</span> <span class="mf">1.0F</span>
-</span><span class='line'><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">val</span> <span class="n">gizmo</span> <span class="k">=</span> <span class="nc">Creature</span><span class="o">(</span><span class="s">&quot;gremlins&quot;</span><span class="o">,</span> <span class="kc">false</span><span class="o">,</span> <span class="mf">1.0F</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">assert</span><span class="o">(</span><span class="nc">Json</span><span class="o">.</span><span class="n">fromJson</span><span class="o">[</span><span class="kt">Creature</span><span class="o">](</span><span class="n">gizmojs</span><span class="o">).</span><span class="n">get</span> <span class="o">==</span> <span class="n">gizmo</span><span class="o">)</span>
-</span><span class='line'><span class="n">assert</span><span class="o">(</span><span class="nc">Json</span><span class="o">.</span><span class="n">toJson</span><span class="o">(</span><span class="n">gizmo</span><span class="o">)</span> <span class="o">==</span> <span class="n">gizmojs</span><span class="o">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h4><a name="format-2">2nd way = create using combinators</a></h4>
-
-<p>We have Reads and Writes combinators, isn&#8217;t it?<br/>
-Play2.1 also provides <strong>Format Combinators</strong> due to the magic of functional programming (actually it&#8217;s not magic, it&#8217;s just pure functional programming;) )</p>
-
-<p>As usual, code 1st:</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json.util._</span>
-</span><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json.Format._</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">implicit</span> <span class="k">val</span> <span class="n">creatureFormat</span> <span class="k">=</span> <span class="o">(</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;name&quot;</span><span class="o">).</span><span class="n">format</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="n">and</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;isDead&quot;</span><span class="o">).</span><span class="n">format</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span> <span class="n">and</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;weight&quot;</span><span class="o">).</span><span class="n">format</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span>
-</span><span class='line'><span class="o">)(</span><span class="nc">Creature</span><span class="o">.</span><span class="n">apply</span><span class="o">,</span> <span class="n">unlift</span><span class="o">(</span><span class="nc">Creature</span><span class="o">.</span><span class="n">unapply</span><span class="o">))</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">val</span> <span class="n">gizmojs</span> <span class="k">=</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span>
-</span><span class='line'>  <span class="s">&quot;name&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;gremlins&quot;</span><span class="o">,</span>
-</span><span class='line'>  <span class="s">&quot;isDead&quot;</span> <span class="o">-&gt;</span> <span class="kc">false</span><span class="o">,</span>
-</span><span class='line'>  <span class="s">&quot;weight&quot;</span> <span class="o">-&gt;</span> <span class="mf">1.0F</span>
-</span><span class='line'><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">val</span> <span class="n">gizmo</span> <span class="k">=</span> <span class="nc">Creature</span><span class="o">(</span><span class="s">&quot;gremlins&quot;</span><span class="o">,</span> <span class="kc">false</span><span class="o">,</span> <span class="mf">1.0F</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">assert</span><span class="o">(</span><span class="nc">Json</span><span class="o">.</span><span class="n">fromJson</span><span class="o">[</span><span class="kt">Creature</span><span class="o">](</span><span class="n">gizmojs</span><span class="o">).</span><span class="n">get</span> <span class="o">==</span> <span class="n">gizmo</span><span class="o">)</span>
-</span><span class='line'><span class="n">assert</span><span class="o">(</span><span class="nc">Json</span><span class="o">.</span><span class="n">toJson</span><span class="o">(</span><span class="n">gizmo</span><span class="o">)</span> <span class="o">==</span> <span class="n">gizmojs</span><span class="o">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Nothing too strange…</p>
-
-<h5><code>(__ \ "name").format[String]</code></h5>
-
-<p>It creates a format[String] reading/writing at the given <code>JsPath</code></p>
-
-<br/>
-
-
-<h5><code>( )(Creature.apply, unlift(Creature.unapply))</code></h5>
-
-<p>To map to a Scala structure:</p>
-
-<ul>
-<li><code>Reads[Creature]</code> requires a function <code>(String, Boolean, Float) =&gt; Creature</code></li>
-<li><code>Writes[Creature]</code> requires a function <code>Creature =&gt; (String, Boolean, Float)</code></li>
-</ul>
-
-
-<p>So as <code>Format[Creature] extends Reads[Creature] with Writes[Creature]</code> we provide <code>Creature.apply</code> and <code>unlift(Creature.unapply)</code> and that&#8217;s all folks&#8230;</p>
-
-<h2><a name="format">More complex case</a></h2>
-
-<p>The previous sample is a bit dumb because the structure is really simple and because reading/writing is symmetric. We have:</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="nc">Json</span><span class="o">.</span><span class="n">fromJson</span><span class="o">[</span><span class="kt">Creature</span><span class="o">](</span><span class="nc">Json</span><span class="o">.</span><span class="n">toJson</span><span class="o">(</span><span class="n">creature</span><span class="o">))</span> <span class="o">==</span> <span class="n">creature</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>In this case, you read what you write and vis versa. So you can use the very simple <code>JsPath.format[T]</code> functions which build both <code>Reads[T]</code> and <code>Writes[T]</code> together.</p>
-
-<p>But if we take our usual more complicated case class, how to write the <code>Format[T]</code>?</p>
-
-<p>Remind the code:</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-<span class='line-number'>31</span>
-<span class='line-number'>32</span>
-<span class='line-number'>33</span>
-<span class='line-number'>34</span>
-<span class='line-number'>35</span>
-<span class='line-number'>36</span>
-<span class='line-number'>37</span>
-<span class='line-number'>38</span>
-<span class='line-number'>39</span>
-<span class='line-number'>40</span>
-<span class='line-number'>41</span>
-<span class='line-number'>42</span>
-<span class='line-number'>43</span>
-<span class='line-number'>44</span>
-<span class='line-number'>45</span>
-<span class='line-number'>46</span>
-<span class='line-number'>47</span>
-<span class='line-number'>48</span>
-<span class='line-number'>49</span>
-<span class='line-number'>50</span>
-<span class='line-number'>51</span>
-<span class='line-number'>52</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json._</span>
-</span><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json.util._</span>
-</span><span class='line'>
-</span><span class='line'><span class="c1">// The case class</span>
-</span><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">Creature</span><span class="o">(</span>
-</span><span class='line'>  <span class="n">name</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span>
-</span><span class='line'>  <span class="n">isDead</span><span class="k">:</span> <span class="kt">Boolean</span><span class="o">,</span>
-</span><span class='line'>  <span class="n">weight</span><span class="k">:</span> <span class="kt">Float</span><span class="o">,</span>
-</span><span class='line'>  <span class="n">email</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="c1">// email format and minLength(5)</span>
-</span><span class='line'>  <span class="n">favorites</span><span class="k">:</span> <span class="o">(</span><span class="kt">String</span><span class="o">,</span> <span class="kt">Int</span><span class="o">),</span> <span class="c1">// the stupid favorites</span>
-</span><span class='line'>  <span class="n">friends</span><span class="k">:</span> <span class="kt">List</span><span class="o">[</span><span class="kt">Creature</span><span class="o">]</span> <span class="k">=</span> <span class="nc">Nil</span><span class="o">,</span> <span class="c1">// yes by default it has no friend</span>
-</span><span class='line'>  <span class="n">social</span><span class="k">:</span> <span class="kt">Option</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="k">=</span> <span class="nc">None</span> <span class="c1">// by default, it&#39;s not social</span>
-</span><span class='line'><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">import</span> <span class="nn">play.api.data.validation.ValidationError</span>
-</span><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json.Reads._</span>
-</span><span class='line'>
-</span><span class='line'><span class="c1">// defines a custom reads to be reused</span>
-</span><span class='line'><span class="c1">// a reads that verifies your value is not equal to a give value</span>
-</span><span class='line'><span class="k">def</span> <span class="n">notEqualReads</span><span class="o">[</span><span class="kt">T</span><span class="o">](</span><span class="n">v</span><span class="k">:</span> <span class="kt">T</span><span class="o">)(</span><span class="k">implicit</span> <span class="n">r</span><span class="k">:</span> <span class="kt">Reads</span><span class="o">[</span><span class="kt">T</span><span class="o">])</span><span class="k">:</span> <span class="kt">Reads</span><span class="o">[</span><span class="kt">T</span><span class="o">]</span> <span class="k">=</span> <span class="nc">Reads</span><span class="o">.</span><span class="n">filterNot</span><span class="o">(</span><span class="nc">ValidationError</span><span class="o">(</span><span class="s">&quot;validate.error.unexpected.value&quot;</span><span class="o">,</span> <span class="n">v</span><span class="o">))(</span> <span class="k">_</span> <span class="o">==</span> <span class="n">v</span> <span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">def</span> <span class="n">skipReads</span><span class="o">(</span><span class="k">implicit</span> <span class="n">r</span><span class="k">:</span> <span class="kt">Reads</span><span class="o">[</span><span class="kt">String</span><span class="o">])</span><span class="k">:</span> <span class="kt">Reads</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="k">=</span> <span class="n">r</span><span class="o">.</span><span class="n">map</span><span class="o">(</span> <span class="k">_</span><span class="o">.</span><span class="n">substring</span><span class="o">(</span><span class="mi">2</span><span class="o">)</span> <span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">val</span> <span class="n">creatureReads</span><span class="k">:</span> <span class="kt">Reads</span><span class="o">[</span><span class="kt">Creature</span><span class="o">]</span> <span class="k">=</span> <span class="o">(</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;name&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="n">and</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;isDead&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span> <span class="n">and</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;weight&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span> <span class="n">and</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;email&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">(</span><span class="n">email</span> <span class="n">keepAnd</span> <span class="n">minLength</span><span class="o">[</span><span class="kt">String</span><span class="o">](</span><span class="mi">5</span><span class="o">))</span> <span class="n">and</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;favorites&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">(</span>
-</span><span class='line'>      <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;string&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">](</span> <span class="n">notEqualReads</span><span class="o">(</span><span class="s">&quot;ni&quot;</span><span class="o">)</span> <span class="n">andKeep</span> <span class="n">skipReads</span> <span class="o">)</span> <span class="n">and</span>
-</span><span class='line'>      <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;number&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Int</span><span class="o">](</span> <span class="n">max</span><span class="o">(</span><span class="mi">86</span><span class="o">)</span> <span class="n">or</span> <span class="n">min</span><span class="o">(</span><span class="mi">875</span><span class="o">)</span> <span class="o">)</span>
-</span><span class='line'>      <span class="n">tupled</span>
-</span><span class='line'>  <span class="o">)</span> <span class="n">and</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;friends&quot;</span><span class="o">).</span><span class="n">lazyRead</span><span class="o">(</span> <span class="n">list</span><span class="o">[</span><span class="kt">Creature</span><span class="o">](</span><span class="n">creatureReads</span><span class="o">)</span> <span class="o">)</span> <span class="n">and</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;social&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">(</span><span class="n">optional</span><span class="o">[</span><span class="kt">String</span><span class="o">])</span>
-</span><span class='line'><span class="o">)(</span><span class="nc">Creature</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json.Writes._</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">val</span> <span class="n">creatureWrites</span><span class="k">:</span> <span class="kt">Writes</span><span class="o">[</span><span class="kt">Creature</span><span class="o">]</span> <span class="k">=</span> <span class="o">(</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;name&quot;</span><span class="o">).</span><span class="n">write</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="n">and</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;isDead&quot;</span><span class="o">).</span><span class="n">write</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span> <span class="n">and</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;weight&quot;</span><span class="o">).</span><span class="n">write</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span> <span class="n">and</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;email&quot;</span><span class="o">).</span><span class="n">write</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="n">and</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;favorites&quot;</span><span class="o">).</span><span class="n">write</span><span class="o">(</span>
-</span><span class='line'>      <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;string&quot;</span><span class="o">).</span><span class="n">write</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="n">and</span>
-</span><span class='line'>      <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;number&quot;</span><span class="o">).</span><span class="n">write</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span>
-</span><span class='line'>      <span class="n">tupled</span>
-</span><span class='line'>  <span class="o">)</span> <span class="n">and</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;friends&quot;</span><span class="o">).</span><span class="n">lazyWrite</span><span class="o">(</span><span class="nc">Writes</span><span class="o">.</span><span class="n">traversableWrites</span><span class="o">[</span><span class="kt">Creature</span><span class="o">](</span><span class="n">creatureWrites</span><span class="o">))</span> <span class="n">and</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;social&quot;</span><span class="o">).</span><span class="n">write</span><span class="o">[</span><span class="kt">Option</span><span class="o">[</span><span class="kt">String</span><span class="o">]]</span>
-</span><span class='line'><span class="o">)(</span><span class="n">unlift</span><span class="o">(</span><span class="nc">Creature</span><span class="o">.</span><span class="n">unapply</span><span class="o">))</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>As you can see, <code>creatureReads</code> and <code>creatureWrites</code> are not exactly symmetric and couldn&#8217;t be merged in one single <code>Format[Creature]</code> as done previously.</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="nc">Json</span><span class="o">.</span><span class="n">fromJson</span><span class="o">[</span><span class="kt">Creature</span><span class="o">](</span><span class="nc">Json</span><span class="o">.</span><span class="n">toJson</span><span class="o">(</span><span class="n">creature</span><span class="o">))</span> <span class="o">!=</span> <span class="n">creature</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Hopefully, as done previously, we can build a <code>Format[T]</code> from a <code>Reads[T]</code> and a <code>Writes[T]</code>.</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-<span class='line-number'>31</span>
-<span class='line-number'>32</span>
-<span class='line-number'>33</span>
-<span class='line-number'>34</span>
-<span class='line-number'>35</span>
-<span class='line-number'>36</span>
-<span class='line-number'>37</span>
-<span class='line-number'>38</span>
-<span class='line-number'>39</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">implicit</span> <span class="k">val</span> <span class="n">creatureFormat</span><span class="k">:</span> <span class="kt">Format</span><span class="o">[</span><span class="kt">Creature</span><span class="o">]</span> <span class="k">=</span> <span class="nc">Format</span><span class="o">(</span><span class="n">creatureReads</span><span class="o">,</span> <span class="n">creatureWrites</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'><span class="c1">// Testing Serialization of Creature to Json</span>
-</span><span class='line'><span class="k">val</span> <span class="n">gizmo</span> <span class="k">=</span> <span class="nc">Creature</span><span class="o">(</span><span class="s">&quot;gremlins&quot;</span><span class="o">,</span> <span class="kc">false</span><span class="o">,</span> <span class="mf">1.0F</span><span class="o">,</span> <span class="s">&quot;gizmo@midnight.com&quot;</span><span class="o">,</span> <span class="o">(</span><span class="s">&quot;alpha&quot;</span><span class="o">,</span> <span class="mi">85</span><span class="o">),</span> <span class="nc">List</span><span class="o">(),</span> <span class="nc">Some</span><span class="o">(</span><span class="s">&quot;@gizmo&quot;</span><span class="o">))</span>
-</span><span class='line'><span class="k">val</span> <span class="n">zombie</span> <span class="k">=</span> <span class="nc">Creature</span><span class="o">(</span><span class="s">&quot;zombie&quot;</span><span class="o">,</span> <span class="kc">true</span><span class="o">,</span> <span class="mf">100.0F</span><span class="o">,</span> <span class="s">&quot;shaun@dead.com&quot;</span><span class="o">,</span> <span class="o">(</span><span class="s">&quot;ain&quot;</span><span class="o">,</span> <span class="mi">2</span><span class="o">),</span> <span class="nc">List</span><span class="o">(</span><span class="n">gizmo</span><span class="o">),</span> <span class="nc">None</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">val</span> <span class="n">zombiejs</span> <span class="k">=</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span>
-</span><span class='line'>  <span class="s">&quot;name&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;zombie&quot;</span><span class="o">,</span>
-</span><span class='line'>  <span class="s">&quot;isDead&quot;</span> <span class="o">-&gt;</span> <span class="kc">true</span><span class="o">,</span>
-</span><span class='line'>  <span class="s">&quot;weight&quot;</span> <span class="o">-&gt;</span> <span class="mf">100.0</span><span class="o">,</span>
-</span><span class='line'>  <span class="s">&quot;email&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;shaun@dead.com&quot;</span><span class="o">,</span>
-</span><span class='line'>  <span class="s">&quot;favorites&quot;</span> <span class="o">-&gt;</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span>
-</span><span class='line'>      <span class="s">&quot;string&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;ain&quot;</span><span class="o">,</span>
-</span><span class='line'>      <span class="s">&quot;number&quot;</span> <span class="o">-&gt;</span> <span class="mi">2</span>
-</span><span class='line'>  <span class="o">),</span>
-</span><span class='line'>  <span class="s">&quot;friends&quot;</span> <span class="o">-&gt;</span> <span class="nc">Json</span><span class="o">.</span><span class="n">arr</span><span class="o">(</span>
-</span><span class='line'>      <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span>
-</span><span class='line'>          <span class="s">&quot;name&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;gremlins&quot;</span><span class="o">,</span>
-</span><span class='line'>          <span class="s">&quot;isDead&quot;</span> <span class="o">-&gt;</span> <span class="kc">false</span><span class="o">,</span>
-</span><span class='line'>          <span class="s">&quot;weight&quot;</span> <span class="o">-&gt;</span> <span class="mf">1.0</span><span class="o">,</span>
-</span><span class='line'>          <span class="s">&quot;email&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;gizmo@midnight.com&quot;</span><span class="o">,</span>
-</span><span class='line'>          <span class="s">&quot;favorites&quot;</span> <span class="o">-&gt;</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span>
-</span><span class='line'>              <span class="s">&quot;string&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;alpha&quot;</span><span class="o">,</span>
-</span><span class='line'>              <span class="s">&quot;number&quot;</span> <span class="o">-&gt;</span> <span class="mi">85</span>
-</span><span class='line'>          <span class="o">),</span>
-</span><span class='line'>          <span class="s">&quot;friends&quot;</span> <span class="o">-&gt;</span> <span class="nc">Json</span><span class="o">.</span><span class="n">arr</span><span class="o">(),</span>
-</span><span class='line'>          <span class="s">&quot;social&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;@gizmo&quot;</span>
-</span><span class='line'>      <span class="o">)</span>
-</span><span class='line'>  <span class="o">),</span>
-</span><span class='line'>  <span class="s">&quot;social&quot;</span> <span class="o">-&gt;</span> <span class="nc">JsNull</span>
-</span><span class='line'><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">assert</span><span class="o">(</span><span class="nc">Json</span><span class="o">.</span><span class="n">toJson</span><span class="o">(</span><span class="n">zombie</span><span class="o">)</span> <span class="o">==</span> <span class="n">zombiejs</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'><span class="c1">// Testing Deserialization of JSON to Creature (note the dissymetric reading)</span>
-</span><span class='line'><span class="k">val</span> <span class="n">gizmo2</span> <span class="k">=</span> <span class="nc">Creature</span><span class="o">(</span><span class="s">&quot;gremlins&quot;</span><span class="o">,</span> <span class="kc">false</span><span class="o">,</span> <span class="mf">1.0F</span><span class="o">,</span> <span class="s">&quot;gizmo@midnight.com&quot;</span><span class="o">,</span> <span class="o">(</span><span class="s">&quot;pha&quot;</span><span class="o">,</span> <span class="mi">85</span><span class="o">),</span> <span class="nc">List</span><span class="o">(),</span> <span class="nc">Some</span><span class="o">(</span><span class="s">&quot;@gizmo&quot;</span><span class="o">))</span>
-</span><span class='line'><span class="k">val</span> <span class="n">zombie2</span> <span class="k">=</span> <span class="nc">Creature</span><span class="o">(</span><span class="s">&quot;zombie&quot;</span><span class="o">,</span> <span class="kc">true</span><span class="o">,</span> <span class="mf">100.0F</span><span class="o">,</span> <span class="s">&quot;shaun@dead.com&quot;</span><span class="o">,</span> <span class="o">(</span><span class="s">&quot;n&quot;</span><span class="o">,</span> <span class="mi">2</span><span class="o">),</span> <span class="nc">List</span><span class="o">(</span><span class="n">gizmo2</span><span class="o">),</span> <span class="nc">None</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">assert</span><span class="o">(</span><span class="nc">Json</span><span class="o">.</span><span class="n">fromJson</span><span class="o">[</span><span class="kt">Creature</span><span class="o">](</span><span class="n">zombiejs</span><span class="o">).</span><span class="n">get</span> <span class="o">==</span> <span class="n">zombie2</span><span class="o">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-
-
-<br/>
-
-
-<br/>
-
-
-<h2><a name="conclusion">Conclusion &amp; much more…</a></h2>
-
-<p>So here is the end of this 2nd part.</p>
-
-<blockquote><p>Json combinator is cool!<br/>
-Now what about transforming Json into Json???<br/>
-Why would you need this?<br/>
-Hmmm: why not receive JSON, validate/transform it, send it to a managing Json (Mongo for ex or others), read it again from the DB, modify it a bit and send it out…<br/>
-Json &#8220;coast to coast&#8221; without any model class…</p></blockquote>
-
-<p>Let&#8217;s tease a bit:</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">jsonTransform</span> <span class="k">=</span> <span class="o">(</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;key1&quot;</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">pickBranch</span> <span class="n">and</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;key2&quot;</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">pickBranch</span><span class="o">(</span>
-</span><span class='line'>    <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;key22&quot;</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">put</span><span class="o">(</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;key22&quot;</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">pick</span><span class="o">.</span><span class="n">map</span><span class="o">(</span> <span class="n">js</span> <span class="k">=&gt;</span> <span class="n">js</span> <span class="o">\</span> <span class="s">&quot;key221&quot;</span> <span class="o">)</span> <span class="o">)</span> <span class="n">and</span>
-</span><span class='line'>    <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;key23&quot;</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">put</span><span class="o">(</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;key23&quot;</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">pick</span><span class="o">.</span><span class="n">map</span><span class="o">{</span> <span class="k">case</span> <span class="nc">JsString</span><span class="o">(</span><span class="n">s</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="nc">JsString</span><span class="o">(</span><span class="n">s</span> <span class="o">+</span> <span class="s">&quot;123&quot;</span><span class="o">)</span> <span class="o">}</span> <span class="o">)</span>
-</span><span class='line'>    <span class="n">reduce</span>
-</span><span class='line'>  <span class="o">)</span>
-</span><span class='line'><span class="o">)</span> <span class="n">reduce</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">val</span> <span class="n">js</span> <span class="k">=</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span>
-</span><span class='line'>  <span class="s">&quot;key1&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;alpha&quot;</span><span class="o">,</span>
-</span><span class='line'>  <span class="s">&quot;key2&quot;</span> <span class="o">-&gt;</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span><span class="s">&quot;key22&quot;</span> <span class="o">-&gt;</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span><span class="s">&quot;key221&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;beta&quot;</span><span class="o">),</span> <span class="s">&quot;key23&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;gamma&quot;</span><span class="o">),</span>
-</span><span class='line'><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">assert</span><span class="o">(</span><span class="n">js</span><span class="o">.</span><span class="n">validate</span><span class="o">(</span><span class="n">jsonTransform</span><span class="o">),</span> <span class="nc">JsSuccess</span><span class="o">(</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span><span class="s">&quot;key1&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;alpha&quot;</span><span class="o">,</span> <span class="s">&quot;key2&quot;</span> <span class="o">-&gt;</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span> <span class="s">&quot;key22&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;beta&quot;</span><span class="o">,</span> <span class="s">&quot;key23&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;gamma123&quot;</span> <span class="o">)</span> <span class="o">)</span> <span class="o">)</span> <span class="o">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<blockquote><p>Next parts about Json generators/transformers ;)</p></blockquote>
-
-<p>Have fun&#8230;</p>
 ]]></content>
   </entry>
   

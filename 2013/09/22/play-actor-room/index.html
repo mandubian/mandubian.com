@@ -1,0 +1,1024 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Play 2.2 Actor Room: websocket (&more) room manager only with actors - Mandubian Blog</title>
+  <meta name="author" content="Pascal Voitot">
+
+  
+  <meta name="description" content="Play 2.2 Actor Room: Websocket (&more) Room Manager Only With Actors
+    
+    
+      
+        
+
+
+
+
+
+
+
+
+  
+
+
+Sep 22nd, 2013 &hellip;">
+  <meta name="keywords" content="scala,play framework,websocket,actor,akka">
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://www.mandubian.com/2013/09/22/play-actor-room">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/bootstrap/bootstrap.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/stylesheets/bootstrap/responsive.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/stylesheets/syntax/syntax.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/stylesheets/d3d.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <style type="text/css">
+    body {
+      padding-bottom: 40px;
+    }
+    h1 {
+      margin-bottom: 15px;
+    }
+    img {
+      max-width: 100%;
+    }
+    .sharing, .meta, .pager {
+      margin: 20px 0px 20px 0px;
+    }
+    .page-footer p {
+      text-align: center;
+    }
+
+    article {
+      margin-bottom: 50px;
+      border-top: #DDD solid 20px;
+    }
+ 
+  </style>
+  <script src="/javascripts/libs/jquery.js"></script>
+  <script src="/javascripts/libs/modernizr-2.0.js"></script>
+  <script src="/javascripts/libs/bootstrap.js"></script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <link href="/atom.xml" rel="alternate" title="Mandubian Blog" type="application/atom+xml">
+  
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-10417377-11']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   >
+  <nav role="navigation"><div class="navbar">
+  <div class="navbar-inner">
+    <div class="container">
+      <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </a>
+
+      <a class="brand" href="/">Mandubian Blog</a>
+
+      <div class="nav-collapse">
+        <ul class="nav">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+
+        <ul class="nav pull-right" data-subscription="rss">
+          <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+          
+        </ul>
+
+        
+          <form class="pull-right navbar-search" action="http://google.com/search" method="get">
+            <fieldset role="search">
+              <input type="hidden" name="q" value="site:www.mandubian.com" />
+              <input class="search-query" type="text" name="q" results="0" placeholder="Search"/>
+            </fieldset>
+          </form>
+        
+      </div>
+    </div>
+  </div>
+</div>
+</nav>
+  <div class="container">
+    <div class="row-fluid">
+      
+<article class="hentry span9" role="article">
+
+  
+  <header class="page-header">
+    
+      <h1 class="entry-title">Play 2.2 Actor Room: Websocket (&more) Room Manager Only With Actors</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-09-22T17:17:00+02:00" pubdate data-updated="true">Sep 22<span>nd</span>, 2013</time>
+        
+         | <a href="#disqus_thread">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>The code &amp; sample apps can be found on Github <a href="https://github.com/mandubian/play-actor-room">here</a></p>
+
+<br/>
+
+
+
+
+<div class="well">
+<b>Actor-Room</b> makes it easy to:
+
+<ul>
+  <li>create any group of connected entities (people or not) (chatroom, forum, broadcast pivot&#8230;).</li>
+  <li>manage connections, disconnections, broadcast, targetted message through actor and nothing else.</li>
+</ul>
+
+For now, members can be:
+<ul>
+  <li>websocket endpoints through actors without taking care of Iteratees/Enumerators&#8230;</li>
+  <li>Bots to simulate members</li>
+</ul>
+</div>
+
+
+
+
+<br/>
+
+
+<h2>Reminders on websockets in Play</h2>
+
+<p>Here is the function Play provides to create a websocket:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">def</span> <span class="n">async</span><span class="o">[</span><span class="kt">A</span><span class="o">](</span>
+</span><span class='line'>  <span class="n">f</span><span class="k">:</span> <span class="kt">RequestHeader</span> <span class="o">=&gt;</span> <span class="nc">Future</span><span class="o">[(</span><span class="kt">Iteratee</span><span class="o">[</span><span class="kt">A</span>, <span class="k">_</span><span class="o">]</span>, <span class="kt">Enumerator</span><span class="o">[</span><span class="kt">A</span><span class="o">])]</span>
+</span><span class='line'><span class="o">)(</span><span class="k">implicit</span> <span class="n">frameFormatter</span><span class="k">:</span> <span class="kt">FrameFormatter</span><span class="o">[</span><span class="kt">A</span><span class="o">])</span><span class="k">:</span> <span class="kt">WebSocket</span><span class="o">[</span><span class="kt">A</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>A websocket is a persistent bi-directional channel of communication (in/out) and is created with:</p>
+
+<ul>
+<li>an <code>Iteratee[A, _]</code> to manage all frames received by the websocket endpoint</li>
+<li>an <code>Enumerator[A]</code> to send messages through the websocket</li>
+<li>an implicit <code>FrameFormatter[A]</code> to parse frame content to type <code>A</code> (Play provides default FrameFormatter for String or JsValue)</li>
+</ul>
+
+
+<p>Here is how you traditionally create a websocket endpoint in Play:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">object</span> <span class="nc">MyController</span> <span class="k">extends</span> <span class="nc">Controller</span> <span class="o">{</span>
+</span><span class='line'>    <span class="k">def</span> <span class="n">connect</span> <span class="k">=</span> <span class="nc">Websocket</span><span class="o">.</span><span class="n">async</span><span class="o">[</span><span class="kt">JsValue</span><span class="o">]{</span> <span class="n">rh</span> <span class="k">=&gt;</span>
+</span><span class='line'>        <span class="c1">// the iteratee to manage received messages</span>
+</span><span class='line'>        <span class="k">val</span> <span class="n">iteratee</span> <span class="k">=</span> <span class="nc">Iteratee</span><span class="o">.</span><span class="n">foreach</span><span class="o">[</span><span class="kt">JsValue</span><span class="o">](</span> <span class="n">js</span> <span class="k">=&gt;</span> <span class="o">...)</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="c1">// the enumerator to be able to send messages</span>
+</span><span class='line'>        <span class="k">val</span> <span class="n">enumerator</span> <span class="k">=</span> <span class="c1">// generally a PushEnumerator</span>
+</span><span class='line'>        <span class="o">(</span><span class="n">iteratee</span><span class="o">,</span> <span class="n">enumerator</span><span class="o">)</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Generally, the <code>Enumerator[A]</code> is created using <code>Concurrent.broadcast[A]</code> and <code>Concurrent.unicast[A]</code> which are very powerful tools but not so easy to understand exactly (the edge-cases of connection close, errors are always tricky).</p>
+
+<p>You often want to:</p>
+
+<ul>
+<li>manage multiple client connections at the same time</li>
+<li>parse messages received from websockets,</li>
+<li>do something with the message payload</li>
+<li>send messages to a given client</li>
+<li>broadcast messages to all connected members</li>
+<li>create bots to be able to simulate fake connected members</li>
+<li>etc&#8230;</li>
+</ul>
+
+
+<p>To do that in Play non-blocking/async architecture, you often end developing an Actor topology managing all events/messages on top of the previous <code>Iteratee/Enumerator</code>.</p>
+
+<p>The <code>Iteratee/Enumerator</code> is quite generic but always not so easy to write.</p>
+
+<p>The actor topology is quite generic because there are administration messages that are almost always the same:</p>
+
+<ul>
+<li>Connection/Forbidden/Disconnection</li>
+<li>Broadcast/Send</li>
+</ul>
+
+
+<br/>
+
+
+<blockquote><p><strong>Actor Room</strong> is a helper managing all of this for you.
+So you can just focus on message management using actors and nothing else. It provides all default behaviors and all behaviors can be overriden if needed. It exposes only actors and nothing else.</p></blockquote>
+
+<br/>
+
+
+<p><em>The code is based on the chatroom sample (and a cool sample by Julien Tournay) from Play Framework pushed far further and in a more generic way.</em></p>
+
+<br/>
+
+
+<br/>
+
+
+<h2>What is Actor Room?</h2>
+
+<p>An actor room manages a group of connected members which are supervised by a supervisor</p>
+
+<h3>Member = 2 actors (receiver/sender)</h3>
+
+<p>Each member is represented by 2 actors (1 receiver &amp; 1 sender):</p>
+
+<ul>
+<li><p><strong>You MUST create at least a Receiver Actor because it&#8217;s your job to manage your own message format</strong></p></li>
+<li><p>The Sender Actor has a default implementation but you can override it.</p></li>
+</ul>
+
+
+<br/>
+
+
+<h3>Supervisor = 1 actor</h3>
+
+<p>All actors are managed by 1 supervisor which have two roles:</p>
+
+<ul>
+<li><p>Creates/supervises all receiver/sender actors</p></li>
+<li><p>Manages administration messages (routing, forwarding, broadcasting etc&#8230;)</p></li>
+</ul>
+
+
+<br/>
+
+
+<br/>
+
+
+<h1>Code sample step by step</h1>
+
+<h2>Create the Actor Room</h2>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// default constructor</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">room</span> <span class="k">=</span> <span class="nc">Room</span><span class="o">()</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// constructor with custom supervisor</span>
+</span><span class='line'>  <span class="c1">// custom supervisor are described later</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">room</span> <span class="k">=</span> <span class="nc">Room</span><span class="o">(</span><span class="nc">Props</span><span class="o">(</span><span class="n">classOf</span><span class="o">[</span><span class="kt">CustomSupervisor</span><span class="o">]))</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The room creates the Supervisor actor for you and delegates the creation of receiver/sender actors to it.</p>
+
+<p>If you want to broadcast a message or target a precise member, you should use the supervisor.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">room</span><span class="o">.</span><span class="n">supervisor</span> <span class="o">!</span> <span class="nc">Broadcast</span><span class="o">(</span><span class="s">&quot;fromId&quot;</span><span class="o">,</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span><span class="s">&quot;foo&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;bar&quot;</span><span class="o">))</span>
+</span><span class='line'>  <span class="n">room</span><span class="o">.</span><span class="n">supervisor</span> <span class="o">!</span> <span class="nc">Send</span><span class="o">(</span><span class="s">&quot;fromId&quot;</span><span class="o">,</span> <span class="s">&quot;toId&quot;</span><span class="o">,</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span><span class="s">&quot;foo&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;bar&quot;</span><span class="o">))</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>You can manage several rooms in the same project.</p></blockquote>
+
+<br/>
+
+
+<h2>Create the mandatory Receiver Actor</h2>
+
+<p>There is only one message to manage:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="cm">/** Message received and parsed to type A</span>
+</span><span class='line'><span class="cm">  * @param from the ID of the sender</span>
+</span><span class='line'><span class="cm">  * @param payload the content of the message</span>
+</span><span class='line'><span class="cm">  */</span>
+</span><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">Received</span><span class="o">[</span><span class="kt">A</span><span class="o">](</span><span class="n">from</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">payload</span><span class="k">:</span> <span class="kt">A</span><span class="o">)</span> <span class="k">extends</span> <span class="nc">Message</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>If your websocket frames contain Json, then it should be <code>Received[JsValue]</code>.</p>
+
+<p>You just have to create a simple actor:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// Create an actor to receive messages from websocket</span>
+</span><span class='line'><span class="k">class</span> <span class="nc">Receiver</span> <span class="k">extends</span> <span class="nc">Actor</span> <span class="o">{</span>
+</span><span class='line'>  <span class="k">def</span> <span class="n">receive</span> <span class="k">=</span> <span class="o">{</span>
+</span><span class='line'>    <span class="c1">// Received(fromId, js) is the only Message to manage in receiver</span>
+</span><span class='line'>    <span class="k">case</span> <span class="nc">Received</span><span class="o">(</span><span class="n">from</span><span class="o">,</span> <span class="n">js</span><span class="k">:</span> <span class="kt">JsValue</span><span class="o">)</span> <span class="k">=&gt;</span>
+</span><span class='line'>      <span class="o">(</span><span class="n">js</span> <span class="o">\</span> <span class="s">&quot;msg&quot;</span><span class="o">).</span><span class="n">asOpt</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="k">match</span> <span class="o">{</span>
+</span><span class='line'>        <span class="k">case</span> <span class="nc">None</span> <span class="k">=&gt;</span>
+</span><span class='line'>          <span class="n">play</span><span class="o">.</span><span class="nc">Logger</span><span class="o">.</span><span class="n">error</span><span class="o">(</span><span class="s">&quot;couldn&#39;t msg in websocket event&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="k">case</span> <span class="nc">Some</span><span class="o">(</span><span class="n">s</span><span class="o">)</span> <span class="k">=&gt;</span>
+</span><span class='line'>          <span class="n">play</span><span class="o">.</span><span class="nc">Logger</span><span class="o">.</span><span class="n">info</span><span class="o">(</span><span class="n">s</span><span class="s">&quot;received $s&quot;</span><span class="o">)</span>
+</span><span class='line'>          <span class="c1">// broadcast message to all connected members</span>
+</span><span class='line'>          <span class="n">context</span><span class="o">.</span><span class="n">parent</span> <span class="o">!</span> <span class="nc">Broadcast</span><span class="o">(</span><span class="n">from</span><span class="o">,</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span><span class="s">&quot;msg&quot;</span> <span class="o">-&gt;</span> <span class="n">s</span><span class="o">))</span>
+</span><span class='line'>      <span class="o">}</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Please note the Receiver Actor is supervised by the <code>Supervisor</code> actor. So, within the Receiver Actor, <code>context.parent</code> is the <code>Supervisor</code> and you can use it to send/broadcast message as following:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">context</span><span class="o">.</span><span class="n">parent</span> <span class="o">!</span> <span class="nc">Send</span><span class="o">(</span><span class="n">fromId</span><span class="o">,</span> <span class="n">toId</span><span class="o">,</span> <span class="n">mymessage</span><span class="o">)</span>
+</span><span class='line'><span class="n">context</span><span class="o">.</span><span class="n">parent</span> <span class="o">!</span> <span class="nc">Broadcast</span><span class="o">(</span><span class="n">fromId</span><span class="o">,</span> <span class="n">mymessage</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// The 2 messages</span>
+</span><span class='line'><span class="cm">/** Sends a message from a member to another member */</span>
+</span><span class='line'><span class="k">case</span> <span class="k">class</span>   <span class="nc">Send</span><span class="o">[</span><span class="kt">A</span><span class="o">](</span><span class="n">from</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">to</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">payload</span><span class="k">:</span> <span class="kt">A</span><span class="o">)</span> <span class="k">extends</span> <span class="nc">Message</span>
+</span><span class='line'>
+</span><span class='line'><span class="cm">/** Broadcasts a message from a member */</span>
+</span><span class='line'><span class="k">case</span> <span class="k">class</span>   <span class="nc">Broadcast</span><span class="o">[</span><span class="kt">A</span><span class="o">](</span><span class="n">from</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">payload</span><span class="k">:</span> <span class="kt">A</span><span class="o">)</span> <span class="k">extends</span> <span class="nc">Message</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<h2>Create your Json websocket endpoint</h2>
+
+<p>Please note that each member is identified by a string that you define yourself.</p>
+
+<p>import org.mandubian.actorroom._</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">class</span> <span class="nc">Receiver</span> <span class="k">extends</span> <span class="nc">Actor</span> <span class="o">{</span>
+</span><span class='line'>  <span class="k">def</span> <span class="n">receive</span> <span class="k">=</span> <span class="o">{</span>
+</span><span class='line'>    <span class="o">...</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">object</span> <span class="nc">Application</span> <span class="k">extends</span> <span class="nc">Controller</span> <span class="o">{</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">room</span> <span class="k">=</span> <span class="nc">Room</span><span class="o">()</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="cm">/** websocket requires :</span>
+</span><span class='line'><span class="cm">    * - the type of the Receiver actor</span>
+</span><span class='line'><span class="cm">    * - the type of the payload</span>
+</span><span class='line'><span class="cm">    */</span>
+</span><span class='line'>  <span class="k">def</span> <span class="n">connect</span><span class="o">(</span><span class="n">id</span><span class="k">:</span> <span class="kt">String</span><span class="o">)</span> <span class="k">=</span> <span class="n">room</span><span class="o">.</span><span class="n">websocket</span><span class="o">[</span><span class="kt">Receiver</span>, <span class="kt">JsValue</span><span class="o">](</span><span class="n">id</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// or</span>
+</span><span class='line'>  <span class="k">def</span> <span class="n">connect</span><span class="o">(</span><span class="n">id</span><span class="k">:</span> <span class="kt">String</span><span class="o">)</span> <span class="k">=</span> <span class="n">room</span><span class="o">.</span><span class="n">websocket</span><span class="o">[</span><span class="kt">JsValue</span><span class="o">](</span><span class="n">id</span><span class="o">,</span> <span class="nc">Props</span><span class="o">[</span><span class="kt">Receiver</span><span class="o">])</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<h2>All together</h2>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">akka.actor._</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">import</span> <span class="nn">play.api._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">play.api.mvc._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json._</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Implicits</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">play.api.Play.current</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.concurrent.Execution.Implicits._</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">import</span> <span class="nn">org.mandubian.actorroom._</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">class</span> <span class="nc">Receiver</span> <span class="k">extends</span> <span class="nc">Actor</span> <span class="o">{</span>
+</span><span class='line'>  <span class="k">def</span> <span class="n">receive</span> <span class="k">=</span> <span class="o">{</span>
+</span><span class='line'>    <span class="k">case</span> <span class="nc">Received</span><span class="o">(</span><span class="n">from</span><span class="o">,</span> <span class="n">js</span><span class="k">:</span> <span class="kt">JsValue</span><span class="o">)</span> <span class="k">=&gt;</span>
+</span><span class='line'>      <span class="o">(</span><span class="n">js</span> <span class="o">\</span> <span class="s">&quot;msg&quot;</span><span class="o">).</span><span class="n">asOpt</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="k">match</span> <span class="o">{</span>
+</span><span class='line'>        <span class="k">case</span> <span class="nc">None</span> <span class="k">=&gt;</span> <span class="n">play</span><span class="o">.</span><span class="nc">Logger</span><span class="o">.</span><span class="n">error</span><span class="o">(</span><span class="s">&quot;couldn&#39;t msg in websocket event&quot;</span><span class="o">)</span>
+</span><span class='line'>        <span class="k">case</span> <span class="nc">Some</span><span class="o">(</span><span class="n">s</span><span class="o">)</span> <span class="k">=&gt;</span>
+</span><span class='line'>          <span class="n">play</span><span class="o">.</span><span class="nc">Logger</span><span class="o">.</span><span class="n">info</span><span class="o">(</span><span class="n">s</span><span class="s">&quot;received $s&quot;</span><span class="o">)</span>
+</span><span class='line'>          <span class="n">context</span><span class="o">.</span><span class="n">parent</span> <span class="o">!</span> <span class="nc">Broadcast</span><span class="o">(</span><span class="n">from</span><span class="o">,</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span><span class="s">&quot;msg&quot;</span> <span class="o">-&gt;</span> <span class="n">s</span><span class="o">))</span>
+</span><span class='line'>      <span class="o">}</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">object</span> <span class="nc">Application</span> <span class="k">extends</span> <span class="nc">Controller</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">val</span> <span class="n">room</span> <span class="k">=</span> <span class="nc">Room</span><span class="o">()</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">def</span> <span class="n">websocket</span><span class="o">(</span><span class="n">id</span><span class="k">:</span> <span class="kt">String</span><span class="o">)</span> <span class="k">=</span> <span class="n">room</span><span class="o">.</span><span class="n">websocket</span><span class="o">[</span><span class="kt">Receiver</span>, <span class="kt">JsValue</span><span class="o">](</span><span class="n">id</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<br/>
+
+
+<h1>Extend default behaviors</h1>
+
+<h2>Override the administration message format</h2>
+
+<p><code>AdminMsgFormatter</code> typeclass is used by ActorRoom to format administration messages (Connected, Disconnected and Error) by default.</p>
+
+<p><code>AdminMsgFormatter[JsValue]</code> and <code>AdminMsgFormatter[String]</code> are provided by default.</p>
+
+<p>You can override the format as following:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// put this implicit in the same scope where you create your websocket endpoint</span>
+</span><span class='line'><span class="k">implicit</span> <span class="k">val</span> <span class="n">msgFormatter</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">AdminMsgFormatter</span><span class="o">[</span><span class="kt">JsValue</span><span class="o">]{</span>
+</span><span class='line'>    <span class="k">def</span> <span class="n">connected</span><span class="o">(</span><span class="n">id</span><span class="k">:</span> <span class="kt">String</span><span class="o">)</span> <span class="k">=</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span><span class="s">&quot;kind&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;connected&quot;</span><span class="o">,</span> <span class="s">&quot;id&quot;</span> <span class="o">-&gt;</span> <span class="n">id</span><span class="o">)</span>
+</span><span class='line'>    <span class="k">def</span> <span class="n">disconnected</span><span class="o">(</span><span class="n">id</span><span class="k">:</span> <span class="kt">String</span><span class="o">)</span> <span class="k">=</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span><span class="s">&quot;kind&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;disconnected&quot;</span><span class="o">,</span> <span class="s">&quot;id&quot;</span> <span class="o">-&gt;</span> <span class="n">id</span><span class="o">)</span>
+</span><span class='line'>    <span class="k">def</span> <span class="n">error</span><span class="o">(</span><span class="n">id</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">msg</span><span class="k">:</span> <span class="kt">String</span><span class="o">)</span> <span class="k">=</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span><span class="s">&quot;kind&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;error&quot;</span><span class="o">,</span> <span class="s">&quot;id&quot;</span> <span class="o">-&gt;</span> <span class="n">id</span><span class="o">,</span> <span class="s">&quot;msg&quot;</span> <span class="o">-&gt;</span> <span class="n">msg</span><span class="o">)</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// then this msgFormatter will be used for all administration messages  </span>
+</span><span class='line'><span class="k">def</span> <span class="n">websocket</span><span class="o">(</span><span class="n">id</span><span class="k">:</span> <span class="kt">String</span><span class="o">)</span> <span class="k">=</span> <span class="n">room</span><span class="o">.</span><span class="n">websocket</span><span class="o">[</span><span class="kt">Receiver</span>, <span class="kt">JsValue</span><span class="o">](</span><span class="n">id</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<h2>Override the Sender Actor</h2>
+
+<p>You just have to create a new actor as following:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">class</span> <span class="nc">MyCustomSender</span> <span class="k">extends</span> <span class="nc">Actor</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">def</span> <span class="n">receive</span> <span class="k">=</span> <span class="o">{</span>
+</span><span class='line'>    <span class="k">case</span> <span class="n">s</span><span class="k">:</span> <span class="kt">Send</span><span class="o">[</span><span class="kt">JsValue</span><span class="o">]</span>        <span class="k">=&gt;</span> <span class="c1">// message send from a member to another one</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">case</span> <span class="n">b</span><span class="k">:</span> <span class="kt">Broadcast</span><span class="o">[</span><span class="kt">JsValue</span><span class="o">]</span>   <span class="k">=&gt;</span> <span class="c1">// message broadcast by a member</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">case</span> <span class="nc">Connected</span><span class="o">(</span><span class="n">id</span><span class="o">)</span>           <span class="k">=&gt;</span> <span class="c1">// member &quot;id&quot; has connected</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">case</span> <span class="nc">Disconnected</span><span class="o">(</span><span class="n">id</span><span class="o">)</span>        <span class="k">=&gt;</span> <span class="c1">// member &quot;id&quot; has disconnected</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">case</span> <span class="nc">Init</span><span class="o">(</span><span class="n">id</span><span class="o">,</span> <span class="n">receiverActor</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="c1">// Message sent when sender actor is initialized by ActorRoom</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Then you must initialize your websocket with it</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">def</span> <span class="n">connect</span><span class="o">(</span><span class="n">id</span><span class="k">:</span> <span class="kt">String</span><span class="o">)</span> <span class="k">=</span> <span class="n">room</span><span class="o">.</span><span class="n">websocket</span><span class="o">[</span><span class="kt">JsValue</span><span class="o">](</span><span class="n">id</span><span class="o">,</span> <span class="nc">Props</span><span class="o">[</span><span class="kt">Receiver</span><span class="o">],</span> <span class="nc">Props</span><span class="o">[</span><span class="kt">MyCustomSender</span><span class="o">])</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>You can override the following messages:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// public sender messages</span>
+</span><span class='line'><span class="cm">/** Sender actor is initialized by Supervisor */</span>
+</span><span class='line'><span class="k">case</span> <span class="k">class</span>   <span class="nc">Init</span><span class="o">(</span><span class="n">id</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">receiverActor</span><span class="k">:</span> <span class="kt">ActorRef</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="cm">/** Sends a message from a member to another member */</span>
+</span><span class='line'><span class="k">case</span> <span class="k">class</span>   <span class="nc">Send</span><span class="o">[</span><span class="kt">A</span><span class="o">](</span><span class="n">from</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">to</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">payload</span><span class="k">:</span> <span class="kt">A</span><span class="o">)</span> <span class="k">extends</span> <span class="nc">Message</span>
+</span><span class='line'>
+</span><span class='line'><span class="cm">/** Broadcasts a message from a member */</span>
+</span><span class='line'><span class="k">case</span> <span class="k">class</span>   <span class="nc">Broadcast</span><span class="o">[</span><span class="kt">A</span><span class="o">](</span><span class="n">from</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">payload</span><span class="k">:</span> <span class="kt">A</span><span class="o">)</span> <span class="k">extends</span> <span class="nc">Message</span>
+</span><span class='line'>
+</span><span class='line'><span class="cm">/** member with ID has connected */</span>
+</span><span class='line'><span class="k">case</span> <span class="k">class</span>   <span class="nc">Connected</span><span class="o">(</span><span class="n">id</span><span class="k">:</span> <span class="kt">String</span><span class="o">)</span> <span class="k">extends</span> <span class="nc">Message</span>
+</span><span class='line'>
+</span><span class='line'><span class="cm">/** member with ID has disconnected */</span>
+</span><span class='line'><span class="k">case</span> <span class="k">class</span>   <span class="nc">Disconnected</span><span class="o">(</span><span class="n">id</span><span class="k">:</span> <span class="kt">String</span><span class="o">)</span> <span class="k">extends</span> <span class="nc">Message</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<h2>Override the Supervisor Actor</h2>
+
+<p>Please note <code>Supervisor</code> is an actor which manages a internal state containing all members:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">var</span> <span class="n">members</span> <span class="k">=</span> <span class="nc">Map</span><span class="o">.</span><span class="n">empty</span><span class="o">[</span><span class="kt">String</span>, <span class="kt">Member</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>You can override the default Supervisor as following:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">class</span> <span class="nc">CustomSupervisor</span> <span class="k">extends</span> <span class="nc">Supervisor</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">def</span> <span class="n">customBroadcast</span><span class="k">:</span> <span class="kt">Receive</span> <span class="o">=</span> <span class="o">{</span>
+</span><span class='line'>      <span class="k">case</span> <span class="nc">Broadcast</span><span class="o">(</span><span class="n">from</span><span class="o">,</span> <span class="n">js</span><span class="k">:</span> <span class="kt">JsObject</span><span class="o">)</span> <span class="k">=&gt;</span>
+</span><span class='line'>        <span class="c1">// adds members to all messages</span>
+</span><span class='line'>        <span class="k">val</span> <span class="n">ids</span> <span class="k">=</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span><span class="s">&quot;members&quot;</span> <span class="o">-&gt;</span> <span class="n">members</span><span class="o">.</span><span class="n">map</span><span class="o">(</span><span class="k">_</span><span class="o">.</span><span class="n">_1</span><span class="o">))</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">members</span><span class="o">.</span><span class="n">foreach</span> <span class="o">{</span>
+</span><span class='line'>          <span class="k">case</span> <span class="o">(</span><span class="n">id</span><span class="o">,</span> <span class="n">member</span><span class="o">)</span> <span class="k">=&gt;</span>
+</span><span class='line'>            <span class="n">member</span><span class="o">.</span><span class="n">sender</span> <span class="o">!</span> <span class="nc">Broadcast</span><span class="o">(</span><span class="n">from</span><span class="o">,</span> <span class="n">js</span> <span class="o">++</span> <span class="n">ids</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>          <span class="k">case</span> <span class="k">_</span> <span class="k">=&gt;</span> <span class="o">()</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">override</span> <span class="k">def</span> <span class="n">receive</span> <span class="k">=</span> <span class="n">customBroadcast</span> <span class="n">orElse</span> <span class="k">super</span><span class="o">.</span><span class="n">receive</span>
+</span><span class='line'>  <span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<h2>Create a bot to simulate member</h2>
+
+<p>A bot is a fake member that you can use to communicate with other members. It&#8217;s identified by an ID as any member.</p>
+
+<p>You create a bot with these API:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">Member</span><span class="o">(</span><span class="n">id</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="k">val</span> <span class="n">receiver</span><span class="k">:</span> <span class="kt">ActorRef</span><span class="o">,</span> <span class="k">val</span> <span class="n">sender</span><span class="k">:</span> <span class="kt">ActorRef</span><span class="o">)</span> <span class="k">extends</span> <span class="nc">Message</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">def</span> <span class="n">bot</span><span class="o">[</span><span class="kt">Payload</span><span class="o">](</span><span class="n">id</span><span class="k">:</span> <span class="kt">String</span><span class="o">)</span>
+</span><span class='line'>    <span class="o">(</span><span class="k">implicit</span> <span class="n">msgFormatter</span><span class="k">:</span> <span class="kt">AdminMsgFormatter</span><span class="o">[</span><span class="kt">Payload</span><span class="o">])</span><span class="k">:</span> <span class="kt">Future</span><span class="o">[</span><span class="kt">Member</span><span class="o">]</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">def</span> <span class="n">bot</span><span class="o">[</span><span class="kt">Payload</span><span class="o">](</span>
+</span><span class='line'>    <span class="n">id</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span>
+</span><span class='line'>    <span class="n">senderProps</span><span class="k">:</span> <span class="kt">Props</span>
+</span><span class='line'>  <span class="o">)(</span><span class="k">implicit</span> <span class="n">msgFormatter</span><span class="k">:</span> <span class="kt">AdminMsgFormatter</span><span class="o">[</span><span class="kt">Payload</span><span class="o">])</span><span class="k">:</span> <span class="kt">Future</span><span class="o">[</span><span class="kt">Member</span><span class="o">]</span>
+</span><span class='line'>
+</span><span class='line'>
+</span><span class='line'><span class="k">def</span> <span class="n">bot</span><span class="o">[</span><span class="kt">Payload</span><span class="o">](</span>
+</span><span class='line'>    <span class="n">id</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span>
+</span><span class='line'>    <span class="n">receiverProps</span><span class="k">:</span> <span class="kt">Props</span><span class="o">,</span>
+</span><span class='line'>    <span class="n">senderProps</span><span class="k">:</span> <span class="kt">Props</span><span class="o">)</span><span class="k">:</span> <span class="kt">Future</span><span class="o">[</span><span class="kt">Member</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Then with returned <code>Member</code>, you can simulate messages:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">room</span> <span class="k">=</span> <span class="nc">Room</span><span class="o">()</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">bot</span> <span class="k">=</span> <span class="n">room</span><span class="o">.</span><span class="n">bot</span><span class="o">[</span><span class="kt">JsValue</span><span class="o">](</span><span class="s">&quot;robot&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// simulate a received message</span>
+</span><span class='line'><span class="n">bot</span><span class="o">.</span><span class="n">receiver</span> <span class="o">!</span> <span class="nc">Received</span><span class="o">(</span><span class="n">bod</span><span class="o">.</span><span class="n">id</span><span class="o">,</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span><span class="s">&quot;foo&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;bar&quot;</span><span class="o">))</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Naturally, you can override the Bot Sender Actor</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="cm">/** The default actor sender for Bots */</span>
+</span><span class='line'><span class="k">class</span> <span class="nc">BotSender</span> <span class="k">extends</span> <span class="nc">Actor</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">def</span> <span class="n">receive</span> <span class="k">=</span> <span class="o">{</span>
+</span><span class='line'>    <span class="k">case</span> <span class="n">s</span> <span class="k">=&gt;</span>
+</span><span class='line'>      <span class="n">play</span><span class="o">.</span><span class="nc">Logger</span><span class="o">.</span><span class="n">info</span><span class="o">(</span><span class="n">s</span><span class="s">&quot;Bot should have sent ${s}&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">bot</span> <span class="k">=</span> <span class="n">room</span><span class="o">.</span><span class="n">bot</span><span class="o">[</span><span class="kt">JsValue</span><span class="o">](</span><span class="s">&quot;robot&quot;</span><span class="o">,</span> <span class="nc">Props</span><span class="o">[</span><span class="kt">BotSender</span><span class="o">])</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>So what else???
+Everything you can override and everything that I didn&#8217;t implement yet&#8230;</p>
+
+<p>On <a href="https://github.com/mandubian/play-actor-room/tree/master/samples">github project</a>, you will find 2 samples:</p>
+
+<ul>
+<li><code>simplest</code> which is a very simple working sample.</li>
+<li><code>websocket-chat</code> which is just the Play Framework ChatRoom sample rewritten with <code>ActorRoom</code>.</li>
+</ul>
+
+
+<p>Have fun!</p>
+
+<br/>
+
+
+<br/>
+
+
+<br/>
+
+
+<br/>
+
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Pascal Voitot</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-09-22T17:17:00+02:00" pubdate data-updated="true">Sep 22<span>nd</span>, 2013</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/actor/'>actor</a>, <a class='category' href='/blog/categories/akka/'>akka</a>, <a class='category' href='/blog/categories/play-framework/'>play framework</a>, <a class='category' href='/blog/categories/scala/'>scala</a>, <a class='category' href='/blog/categories/websocket/'>websocket</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://www.mandubian.com/2013/09/22/play-actor-room/" data-via="mandubian" data-counturl="http://www.mandubian.com/2013/09/22/play-actor-room/" >Tweet</a>
+  
+  
+  <div class="g-plusone" data-size="medium"></div>
+  
+  
+</div>
+
+    
+    
+    <section>
+      <h1>Comments</h1>
+      <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+    </section>
+    
+    <ul class="pager">
+      
+      <li class="previous"><a class="basic-alignment left"
+        href="/2013/08/21/playztream/" title="Previous Post:
+        Scalaz-Stream Plug'n'Play2 Iteratee/WS + Recursive streaming">&laquo; Scalaz-Stream Plug'n'Play2 Iteratee/WS + Recursive streaming</a></li>
+      
+      <li><a href="/blog/archives">Blog Archives</a></li>
+      
+    </ul>
+  </footer>
+</article>
+
+<aside class="sidebar-nav span3">
+  
+    <section class="well">
+  <ul id="recent_posts" class="nav nav-list">
+    <li class="nav-header">Recent Posts</li>
+    
+      <li class="post">
+        <a href="/2013/09/22/play-actor-room/">Play 2.2 Actor Room: websocket (&more) room manager only with actors</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2013/08/21/playztream/">Scalaz-Stream Plug'n'Play2 Iteratee/WS + Recursive streaming</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2013/07/11/play-autosource-datomisca/">Play AutoSource & Datomisca: Proofing the concept on Datomic, a Schema DB</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2013/07/04/json-interpolation-pattern-matching/">Play2 Json Interpolation & Pattern Matching</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2013/06/11/play-autosource/">Play AutoSource : 2'30 Kickstart Full REST & CRUD Datasource in Play App (demo'ed with ReactiveMongo + AngularJS)</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+<section class="well">
+  <ul id="gh_repos" data-user="mandubian" data-count="5" data-skip="true" class="nav">
+	<li class="nav-header">On GitHub</li>
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+  <a class="github-follow" href="https://github.com/mandubian">Follow @mandubian</a>
+  
+</section>
+
+
+
+<section class="well">
+  <ul id="tweets" class="nav" data-user="mandubian" data-count="4" data-replies="false">
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+    <a href="http://twitter.com/mandubian" class="twitter-follow-button" data-show-count="false">Follow @mandubian</a>
+  
+</section>
+
+
+
+
+
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo" class="page-footer"><hr>
+<p>
+  Copyright &copy; 2013 - Pascal Voitot -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'mandubian';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://www.mandubian.com/2013/09/22/play-actor-room/';
+        var disqus_url = 'http://www.mandubian.com/2013/09/22/play-actor-room/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+  <script type="text/javascript">
+    (function() {
+      var script = document.createElement('script'); script.type = 'text/javascript'; script.async = true;
+      script.src = 'https://apis.google.com/js/plusone.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(script, s);
+    })();
+  </script>
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = 'http://platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>
