@@ -16,6 +16,7 @@ The code for all autosources & sample apps can be found on Github [here](https:/
   <ul>
     <li><b><a href="http://www.datomic.com">Datomic</a> based on <a href="http://pellucidanalytics.github.io/datomisca/">Datomisca</a></b>, the Scala API I developed with Daniel James (<a href="https://twitter.com/dwhjames">@dwhjames</a>) sponsored by Pellucid Analytics & Zenexity which is presented in this article</li>
     <li><b><a href="http://www.couchbase.com/">CouchBase</a></b> contributed by Mathieu Ancelin <a href="https://twitter.com/TrevorReznik">@TrevorReznik</a></li>
+    <li><b><a href="http://www.typesafe.com/slick">Slick/JDBC</a></b> based on <a href="https://github.com/freekh/play-slick">Play2-Slick</a> contributed by <a href="https://github.com/rcavalcanti">Renato Cavalcanti</a> and <a href="https://github.com/loicdescotte">Loic Descotte</a></li>
   </ul>
 </div>
 
@@ -40,7 +41,7 @@ val appDependencies = Seq()
 val main = play.Project(appName, appVersion, appDependencies).settings(
   resolvers ++= mandubianRepo,
   libraryDependencies ++= Seq(
-    "play-autosource"   %% "datomisca"       % "0.1-SNAPSHOT",
+    "play-autosource"   %% "datomisca"       % "1.0",
     ...
   )
 )
