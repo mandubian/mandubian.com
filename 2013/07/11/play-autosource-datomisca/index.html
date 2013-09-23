@@ -163,6 +163,7 @@ Jul 11th, 2013 &hellip;">
   <ul>
     <li><b><a href="http://www.datomic.com">Datomic</a> based on <a href="http://pellucidanalytics.github.io/datomisca/">Datomisca</a></b>, the Scala API I developed with Daniel James (<a href="https://twitter.com/dwhjames">@dwhjames</a>) sponsored by Pellucid Analytics & Zenexity which is presented in this article</li>
     <li><b><a href="http://www.couchbase.com/">CouchBase</a></b> contributed by Mathieu Ancelin <a href="https://twitter.com/TrevorReznik">@TrevorReznik</a></li>
+    <li><b><a href="http://www.typesafe.com/slick">Slick/JDBC</a></b> based on <a href="https://github.com/freekh/play-slick">Play2-Slick</a> contributed by <a href="https://github.com/rcavalcanti">Renato Cavalcanti</a> and <a href="https://github.com/loicdescotte">Loic Descotte</a></li>
   </ul>
 </div>
 
@@ -202,7 +203,7 @@ Jul 11th, 2013 &hellip;">
 </span><span class='line'><span class="k">val</span> <span class="n">main</span> <span class="k">=</span> <span class="n">play</span><span class="o">.</span><span class="nc">Project</span><span class="o">(</span><span class="n">appName</span><span class="o">,</span> <span class="n">appVersion</span><span class="o">,</span> <span class="n">appDependencies</span><span class="o">).</span><span class="n">settings</span><span class="o">(</span>
 </span><span class='line'>  <span class="n">resolvers</span> <span class="o">++=</span> <span class="n">mandubianRepo</span><span class="o">,</span>
 </span><span class='line'>  <span class="n">libraryDependencies</span> <span class="o">++=</span> <span class="nc">Seq</span><span class="o">(</span>
-</span><span class='line'>    <span class="s">&quot;play-autosource&quot;</span>   <span class="o">%%</span> <span class="s">&quot;datomisca&quot;</span>       <span class="o">%</span> <span class="s">&quot;0.1-SNAPSHOT&quot;</span><span class="o">,</span>
+</span><span class='line'>    <span class="s">&quot;play-autosource&quot;</span>   <span class="o">%%</span> <span class="s">&quot;datomisca&quot;</span>       <span class="o">%</span> <span class="s">&quot;1.0&quot;</span><span class="o">,</span>
 </span><span class='line'>    <span class="o">...</span>
 </span><span class='line'>  <span class="o">)</span>
 </span><span class='line'><span class="o">)</span>
