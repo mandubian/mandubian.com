@@ -4,7 +4,7 @@
   <title><![CDATA[Mandubian Blog]]></title>
   <link href="http://www.mandubian.com/atom.xml" rel="self"/>
   <link href="http://www.mandubian.com/"/>
-  <updated>2013-09-23T12:29:38+02:00</updated>
+  <updated>2014-02-01T22:58:10+01:00</updated>
   <id>http://www.mandubian.com/</id>
   <author>
     <name><![CDATA[Pascal Voitot]]></name>
@@ -12,6 +12,852 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[New Play 2.3 Validation API : breaking the 22 limits with Shapeless]]></title>
+    <link href="http://www.mandubian.com/2014/01/31/play-rules-shapeless/"/>
+    <updated>2014-01-31T08:08:00+01:00</updated>
+    <id>http://www.mandubian.com/2014/01/31/play-rules-shapeless</id>
+    <content type="html"><![CDATA[<p>The code &amp; sample apps can be found on <a href="https://github.com/mandubian/shapeless-rules">Github</a></p>
+
+<p>After 5 months studying theories deeper &amp; deeper on my free-time and preparing 3 talks for <a href="http://www.scala.io">scala.io</a> &amp; <a href="http://www.ping-conf.com">ping-conf</a> with my friend <a href="http://www.twitter.com/skaalf">Julien Tournay aka @skaalf</a>, I&#8217;m back blogging and I&#8217;ve got a few more ideas of articles to come&#8230;</p>
+
+<blockquote><p>If you&#8217;re interested in those talks, you can find pingconf videos here:</p>
+
+<ul>
+<li><a href="http://www.ustream.tv/recorded/42778238">Entropic history &amp; Play2.3 new validation API</a></li>
+<li><a href="http://www.ustream.tv/recorded/42802705">Play2, scalaz-stream &amp; SciFi</a></li>
+</ul>
+</blockquote>
+
+<p>Let&#8217;s go back to our today&#8217;s subject : <strong>Incoming Play2.3/Scala generic validation API &amp; more</strong>.</p>
+
+<p><a href="http://www.twitter.com/skaalf">Julien Tournay aka @skaalf</a> has been working a lot for a few months developing this new API and has just published an article previewing <a href="http://jto.github.io/articles/play_new_validation_api/">Play 2.3 generic validation API</a>.</p>
+
+<p>This new API is just the logical extension of play2/Scala Json API (that I&#8217;ve been working &amp; promoting those 2 last years) pushing its principles far further by allowing validation on any data types.</p>
+
+<p>This new API is a real step further as it will progressively propose a common API for all validations in Play2/Scala (Form/Json/XML/&#8230;). It proposes an even more robust design relying on very strong theoretical ground making it very reliable &amp; typesafe.</p>
+
+<p>Julien has written his <a href="http://jto.github.io/articles/play_new_validation_api/">article</a> presenting the new API basics and he also found time to write great documentation for this new validation API. I must confess Json API doc was quite messy but I&#8217;ve never found freetime (and courage) to do better. So I&#8217;m not going to spend time on basic features of this new API and I&#8217;m going to target advanced features to open your minds about the power of this new API.</p>
+
+<blockquote><p>Let&#8217;s have fun with this new APi &amp; <a href="https://github.com/milessabin/shapeless">Shapeless</a>, this fantastic tool for higher-rank polymorphism &amp; type-safety!</p></blockquote>
+
+<br/>
+
+
+<h2>Warm-up with Higher-kind Zipping of Rules</h2>
+
+<p>A really cool &amp; new feature of Play2.3 generic validation API is its ability to compose validation Rules in chains like:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">rule1</span><span class="k">:</span> <span class="kt">Rule</span><span class="o">[</span><span class="kt">A</span>, <span class="kt">B</span><span class="o">]</span> <span class="k">=</span> <span class="o">...</span>
+</span><span class='line'><span class="k">val</span> <span class="n">rule2</span><span class="k">:</span> <span class="kt">Rule</span><span class="o">[</span><span class="kt">B</span>, <span class="kt">C</span><span class="o">]</span> <span class="k">=</span> <span class="o">...</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">rule3</span><span class="k">:</span> <span class="kt">Rule</span><span class="o">[</span><span class="kt">A</span>, <span class="kt">C</span><span class="o">]</span> <span class="k">=</span> <span class="n">rule1</span> <span class="n">compose</span> <span class="n">rule2</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><em>In Play2.1 Json API, you couldn&#8217;t do that (you could only map on Reads).</em></p>
+
+<p>Moreover, with new validation API, as in Json API, you can use macros to create basic validators from case-classes.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">FooBar</span><span class="o">(</span><span class="n">foo</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">bar</span><span class="k">:</span> <span class="kt">Int</span><span class="o">,</span> <span class="n">foo2</span><span class="k">:</span> <span class="kt">Long</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">rule</span> <span class="k">=</span> <span class="nc">Rule</span><span class="o">.</span><span class="n">gen</span><span class="o">[</span><span class="kt">JsValue</span>, <span class="kt">FooBar</span><span class="o">]</span>
+</span><span class='line'>
+</span><span class='line'><span class="cm">/** Action to validate Json:</span>
+</span><span class='line'><span class="cm">  * { foo: &quot;toto&quot;, bar: 5, foo2: 2 }</span>
+</span><span class='line'><span class="cm">  */</span>
+</span><span class='line'><span class="k">def</span> <span class="n">action</span> <span class="k">=</span> <span class="nc">Action</span><span class="o">(</span><span class="n">parse</span><span class="o">.</span><span class="n">json</span><span class="o">)</span> <span class="o">{</span> <span class="n">request</span> <span class="k">=&gt;</span>
+</span><span class='line'>  <span class="n">rule</span><span class="o">.</span><span class="n">validate</span><span class="o">(</span><span class="n">request</span><span class="o">.</span><span class="n">body</span><span class="o">)</span> <span class="n">map</span> <span class="o">{</span> <span class="n">foobar</span> <span class="k">=&gt;</span>
+</span><span class='line'>    <span class="nc">Ok</span><span class="o">(</span><span class="n">foobar</span><span class="o">.</span><span class="n">toString</span><span class="o">)</span>
+</span><span class='line'>  <span class="o">}</span> <span class="n">recoverTotal</span> <span class="o">{</span> <span class="n">errors</span> <span class="k">=&gt;</span>
+</span><span class='line'>    <span class="nc">BadRequest</span><span class="o">(</span><span class="n">errors</span><span class="o">.</span><span class="n">toString</span><span class="o">)</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Great but sometimes not enough as you would like to add custom validations on your class.
+For exampe, you want to verify :</p>
+
+<ul>
+<li><code>foo</code> isn&#8217;t empty</li>
+<li><code>bar</code> is >5</li>
+<li><code>foo2</code> is &lt;10</li>
+</ul>
+
+
+<p>For that you can&#8217;t use the macro and must write your caseclass Rule yourself.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">FooBar</span><span class="o">(</span><span class="n">foo</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">bar</span><span class="k">:</span> <span class="kt">Int</span><span class="o">,</span> <span class="n">foo2</span><span class="k">:</span> <span class="kt">Long</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">import</span> <span class="nn">play.api.data.mapping.json.Rules</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">Rules._</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">rule</span> <span class="k">=</span> <span class="nc">From</span><span class="o">[</span><span class="kt">JsValue</span><span class="o">]</span> <span class="o">{</span> <span class="nc">__</span> <span class="k">=&gt;</span>
+</span><span class='line'>  <span class="o">(</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;foo&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">](</span><span class="n">notEmpty</span><span class="o">)</span> <span class="o">~</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;bar&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Int</span><span class="o">](</span><span class="n">min</span><span class="o">(</span><span class="mi">5</span><span class="o">))</span> <span class="o">~</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;foo2&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Long</span><span class="o">](</span><span class="n">max</span><span class="o">(</span><span class="mi">10</span><span class="o">))</span>
+</span><span class='line'>  <span class="o">)(</span><span class="nc">FooBar</span><span class="o">.</span><span class="n">apply</span> <span class="k">_</span><span class="o">)</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><em>Please note the new <code>From[JsValue]</code>: yes if it was Xml, it would be <code>From[Xml]</code>, genericity requires some more info.</em></p>
+
+<p>Ok that&#8217;s not too hard but sometimes you would like to use first the macro and after those primary type validations, you want to refine with custom validations. Something like:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="nc">Rule</span><span class="o">.</span><span class="n">gen</span><span class="o">[</span><span class="kt">JsValue</span>, <span class="kt">FooBar</span><span class="o">]</span> <span class="o">+?+?+</span> <span class="o">(</span> <span class="o">(</span><span class="n">notEmpty</span><span class="k">:</span><span class="kt">Rule</span><span class="o">[</span><span class="kt">String</span>, <span class="kt">String</span><span class="o">])</span> <span class="o">+:</span> <span class="o">(</span><span class="n">min</span><span class="o">(</span><span class="mi">5</span><span class="o">)</span><span class="k">:</span><span class="kt">Rule</span><span class="o">[</span><span class="kt">Int</span>, <span class="kt">Int</span><span class="o">])</span> <span class="o">+:</span> <span class="o">(</span><span class="n">min</span><span class="o">(</span><span class="mi">10L</span><span class="o">)</span><span class="k">:</span><span class="kt">Rule</span><span class="o">[</span><span class="kt">Long</span>,<span class="kt">Long</span><span class="o">])</span> <span class="o">)</span>
+</span><span class='line'><span class="c1">// +?+?+ is a non-existing operator meaning &quot;compose&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>As you may know, you can&#8217;t do use this <code>+:</code> from Scala <code>Sequence[T]</code> as this list of Rules is typed heterogenously and <code>Rule[I, O]</code> is invariant.</p>
+
+<p>So we are going to use Shapeless heterogenous Hlist for that:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">customRules</span> <span class="k">=</span>
+</span><span class='line'>  <span class="o">(</span><span class="n">notEmpty</span><span class="k">:</span><span class="kt">Rule</span><span class="o">[</span><span class="kt">String</span>, <span class="kt">String</span><span class="o">])</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="n">min</span><span class="o">(</span><span class="mi">5</span><span class="o">)</span><span class="k">:</span><span class="kt">Rule</span><span class="o">[</span><span class="kt">Int</span>, <span class="kt">Int</span><span class="o">])</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="n">min</span><span class="o">(</span><span class="mi">10L</span><span class="o">)</span><span class="k">:</span><span class="kt">Rule</span><span class="o">[</span><span class="kt">Long</span>,<span class="kt">Long</span><span class="o">])</span> <span class="o">::</span>
+</span><span class='line'>  <span class="nc">HNil</span>
+</span><span class='line'><span class="c1">// customRules is inferred Rule[String, String]) :: Rule[Int, Int] :: Rule[Long,Long]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<br/>
+
+
+<h4>How to compose <code>Rule[JsValue, FooBar]</code> with <code>Rule[String, String]) :: Rule[Int, Int] :: Rule[Long,Long]</code> ?</h4>
+
+<br/>
+
+
+<p>We need to convert <code>Rule[JsValue, FooBar]</code> to something like <code>Rule[JsValue, T &lt;: HList]</code>.</p>
+
+<p>Based on Shapeless <code>Generic[T]</code>, we can provide a nice little new conversion API <code>.hlisted</code>:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">rule</span><span class="k">:</span> <span class="kt">Rule</span><span class="o">[</span><span class="kt">JsValue</span>, <span class="kt">String</span> <span class="kt">::</span> <span class="kt">Int</span> <span class="kt">::</span> <span class="kt">Long</span> <span class="kt">::</span> <span class="kt">HNil</span><span class="o">]</span> <span class="k">=</span> <span class="nc">Rule</span><span class="o">.</span><span class="n">gen</span><span class="o">[</span><span class="kt">JsValue</span>, <span class="kt">FooBar</span><span class="o">].</span><span class="n">hlisted</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>Generic[T]</code> is able to convert any caseclass from Scala from/to Shapeless HList (&amp; CoProduct).</p>
+
+<p>So we can validate a case class with the macro and get a <code>Rule[JsValue, T &lt;: HList]</code> from it.</p>
+
+<br/>
+
+
+<br/>
+
+
+<h4>How to compose <code>Rule[JsValue, String :: Int :: Long :: HNil]</code> with <code>Rule[String, String]) :: Rule[Int, Int] :: Rule[Long,Long]</code>?</h4>
+
+<br/>
+
+
+<p>Again, using Shapeless Polymorphic and HList RightFolder, we can implement a function :</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="nc">Rule</span><span class="o">[</span><span class="kt">String</span>, <span class="kt">String</span><span class="o">])</span> <span class="o">::</span> <span class="nc">Rule</span><span class="o">[</span><span class="kt">Int</span>, <span class="kt">Int</span><span class="o">]</span> <span class="o">::</span> <span class="nc">Rule</span><span class="o">[</span><span class="kt">Long</span>,<span class="kt">Long</span><span class="o">]</span> <span class="o">::</span> <span class="nc">HNil</span><span class="o">)</span> <span class="k">=&gt;</span>
+</span><span class='line'>    <span class="nc">Rule</span><span class="o">[</span><span class="kt">String</span> <span class="kt">::</span> <span class="kt">Int</span> <span class="kt">::</span> <span class="kt">Long</span> <span class="kt">::</span> <span class="kt">HNil</span>, <span class="kt">String</span> <span class="kt">::</span> <span class="kt">Int</span> <span class="kt">::</span> <span class="kt">Long</span> <span class="kt">::</span> <span class="kt">HNil</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>This looks like some higher-kind zip function, let&#8217;s call it <code>HZIP</code>.</p></blockquote>
+
+<br/>
+
+
+<br/>
+
+
+<h4>Now, we can compose them&#8230;</h4>
+
+<br/>
+
+
+
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">ruleZip</span> <span class="k">=</span> <span class="nc">Rule</span><span class="o">.</span><span class="n">gen</span><span class="o">[</span><span class="kt">JsValue</span>, <span class="kt">FooBar</span><span class="o">].</span><span class="n">hlisted</span> <span class="n">compose</span> <span class="n">hzip</span><span class="o">(</span>
+</span><span class='line'>  <span class="o">(</span><span class="n">notEmpty</span><span class="k">:</span><span class="kt">Rule</span><span class="o">[</span><span class="kt">String</span>, <span class="kt">String</span><span class="o">])</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="n">min</span><span class="o">(</span><span class="mi">5</span><span class="o">)</span><span class="k">:</span><span class="kt">Rule</span><span class="o">[</span><span class="kt">Int</span>, <span class="kt">Int</span><span class="o">])</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="n">min</span><span class="o">(</span><span class="mi">10L</span><span class="o">)</span><span class="k">:</span><span class="kt">Rule</span><span class="o">[</span><span class="kt">Long</span>,<span class="kt">Long</span><span class="o">])</span> <span class="o">::</span>
+</span><span class='line'>  <span class="nc">HNil</span>
+</span><span class='line'><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h4>Finally, let&#8217;s wire all together in a Play action:</h4>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">def</span> <span class="n">hzipper</span> <span class="k">=</span> <span class="nc">Action</span><span class="o">(</span><span class="n">parse</span><span class="o">.</span><span class="n">json</span><span class="o">)</span> <span class="o">{</span> <span class="n">request</span> <span class="k">=&gt;</span>
+</span><span class='line'>  <span class="n">ruleZip</span><span class="o">.</span><span class="n">validate</span><span class="o">(</span><span class="n">request</span><span class="o">.</span><span class="n">body</span><span class="o">)</span> <span class="n">map</span> <span class="o">{</span> <span class="n">foobar</span> <span class="k">=&gt;</span>
+</span><span class='line'>    <span class="nc">Ok</span><span class="o">(</span><span class="n">foobar</span><span class="o">.</span><span class="n">toString</span><span class="o">)</span>
+</span><span class='line'>  <span class="o">}</span> <span class="n">recoverTotal</span> <span class="o">{</span> <span class="n">errors</span> <span class="k">=&gt;</span>
+</span><span class='line'>    <span class="nc">BadRequest</span><span class="o">(</span><span class="n">errors</span><span class="o">.</span><span class="n">toString</span><span class="o">)</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// OK case</span>
+</span><span class='line'><span class="o">{</span>
+</span><span class='line'>  <span class="s">&quot;foo&quot;</span> <span class="k">:</span> <span class="err">&quot;</span><span class="kt">toto</span><span class="err">&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;bar&quot;</span> <span class="k">:</span> <span class="err">5</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo2&quot;</span> <span class="k">:</span> <span class="err">5</span>
+</span><span class='line'><span class="o">}</span> <span class="k">=&gt;</span> <span class="n">toto</span> <span class="o">::</span> <span class="mi">5</span> <span class="o">::</span> <span class="mi">8</span> <span class="o">::</span> <span class="nc">HNil</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// KO case</span>
+</span><span class='line'><span class="o">{</span>
+</span><span class='line'>  <span class="s">&quot;foo&quot;</span> <span class="k">:</span> <span class="err">&quot;&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;bar&quot;</span> <span class="k">:</span> <span class="err">2</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo2&quot;</span> <span class="k">:</span> <span class="err">12</span>
+</span><span class='line'><span class="o">}</span> <span class="k">=&gt;</span> <span class="nc">Failure</span><span class="o">(</span><span class="nc">List</span><span class="o">(</span>
+</span><span class='line'>  <span class="o">([</span><span class="err">0</span><span class="o">],</span><span class="nc">List</span><span class="o">(</span><span class="nc">ValidationError</span><span class="o">(</span><span class="n">error</span><span class="o">.</span><span class="n">max</span><span class="o">,</span><span class="nc">WrappedArray</span><span class="o">(</span><span class="mi">10</span><span class="o">)))),</span>
+</span><span class='line'>  <span class="o">([</span><span class="err">1</span><span class="o">],</span><span class="nc">List</span><span class="o">(</span><span class="nc">ValidationError</span><span class="o">(</span><span class="n">error</span><span class="o">.</span><span class="n">min</span><span class="o">,</span><span class="nc">WrappedArray</span><span class="o">(</span><span class="mi">5</span><span class="o">)))),</span>
+</span><span class='line'>  <span class="o">([</span><span class="err">2</span><span class="o">],</span><span class="nc">List</span><span class="o">(</span><span class="nc">ValidationError</span><span class="o">(</span><span class="n">error</span><span class="o">.</span><span class="n">required</span><span class="o">,</span><span class="nc">WrappedArray</span><span class="o">())))</span>
+</span><span class='line'><span class="o">))</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>As you can see, the problem in this approach is that we lose the path of Json.
+Anyway, this can give you a few ideas!
+Now let&#8217;s do something really useful&#8230;</p></blockquote>
+
+<br/>
+
+
+<br/>
+
+
+<h2>Higher-kind Fold of Rules to break the 22 limits</h2>
+
+<p>As in Play2.1 Json API, the new validation API provides an applicative builder which allows the following:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="o">(</span><span class="nc">Rule</span><span class="o">[</span><span class="kt">I</span>, <span class="kt">A</span><span class="o">]</span> <span class="o">~</span> <span class="nc">Rule</span><span class="o">[</span><span class="kt">I</span>, <span class="kt">B</span><span class="o">]</span> <span class="o">~</span> <span class="nc">Rule</span><span class="o">[</span><span class="kt">I</span>, <span class="kt">C</span><span class="o">]).</span><span class="n">tupled</span> <span class="k">=&gt;</span> <span class="nc">Rule</span><span class="o">[</span><span class="kt">I</span>, <span class="o">(</span><span class="kt">A</span>, <span class="kt">B</span>, <span class="kt">C</span><span class="o">)]</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">(</span><span class="nc">Rule</span><span class="o">[</span><span class="kt">I</span>, <span class="kt">A</span><span class="o">]</span> <span class="o">~</span> <span class="nc">Rule</span><span class="o">[</span><span class="kt">I</span>, <span class="kt">B</span><span class="o">]</span> <span class="o">~</span> <span class="nc">Rule</span><span class="o">[</span><span class="kt">I</span>, <span class="kt">C</span><span class="o">])(</span><span class="nc">MyClass</span><span class="o">.</span><span class="n">apply</span> <span class="k">_</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="nc">Rule</span><span class="o">[</span><span class="kt">I</span>, <span class="kt">MyClass</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>But, in Play2.1 Json API and also in new validation API, all functional combinators are limited by the famous Scala 22 limits.</p>
+
+<p>In Scala, you <strong>CAN&#8217;T</strong> write :</p>
+
+<ul>
+<li>a case-class with >22 fields</li>
+<li>a <code>Tuple23</code></li>
+</ul>
+
+
+<p><strong>So you can&#8217;t do <code>Rule[JsValue, A] ~ Rule[JsValue, B] ~ ...</code> more than 22 times.</strong></p>
+
+<p>Nevertheless, sometimes you receive huge JSON with much more than 22 fields in it. Then you have to build more complex models like case-classes embedding case-classes&#8230; Shameful, isn&#8217;t it&#8230;</p>
+
+<p>Let&#8217;s be shameless with Shapeless HList which enables to have unlimited heterogenously typed lists!</p>
+
+<p>So, with HList, we can write :</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+<span class='line-number'>49</span>
+<span class='line-number'>50</span>
+<span class='line-number'>51</span>
+<span class='line-number'>52</span>
+<span class='line-number'>53</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">bigRule</span> <span class="k">=</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo1&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo2&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo3&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo4&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo5&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo6&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo7&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo8&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo9&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo10&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo11&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo12&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo13&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo14&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo15&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo16&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo17&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo18&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo19&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo20&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo21&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo22&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo23&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo25&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo26&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo27&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo28&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo29&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo30&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo31&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo32&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo33&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo34&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo35&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo36&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo37&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo38&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo39&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo40&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">List</span><span class="o">[</span><span class="kt">Long</span><span class="o">]]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo41&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">List</span><span class="o">[</span><span class="kt">Long</span><span class="o">]]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo42&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">List</span><span class="o">[</span><span class="kt">Long</span><span class="o">]]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo43&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">List</span><span class="o">[</span><span class="kt">Long</span><span class="o">]]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo44&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">List</span><span class="o">[</span><span class="kt">Long</span><span class="o">]]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo45&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">List</span><span class="o">[</span><span class="kt">Long</span><span class="o">]]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo46&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">List</span><span class="o">[</span><span class="kt">Long</span><span class="o">]]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo47&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">List</span><span class="o">[</span><span class="kt">Long</span><span class="o">]]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo48&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">List</span><span class="o">[</span><span class="kt">Long</span><span class="o">]]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo49&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">List</span><span class="o">[</span><span class="kt">Long</span><span class="o">]]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo50&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">JsNull.</span><span class="k">type</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="nc">HNil</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// inferred as Rule[JsValue, String] :: Rule[JsValue, String] :: ... :: Rule[JsValue, List[Long]] :: HNil</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>That&#8217;s cool but we want the <code>::</code> operator to have the same <code>applicative builder behavior as the</code>~/and` operator:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="nc">Rule</span><span class="o">[</span><span class="kt">JsValue</span>, <span class="kt">String</span><span class="o">]</span> <span class="o">::</span> <span class="nc">Rule</span><span class="o">[</span><span class="kt">JsValue</span>, <span class="kt">Long</span><span class="o">]</span> <span class="o">::</span> <span class="nc">Rule</span><span class="o">[</span><span class="kt">JsValue</span>, <span class="kt">Float</span><span class="o">]</span> <span class="o">::</span> <span class="nc">HNil</span> <span class="k">=&gt;</span>
+</span><span class='line'>  <span class="nc">Rule</span><span class="o">[</span><span class="kt">JsValue</span>, <span class="kt">String</span> <span class="kt">::</span> <span class="kt">Long</span> <span class="kt">::</span> <span class="kt">Float</span> <span class="kt">::</span> <span class="kt">HNil</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>This looks like a higher-kind fold so let&#8217;s call that <code>HFOLD</code>.</p></blockquote>
+
+<p>We can build this <code>hfold</code> using Shapeless polymorphic functions &amp; RighFolder.</p>
+
+<p><em>In a next article, I may write about coding such shapeless feature. Meanwhile, you&#8217;ll have to discover the code on <a href="https://github.com/mandubian/shapeless-rules">Github</a> as it&#8217;s a bit hairy but very interesting ;)</em></p>
+
+<p>Gathering everything, we obtain the following:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+<span class='line-number'>49</span>
+<span class='line-number'>50</span>
+<span class='line-number'>51</span>
+<span class='line-number'>52</span>
+<span class='line-number'>53</span>
+<span class='line-number'>54</span>
+<span class='line-number'>55</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="cm">/* Rules Folding */</span>
+</span><span class='line'><span class="k">val</span> <span class="n">ruleFold</span> <span class="k">=</span> <span class="nc">From</span><span class="o">[</span><span class="kt">JsValue</span><span class="o">]{</span> <span class="nc">__</span> <span class="k">=&gt;</span>
+</span><span class='line'>  <span class="n">hfold</span><span class="o">[</span><span class="kt">JsValue</span><span class="o">](</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo1&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo2&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo3&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo4&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo5&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo6&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo7&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo8&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo9&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo10&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo11&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo12&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo13&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo14&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo15&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo16&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo17&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo18&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo19&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo20&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo21&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo22&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo23&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo25&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo26&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo27&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo28&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo29&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo30&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo31&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo32&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo33&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo34&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo35&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo36&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo37&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo38&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo39&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo40&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">List</span><span class="o">[</span><span class="kt">Long</span><span class="o">]]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo41&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">List</span><span class="o">[</span><span class="kt">Long</span><span class="o">]]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo42&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">List</span><span class="o">[</span><span class="kt">Long</span><span class="o">]]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo43&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">List</span><span class="o">[</span><span class="kt">Long</span><span class="o">]]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo44&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">List</span><span class="o">[</span><span class="kt">Long</span><span class="o">]]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo45&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">List</span><span class="o">[</span><span class="kt">Long</span><span class="o">]]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo46&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">List</span><span class="o">[</span><span class="kt">Long</span><span class="o">]]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo47&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">List</span><span class="o">[</span><span class="kt">Long</span><span class="o">]]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo48&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">List</span><span class="o">[</span><span class="kt">Long</span><span class="o">]]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo49&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">List</span><span class="o">[</span><span class="kt">Long</span><span class="o">]]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo50&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">JsNull.</span><span class="k">type</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="nc">HNil</span>
+</span><span class='line'>  <span class="o">)</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Let&#8217;s write a play action using this rule:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+<span class='line-number'>49</span>
+<span class='line-number'>50</span>
+<span class='line-number'>51</span>
+<span class='line-number'>52</span>
+<span class='line-number'>53</span>
+<span class='line-number'>54</span>
+<span class='line-number'>55</span>
+<span class='line-number'>56</span>
+<span class='line-number'>57</span>
+<span class='line-number'>58</span>
+<span class='line-number'>59</span>
+<span class='line-number'>60</span>
+<span class='line-number'>61</span>
+<span class='line-number'>62</span>
+<span class='line-number'>63</span>
+<span class='line-number'>64</span>
+<span class='line-number'>65</span>
+<span class='line-number'>66</span>
+<span class='line-number'>67</span>
+<span class='line-number'>68</span>
+<span class='line-number'>69</span>
+<span class='line-number'>70</span>
+<span class='line-number'>71</span>
+<span class='line-number'>72</span>
+<span class='line-number'>73</span>
+<span class='line-number'>74</span>
+<span class='line-number'>75</span>
+<span class='line-number'>76</span>
+<span class='line-number'>77</span>
+<span class='line-number'>78</span>
+<span class='line-number'>79</span>
+<span class='line-number'>80</span>
+<span class='line-number'>81</span>
+<span class='line-number'>82</span>
+<span class='line-number'>83</span>
+<span class='line-number'>84</span>
+<span class='line-number'>85</span>
+<span class='line-number'>86</span>
+<span class='line-number'>87</span>
+<span class='line-number'>88</span>
+<span class='line-number'>89</span>
+<span class='line-number'>90</span>
+<span class='line-number'>91</span>
+<span class='line-number'>92</span>
+<span class='line-number'>93</span>
+<span class='line-number'>94</span>
+<span class='line-number'>95</span>
+<span class='line-number'>96</span>
+<span class='line-number'>97</span>
+<span class='line-number'>98</span>
+<span class='line-number'>99</span>
+<span class='line-number'>100</span>
+<span class='line-number'>101</span>
+<span class='line-number'>102</span>
+<span class='line-number'>103</span>
+<span class='line-number'>104</span>
+<span class='line-number'>105</span>
+<span class='line-number'>106</span>
+<span class='line-number'>107</span>
+<span class='line-number'>108</span>
+<span class='line-number'>109</span>
+<span class='line-number'>110</span>
+<span class='line-number'>111</span>
+<span class='line-number'>112</span>
+<span class='line-number'>113</span>
+<span class='line-number'>114</span>
+<span class='line-number'>115</span>
+<span class='line-number'>116</span>
+<span class='line-number'>117</span>
+<span class='line-number'>118</span>
+<span class='line-number'>119</span>
+<span class='line-number'>120</span>
+<span class='line-number'>121</span>
+<span class='line-number'>122</span>
+<span class='line-number'>123</span>
+<span class='line-number'>124</span>
+<span class='line-number'>125</span>
+<span class='line-number'>126</span>
+<span class='line-number'>127</span>
+<span class='line-number'>128</span>
+<span class='line-number'>129</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">def</span> <span class="n">hfolder</span> <span class="k">=</span> <span class="nc">Action</span><span class="o">(</span><span class="n">parse</span><span class="o">.</span><span class="n">json</span><span class="o">)</span> <span class="o">{</span> <span class="n">request</span> <span class="k">=&gt;</span>
+</span><span class='line'>  <span class="n">ruleFold</span><span class="o">.</span><span class="n">validate</span><span class="o">(</span><span class="n">request</span><span class="o">.</span><span class="n">body</span><span class="o">)</span> <span class="n">map</span> <span class="o">{</span> <span class="n">hl</span> <span class="k">=&gt;</span>
+</span><span class='line'>    <span class="nc">Ok</span><span class="o">(</span><span class="n">hl</span><span class="o">.</span><span class="n">toString</span><span class="o">)</span>
+</span><span class='line'>  <span class="o">}</span> <span class="n">recoverTotal</span> <span class="o">{</span> <span class="n">errors</span> <span class="k">=&gt;</span>
+</span><span class='line'>    <span class="nc">BadRequest</span><span class="o">(</span><span class="n">errors</span><span class="o">.</span><span class="n">toString</span><span class="o">)</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// OK</span>
+</span><span class='line'><span class="o">{</span>
+</span><span class='line'>  <span class="s">&quot;foo1&quot;</span> <span class="k">:</span> <span class="err">&quot;</span><span class="kt">toto1</span><span class="err">&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo2&quot;</span> <span class="k">:</span> <span class="err">&quot;</span><span class="kt">toto2</span><span class="err">&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo3&quot;</span> <span class="k">:</span> <span class="err">&quot;</span><span class="kt">toto3</span><span class="err">&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo4&quot;</span> <span class="k">:</span> <span class="err">&quot;</span><span class="kt">toto4</span><span class="err">&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo5&quot;</span> <span class="k">:</span> <span class="err">&quot;</span><span class="kt">toto5</span><span class="err">&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo6&quot;</span> <span class="k">:</span> <span class="err">&quot;</span><span class="kt">toto6</span><span class="err">&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo7&quot;</span> <span class="k">:</span> <span class="err">&quot;</span><span class="kt">toto7</span><span class="err">&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo8&quot;</span> <span class="k">:</span> <span class="err">&quot;</span><span class="kt">toto8</span><span class="err">&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo9&quot;</span> <span class="k">:</span> <span class="err">&quot;</span><span class="kt">toto9</span><span class="err">&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo10&quot;</span> <span class="k">:</span> <span class="err">10</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo11&quot;</span> <span class="k">:</span> <span class="err">11</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo12&quot;</span> <span class="k">:</span> <span class="err">12</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo13&quot;</span> <span class="k">:</span> <span class="err">13</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo14&quot;</span> <span class="k">:</span> <span class="err">14</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo15&quot;</span> <span class="k">:</span> <span class="err">15</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo16&quot;</span> <span class="k">:</span> <span class="err">16</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo17&quot;</span> <span class="k">:</span> <span class="err">17</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo18&quot;</span> <span class="k">:</span> <span class="err">18</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo19&quot;</span> <span class="k">:</span> <span class="err">19</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo20&quot;</span> <span class="k">:</span> <span class="kt">true</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo21&quot;</span> <span class="k">:</span> <span class="kt">false</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo22&quot;</span> <span class="k">:</span> <span class="kt">true</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo23&quot;</span> <span class="k">:</span> <span class="kt">false</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo24&quot;</span> <span class="k">:</span> <span class="kt">true</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo25&quot;</span> <span class="k">:</span> <span class="kt">false</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo26&quot;</span> <span class="k">:</span> <span class="kt">true</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo27&quot;</span> <span class="k">:</span> <span class="kt">false</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo28&quot;</span> <span class="k">:</span> <span class="kt">true</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo29&quot;</span> <span class="k">:</span> <span class="kt">false</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo30&quot;</span> <span class="k">:</span> <span class="err">3</span><span class="kt">.</span><span class="err">0</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo31&quot;</span> <span class="k">:</span> <span class="err">3</span><span class="kt">.</span><span class="err">1</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo32&quot;</span> <span class="k">:</span> <span class="err">3</span><span class="kt">.</span><span class="err">2</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo33&quot;</span> <span class="k">:</span> <span class="err">3</span><span class="kt">.</span><span class="err">3</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo34&quot;</span> <span class="k">:</span> <span class="err">3</span><span class="kt">.</span><span class="err">4</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo35&quot;</span> <span class="k">:</span> <span class="err">3</span><span class="kt">.</span><span class="err">5</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo36&quot;</span> <span class="k">:</span> <span class="err">3</span><span class="kt">.</span><span class="err">6</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo37&quot;</span> <span class="k">:</span> <span class="err">3</span><span class="kt">.</span><span class="err">7</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo38&quot;</span> <span class="k">:</span> <span class="err">3</span><span class="kt">.</span><span class="err">8</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo39&quot;</span> <span class="k">:</span> <span class="err">3</span><span class="kt">.</span><span class="err">9</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo40&quot;</span> <span class="k">:</span> <span class="err">[1</span><span class="o">,</span><span class="mi">2</span><span class="o">,</span><span class="mi">3</span><span class="err">]</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo41&quot;</span> <span class="k">:</span> <span class="err">[11</span><span class="o">,</span><span class="mi">21</span><span class="o">,</span><span class="mi">31</span><span class="err">]</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo42&quot;</span> <span class="k">:</span> <span class="err">[12</span><span class="o">,</span><span class="mi">22</span><span class="o">,</span><span class="mi">32</span><span class="err">]</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo43&quot;</span> <span class="k">:</span> <span class="err">[13</span><span class="o">,</span><span class="mi">23</span><span class="o">,</span><span class="mi">33</span><span class="err">]</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo44&quot;</span> <span class="k">:</span> <span class="err">[14</span><span class="o">,</span><span class="mi">24</span><span class="o">,</span><span class="mi">34</span><span class="err">]</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo45&quot;</span> <span class="k">:</span> <span class="err">[15</span><span class="o">,</span><span class="mi">25</span><span class="o">,</span><span class="mi">35</span><span class="err">]</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo46&quot;</span> <span class="k">:</span> <span class="err">[16</span><span class="o">,</span><span class="mi">26</span><span class="o">,</span><span class="mi">36</span><span class="err">]</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo47&quot;</span> <span class="k">:</span> <span class="err">[17</span><span class="o">,</span><span class="mi">27</span><span class="o">,</span><span class="mi">37</span><span class="err">]</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo48&quot;</span> <span class="k">:</span> <span class="err">[18</span><span class="o">,</span><span class="mi">28</span><span class="o">,</span><span class="mi">38</span><span class="err">]</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo49&quot;</span> <span class="k">:</span> <span class="err">[19</span><span class="o">,</span><span class="mi">29</span><span class="o">,</span><span class="mi">39</span><span class="err">]</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo50&quot;</span> <span class="k">:</span> <span class="kt">null</span>
+</span><span class='line'><span class="o">}</span> <span class="k">=&gt;</span> <span class="n">toto1</span> <span class="o">::</span> <span class="n">toto2</span> <span class="o">::</span> <span class="n">toto3</span> <span class="o">::</span> <span class="n">toto4</span> <span class="o">::</span> <span class="n">toto5</span> <span class="o">::</span> <span class="n">toto6</span> <span class="o">::</span> <span class="n">toto7</span> <span class="o">::</span> <span class="n">toto8</span> <span class="o">::</span> <span class="n">toto9</span> <span class="o">::</span>
+</span><span class='line'>  <span class="mi">10</span> <span class="o">::</span> <span class="mi">11</span> <span class="o">::</span> <span class="mi">12</span> <span class="o">::</span> <span class="mi">13</span> <span class="o">::</span> <span class="mi">14</span> <span class="o">::</span> <span class="mi">15</span> <span class="o">::</span> <span class="mi">16</span> <span class="o">::</span> <span class="mi">17</span> <span class="o">::</span> <span class="mi">18</span> <span class="o">::</span> <span class="mi">19</span> <span class="o">::</span>
+</span><span class='line'>  <span class="kc">true</span> <span class="o">::</span> <span class="kc">false</span> <span class="o">::</span> <span class="kc">true</span> <span class="o">::</span> <span class="kc">false</span> <span class="o">::</span> <span class="kc">false</span> <span class="o">::</span> <span class="kc">true</span> <span class="o">::</span> <span class="kc">false</span> <span class="o">::</span> <span class="kc">true</span> <span class="o">::</span> <span class="kc">false</span> <span class="o">::</span>
+</span><span class='line'>  <span class="mf">3.0</span> <span class="o">::</span> <span class="mf">3.1</span> <span class="o">::</span> <span class="mf">3.2</span> <span class="o">::</span> <span class="mf">3.3</span> <span class="o">::</span> <span class="mf">3.4</span> <span class="o">::</span> <span class="mf">3.5</span> <span class="o">::</span> <span class="mf">3.6</span> <span class="o">::</span> <span class="mf">3.7</span> <span class="o">::</span> <span class="mf">3.8</span> <span class="o">::</span> <span class="mf">3.9</span> <span class="o">::</span>
+</span><span class='line'>  <span class="nc">List</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span> <span class="mi">2</span><span class="o">,</span> <span class="mi">3</span><span class="o">)</span> <span class="o">::</span> <span class="nc">List</span><span class="o">(</span><span class="mi">11</span><span class="o">,</span> <span class="mi">21</span><span class="o">,</span> <span class="mi">31</span><span class="o">)</span> <span class="o">::</span> <span class="nc">List</span><span class="o">(</span><span class="mi">12</span><span class="o">,</span> <span class="mi">22</span><span class="o">,</span> <span class="mi">32</span><span class="o">)</span> <span class="o">::</span> <span class="nc">List</span><span class="o">(</span><span class="mi">13</span><span class="o">,</span> <span class="mi">23</span><span class="o">,</span> <span class="mi">33</span><span class="o">)</span> <span class="o">::</span>
+</span><span class='line'>  <span class="nc">List</span><span class="o">(</span><span class="mi">14</span><span class="o">,</span> <span class="mi">24</span><span class="o">,</span> <span class="mi">34</span><span class="o">)</span> <span class="o">::</span> <span class="nc">List</span><span class="o">(</span><span class="mi">15</span><span class="o">,</span> <span class="mi">25</span><span class="o">,</span> <span class="mi">35</span><span class="o">)</span> <span class="o">::</span> <span class="nc">List</span><span class="o">(</span><span class="mi">16</span><span class="o">,</span> <span class="mi">26</span><span class="o">,</span> <span class="mi">36</span><span class="o">)</span> <span class="o">::</span> <span class="nc">List</span><span class="o">(</span><span class="mi">17</span><span class="o">,</span> <span class="mi">27</span><span class="o">,</span> <span class="mi">37</span><span class="o">)</span> <span class="o">::</span>
+</span><span class='line'>  <span class="nc">List</span><span class="o">(</span><span class="mi">18</span><span class="o">,</span> <span class="mi">28</span><span class="o">,</span> <span class="mi">38</span><span class="o">)</span> <span class="o">::</span> <span class="nc">List</span><span class="o">(</span><span class="mi">19</span><span class="o">,</span> <span class="mi">29</span><span class="o">,</span> <span class="mi">39</span><span class="o">)</span> <span class="o">::</span> <span class="kc">null</span> <span class="o">::</span>
+</span><span class='line'>  <span class="nc">HNil</span>
+</span><span class='line'>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// KO</span>
+</span><span class='line'><span class="o">{</span>
+</span><span class='line'>  <span class="s">&quot;foo1&quot;</span> <span class="k">:</span> <span class="err">&quot;</span><span class="kt">toto1</span><span class="err">&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo2&quot;</span> <span class="k">:</span> <span class="err">&quot;</span><span class="kt">toto2</span><span class="err">&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo3&quot;</span> <span class="k">:</span> <span class="err">&quot;</span><span class="kt">toto3</span><span class="err">&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo4&quot;</span> <span class="k">:</span> <span class="err">&quot;</span><span class="kt">toto4</span><span class="err">&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo5&quot;</span> <span class="k">:</span> <span class="err">&quot;</span><span class="kt">toto5</span><span class="err">&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo6&quot;</span> <span class="k">:</span> <span class="err">&quot;</span><span class="kt">toto6</span><span class="err">&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo7&quot;</span> <span class="k">:</span> <span class="err">50</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo8&quot;</span> <span class="k">:</span> <span class="err">&quot;</span><span class="kt">toto8</span><span class="err">&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo9&quot;</span> <span class="k">:</span> <span class="err">&quot;</span><span class="kt">toto9</span><span class="err">&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo10&quot;</span> <span class="k">:</span> <span class="err">10</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo11&quot;</span> <span class="k">:</span> <span class="err">11</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo12&quot;</span> <span class="k">:</span> <span class="err">12</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo13&quot;</span> <span class="k">:</span> <span class="err">13</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo14&quot;</span> <span class="k">:</span> <span class="err">14</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo15&quot;</span> <span class="k">:</span> <span class="kt">true</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo16&quot;</span> <span class="k">:</span> <span class="err">16</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo17&quot;</span> <span class="k">:</span> <span class="err">17</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo18&quot;</span> <span class="k">:</span> <span class="err">18</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo19&quot;</span> <span class="k">:</span> <span class="err">19</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo20&quot;</span> <span class="k">:</span> <span class="kt">true</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo21&quot;</span> <span class="k">:</span> <span class="kt">false</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo22&quot;</span> <span class="k">:</span> <span class="kt">true</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo23&quot;</span> <span class="k">:</span> <span class="kt">false</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo24&quot;</span> <span class="k">:</span> <span class="kt">true</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo25&quot;</span> <span class="k">:</span> <span class="kt">false</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo26&quot;</span> <span class="k">:</span> <span class="kt">true</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo27&quot;</span> <span class="k">:</span> <span class="err">&quot;</span><span class="kt">chboing</span><span class="err">&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo28&quot;</span> <span class="k">:</span> <span class="kt">true</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo29&quot;</span> <span class="k">:</span> <span class="kt">false</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo30&quot;</span> <span class="k">:</span> <span class="err">3</span><span class="kt">.</span><span class="err">0</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo31&quot;</span> <span class="k">:</span> <span class="err">3</span><span class="kt">.</span><span class="err">1</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo32&quot;</span> <span class="k">:</span> <span class="err">3</span><span class="kt">.</span><span class="err">2</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo33&quot;</span> <span class="k">:</span> <span class="err">3</span><span class="kt">.</span><span class="err">3</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo34&quot;</span> <span class="k">:</span> <span class="err">3</span><span class="kt">.</span><span class="err">4</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo35&quot;</span> <span class="k">:</span> <span class="err">3</span><span class="kt">.</span><span class="err">5</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo36&quot;</span> <span class="k">:</span> <span class="err">3</span><span class="kt">.</span><span class="err">6</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo37&quot;</span> <span class="k">:</span> <span class="err">3</span><span class="kt">.</span><span class="err">7</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo38&quot;</span> <span class="k">:</span> <span class="err">3</span><span class="kt">.</span><span class="err">8</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo39&quot;</span> <span class="k">:</span> <span class="err">3</span><span class="kt">.</span><span class="err">9</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo40&quot;</span> <span class="k">:</span> <span class="err">[1</span><span class="o">,</span><span class="mi">2</span><span class="o">,</span><span class="mi">3</span><span class="err">]</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo41&quot;</span> <span class="k">:</span> <span class="err">[11</span><span class="o">,</span><span class="mi">21</span><span class="o">,</span><span class="mi">31</span><span class="err">]</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo42&quot;</span> <span class="k">:</span> <span class="err">[12</span><span class="o">,</span><span class="mi">22</span><span class="o">,</span><span class="mi">32</span><span class="err">]</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo43&quot;</span> <span class="k">:</span> <span class="err">[13</span><span class="o">,</span><span class="mi">23</span><span class="o">,</span><span class="mi">33</span><span class="err">]</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo44&quot;</span> <span class="k">:</span> <span class="err">[14</span><span class="o">,</span><span class="mi">24</span><span class="o">,</span><span class="mi">34</span><span class="err">]</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo45&quot;</span> <span class="k">:</span> <span class="err">[15</span><span class="o">,</span><span class="mi">25</span><span class="o">,</span><span class="mi">35</span><span class="err">]</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo46&quot;</span> <span class="k">:</span> <span class="err">[16</span><span class="o">,</span><span class="mi">26</span><span class="o">,</span><span class="s">&quot;blabla&quot;</span><span class="err">]</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo47&quot;</span> <span class="k">:</span> <span class="err">[17</span><span class="o">,</span><span class="mi">27</span><span class="o">,</span><span class="mi">37</span><span class="err">]</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo48&quot;</span> <span class="k">:</span> <span class="err">[18</span><span class="o">,</span><span class="mi">28</span><span class="o">,</span><span class="mi">38</span><span class="err">]</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo49&quot;</span> <span class="k">:</span> <span class="err">[19</span><span class="o">,</span><span class="mi">29</span><span class="o">,</span><span class="mi">39</span><span class="err">]</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo50&quot;</span> <span class="k">:</span> <span class="err">&quot;</span><span class="kt">toto</span><span class="err">&quot;</span>
+</span><span class='line'><span class="o">}</span> <span class="k">=&gt;</span> <span class="nc">Failure</span><span class="o">(</span><span class="nc">List</span><span class="o">(</span>
+</span><span class='line'>  <span class="o">(/</span><span class="n">foo50</span><span class="o">,</span><span class="nc">List</span><span class="o">(</span><span class="nc">ValidationError</span><span class="o">(</span><span class="n">error</span><span class="o">.</span><span class="n">invalid</span><span class="o">,</span><span class="nc">WrappedArray</span><span class="o">(</span><span class="kc">null</span><span class="o">)))),</span>
+</span><span class='line'>  <span class="o">(/</span><span class="n">foo46</span><span class="o">[</span><span class="err">2</span><span class="o">],</span><span class="nc">List</span><span class="o">(</span><span class="nc">ValidationError</span><span class="o">(</span><span class="n">error</span><span class="o">.</span><span class="n">number</span><span class="o">,</span><span class="nc">WrappedArray</span><span class="o">(</span><span class="nc">Long</span><span class="o">)))),</span>
+</span><span class='line'>  <span class="o">(/</span><span class="n">foo27</span><span class="o">,</span><span class="nc">List</span><span class="o">(</span><span class="nc">ValidationError</span><span class="o">(</span><span class="n">error</span><span class="o">.</span><span class="n">invalid</span><span class="o">,</span><span class="nc">WrappedArray</span><span class="o">(</span><span class="nc">Boolean</span><span class="o">)))),</span>
+</span><span class='line'>  <span class="o">(/</span><span class="n">foo15</span><span class="o">,</span><span class="nc">List</span><span class="o">(</span><span class="nc">ValidationError</span><span class="o">(</span><span class="n">error</span><span class="o">.</span><span class="n">number</span><span class="o">,</span><span class="nc">WrappedArray</span><span class="o">(</span><span class="nc">Int</span><span class="o">)))),</span>
+</span><span class='line'>  <span class="o">(/</span><span class="n">foo7</span><span class="o">,</span><span class="nc">List</span><span class="o">(</span><span class="nc">ValidationError</span><span class="o">(</span><span class="n">error</span><span class="o">.</span><span class="n">invalid</span><span class="o">,</span><span class="nc">WrappedArray</span><span class="o">(</span><span class="nc">String</span><span class="o">))</span>
+</span><span class='line'><span class="o">))))</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Awesome&#8230; now, nobody can say 22 limits is still a problem ;)</p>
+
+<p>Have a look at the code on <a href="https://github.com/mandubian/shapeless-rules">Github</a>
+Have fun x 50!</p>
+
+<br/>
+
+
+<br/>
+
+
+<br/>
+
+
+<br/>
+
+
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Play 2.2 Actor Room: websocket (&more) room manager only with actors]]></title>
@@ -9275,1048 +10121,6 @@ Great power means greater responsability so it&#8217;s better to discuss all tog
 <p>If anyone tells me there is still 1 line to write, I think I might become unpolite ;)</p>
 
 <p>Have Macrofun!</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Unveiling Play 2.1 Json API - Part 3 : JSON transformers]]></title>
-    <link href="http://www.mandubian.com/2012/10/29/unveiling-play-2-dot-1-json-api-part3-json-transformers/"/>
-    <updated>2012-10-29T11:10:00+01:00</updated>
-    <id>http://www.mandubian.com/2012/10/29/unveiling-play-2-dot-1-json-api-part3-json-transformers</id>
-    <content type="html"><![CDATA[<blockquote><p>In <a href="http://www.mandubian.com/2012/09/08/unveiling-play-2-dot-1-json-api-part1-jspath-reads-combinators/">Part 1</a> and <a href="2012-10-01-unveiling-play-2-dot-1-json-api-part2-writes-format-combinators">Part 2</a> , we have presented Json combinators for <code>Reads[T]</code>, <code>Writes[T]</code> and <code>Format[T]</code>. So now you should know how to validate JSON and convert into any structure you can write in Scala and back to JSON. But as soon as I&#8217;ve begun to use those combinators to write web applications, I almost immediately encountered a case : read JSON from network, validate it and convert it into… JSON.</p></blockquote>
-
-<br/>
-
-
-<br/>
-
-
-<h1><a name="json-to-json">Introducing JSON <em>coast-to-coast</em> design</a></h1>
-
-<h3><a name="doomed-to-OO">Are we doomed to convert JSON to OO?</a></h3>
-
-<p>For a few years now, in almost all web frameworks (except recent JS serverside stuff maybe in which JSON is the default data structure), we have been used to get JSON from network and <strong>convert JSON (or even POST/GET data) into OO structures</strong> such as classes (or case classes in Scala). Why?</p>
-
-<ul>
-<li>for a good reason : <strong>OO structures are &#8220;language-native&#8221;</strong> and allows <strong>manipulating data with respect to your business logic</strong> in a seamless way while ensuring isolation of business logic from web layers.</li>
-<li>for a more questionable reason : <strong>ORM frameworks talk to DB only with OO structures</strong> and we have (kind of) convinced ourselves that it was impossible to do else… with the well-known good &amp; bad features of ORMs… (not here to criticize those stuff)</li>
-</ul>
-
-
-<h3><a name="is-default-case">Is OO conversion really the default usecase?</a></h3>
-
-<p><strong>In many cases, you don&#8217;t really need to perform any real business logic with data but validating/transforming before storing or after extracting.</strong></p>
-
-<p>Let&#8217;s take the CRUD case:</p>
-
-<ul>
-<li>You just get the data from the network, validate them a bit and insert/update into DB.</li>
-<li>In the other way, you just retrieve data from DB and send them outside.</li>
-</ul>
-
-
-<p>So, generally, for CRUD ops, you convert JSON into a OO structure just because the frameworks are only able to speak OO.</p>
-
-<blockquote><p><strong>I don&#8217;t say or pretend you shouldn&#8217;t use JSON to OO conversion but maybe this is not the most common case and we should keep conversion to OO only when we have real business logic to fulfill.</strong></p></blockquote>
-
-<h3><a name="new-players">New tech players change the way of manipulating JSON</a></h3>
-
-<p>Besides this fact, we have some new DB types such as Mongo (or CouchDB) accepting document structured data looking almost like JSON trees (<em>isn&#8217;t BSON, Binary JSON?</em>).<br/>
-With these DB types, we also have new great tools such as <a href="http://www.reactivemongo.org">ReactiveMongo</a> which provides reactive environment to stream data to and from Mongo in a very natural way.<br/>
-I&#8217;ve been working with Stephane Godbillon to integrate ReactiveMongo with Play2.1 while writing the <a href="https://github.com/zenexity/Play-ReactiveMongo">Play2-ReactiveMongo module</a>. Besides Mongo facilities for Play2.1, this module provides <em>Json To/From BSON conversion typeclasses</em>.</p>
-
-<blockquote><p><strong>So it means you can manipulate JSON flows to and from DB directly without even converting into OO.</strong></p></blockquote>
-
-<h3><a name="new-players">JSON <em>coast-to-coast</em> design</a></h3>
-
-<p>Taking this into account, we can easily imagine the following:</p>
-
-<ul>
-<li>receive JSON,</li>
-<li>validate JSON,</li>
-<li>transform JSON to fit expected DB document structure,</li>
-<li>directly send JSON to DB (or somewhere else)</li>
-</ul>
-
-
-<p>This is exactly the same case when serving data from DB:</p>
-
-<ul>
-<li>extract some data from DB as JSON directly,</li>
-<li>filter/transform this JSON to send only mandatory data in the format expected by the client (for ex, you don&#8217;t want some secure info to go out),</li>
-<li>directly send JSON to the client</li>
-</ul>
-
-
-<p>In this context, we can easily imagine <strong>manipulating a flow of JSON data</strong> from client to DB and back without any (explicit) transformation in anything else than JSON.<br/>
-Naturally, when you plug this transformation flow on <strong>reactive infrastructure provided by Play2.1</strong>, it suddenly opens new horizons.</p>
-
-<blockquote><p>This is the so-called (by me) <strong>JSON coast-to-coast design</strong>:</p>
-
-<ul>
-<li>Don&#8217;t consider JSON data chunk by chunk but as a <strong>continuous flow of data from client to DB (or else) through server</strong>,</li>
-<li>Treat the <strong>JSON flow like a pipe that you connect to others pipes</strong> while applying modifications, transformations alongside,</li>
-<li>Treat the flow in a <strong>fully asynchronous/non-blocking</strong> way.</li>
-</ul>
-
-
-<p>This is also one of the reason of being of Play2.1 reactive architecture…<br/>
-I believe <strong>considering your app through the prism of flows of data changes drastically the way you design</strong> your web apps in general. It may also open new functional scopes that fit today&#8217;s webapps requirements quite better than classic architecture. Anyway, this is not the subject here ;)</p></blockquote>
-
-<p>So, as you have deduced by yourself, to be able to manipulate Json flows based on validation and transformation directly, we needed some new tools. JSON combinators were good candidates but they are a bit too generic.<br/>
-That&#8217;s why we have created some specialized combinators and API called <strong>JSON transformers</strong> to do that.</p>
-
-<br/>
-
-
-<br/>
-
-
-<h1><a name="json-transf-are-reads">JSON transformers are Reads[T &lt;: JsValue]</a></h1>
-
-<p>You may tell JSON transformers are just <code>f:JSON =&gt; JSON</code>.<br/>
-So a JSON transformer could be simply a <code>Writes[A &lt;: JsValue]</code>.<br/>
-But, a JSON transformer is not only a function: as we said, we also want to validate JSON while transforming it.<br/>
-As a consequence, a JSON transformer is a <code>Reads[A &lt;: Jsvalue]</code>.</p>
-
-<blockquote><p><strong>Keep in mind that a Reads[A &lt;: JsValue] is able to transform and not only to read/validate</strong></p></blockquote>
-
-<br/>
-
-
-<br/>
-
-
-<h1><a name="play2-syntax">Recent Play2 JSON syntax evolutions</a></h1>
-
-<p>As you know, Json API for Play2.1 was still draft and has evolved since I began writing article part 1/2.<br/>
-We have changed a few things since (nothing conceptual, just cosmetics).</p>
-
-<h3><a name="new-play2-syntax">Syntax clarification</a></h3>
-
-<h5><code>Reads[A] andThen Reads[B]</code> has been renamed <code>Reads[A] andKeep Reads[B]</code> (keep the right side result)</h5>
-
-<br/>
-
-
-<h5><code>Reads[A] provided Reads[B]</code> has been renamed <code>Reads[A] keepAnd Reads[B]</code> (keep the left side result and is symmetric with andKeep)</h5>
-
-<br/>
-
-
-<h3><a name="new-reads-feature">Remarkable new Reads[A] features</a></h3>
-
-<h5><code>Reads[A &lt;: JsValue] andThen Reads[B]</code></h5>
-
-<p><code>andThen</code> has the classic Scala semantic of function composition : it applies <code>Reads[A &lt;: JsValue]</code> on JSON retrieving a JsValue and then applies <code>Reads[B]</code> on this JsValue.</p>
-
-<br/>
-
-
-<h5><code>Reads[A &lt;: JsValue].map(f: A =&gt; B): Reads[B]</code></h5>
-
-<p><code>map</code> is the classic and always very useful Scala map function.</p>
-
-<br/>
-
-
-<h5><code>Reads[A &lt;: JsValue].flatMap(f: A =&gt; Reads[B]): Reads[B]</code></h5>
-
-<p><code>flatMap</code> is the classic Scala flatMap function.</p>
-
-<br/>
-
-
-<br/>
-
-
-<h1><a name="step-by-step">JSON transformers case by case</a></h1>
-
-<h2><a name="json-def">A few reminders</a></h2>
-
-<h3><a name="json-def">JSON new syntax</a></h3>
-
-<p>In code samples, we&#8217;ll use the following JSON.</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-</pre></td><td class='code'><pre><code class='json'><span class='line'><span class="p">{</span>
-</span><span class='line'>  <span class="nt">&quot;key1&quot;</span> <span class="p">:</span> <span class="s2">&quot;value1&quot;</span><span class="p">,</span>
-</span><span class='line'>  <span class="nt">&quot;key2&quot;</span> <span class="p">:</span> <span class="p">{</span>
-</span><span class='line'>    <span class="nt">&quot;key21&quot;</span> <span class="p">:</span> <span class="mi">123</span><span class="p">,</span>
-</span><span class='line'>    <span class="nt">&quot;key22&quot;</span> <span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
-</span><span class='line'>    <span class="nt">&quot;key23&quot;</span> <span class="p">:</span> <span class="p">[</span> <span class="s2">&quot;alpha&quot;</span><span class="p">,</span> <span class="s2">&quot;beta&quot;</span><span class="p">,</span> <span class="s2">&quot;gamma&quot;</span><span class="p">]</span>
-</span><span class='line'>    <span class="s2">&quot;key24&quot;</span> <span class="p">:</span> <span class="p">{</span>
-</span><span class='line'>      <span class="nt">&quot;key241&quot;</span> <span class="p">:</span> <span class="mi">234</span><span class="err">.</span><span class="mi">123</span><span class="p">,</span>
-</span><span class='line'>      <span class="nt">&quot;key242&quot;</span> <span class="p">:</span> <span class="s2">&quot;value242&quot;</span>
-</span><span class='line'>    <span class="p">}</span>
-</span><span class='line'>  <span class="p">},</span>
-</span><span class='line'>  <span class="nt">&quot;key3&quot;</span> <span class="p">:</span> <span class="mi">234</span>
-</span><span class='line'><span class="p">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Remind that, in Play2, you can write this JSON as following.</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">json</span> <span class="k">=</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span>
-</span><span class='line'>  <span class="s">&quot;key1&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;value1&quot;</span><span class="o">,</span>
-</span><span class='line'>  <span class="s">&quot;key2&quot;</span> <span class="o">-&gt;</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span>
-</span><span class='line'>    <span class="s">&quot;key21&quot;</span> <span class="o">-&gt;</span> <span class="mi">123</span><span class="o">,</span>
-</span><span class='line'>    <span class="s">&quot;key22&quot;</span> <span class="o">-&gt;</span> <span class="kc">true</span><span class="o">,</span>
-</span><span class='line'>    <span class="s">&quot;key23&quot;</span> <span class="o">-&gt;</span> <span class="nc">Json</span><span class="o">.</span><span class="n">arr</span><span class="o">(</span><span class="s">&quot;alpha&quot;</span><span class="o">,</span> <span class="s">&quot;beta&quot;</span><span class="o">,</span> <span class="s">&quot;gamma&quot;</span><span class="o">),</span>
-</span><span class='line'>    <span class="s">&quot;key24&quot;</span> <span class="o">-&gt;</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span>
-</span><span class='line'>      <span class="s">&quot;key241&quot;</span> <span class="o">-&gt;</span> <span class="mf">234.123</span><span class="o">,</span>
-</span><span class='line'>      <span class="s">&quot;key242&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;value242&quot;</span>
-</span><span class='line'>    <span class="o">)</span>
-</span><span class='line'>  <span class="o">),</span>
-</span><span class='line'>  <span class="s">&quot;key3&quot;</span> <span class="o">-&gt;</span> <span class="mi">234</span>
-</span><span class='line'><span class="o">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h3><a name="controller-def">Defining Play2 JSON action controller</a></h3>
-
-<p>Here is how you would write a Play2.1 action controller to receive and manipulate/validate JSON.</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">object</span> <span class="nc">YourController</span> <span class="o">{</span>
-</span><span class='line'>  <span class="err">…</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="c1">// not implicit because I want to control which transformer I use</span>
-</span><span class='line'>  <span class="k">val</span> <span class="n">jsonTransformer</span><span class="k">:</span> <span class="kt">Reads</span><span class="o">[</span><span class="kt">JsValue</span><span class="o">]</span> <span class="k">=</span> <span class="err">…</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">def</span> <span class="n">doit</span> <span class="k">=</span> <span class="nc">Action</span><span class="o">(</span><span class="n">parse</span><span class="o">.</span><span class="n">json</span><span class="o">)</span> <span class="o">{</span> <span class="n">request</span> <span class="k">=&gt;</span>
-</span><span class='line'>      <span class="n">request</span><span class="o">.</span><span class="n">body</span><span class="o">.</span><span class="n">validate</span><span class="o">(</span><span class="n">jsonTransformer</span><span class="o">).</span><span class="n">map</span> <span class="o">{</span> <span class="n">js</span> <span class="k">=&gt;</span>
-</span><span class='line'>          <span class="c1">// do something</span>
-</span><span class='line'>          <span class="nc">Ok</span><span class="o">(...)</span>  
-</span><span class='line'>      <span class="o">}.</span><span class="n">recover</span> <span class="o">{</span> <span class="n">error</span> <span class="k">=&gt;</span>
-</span><span class='line'>          <span class="nc">BadRequest</span><span class="o">(</span><span class="err">…</span><span class="o">)</span>
-</span><span class='line'>          <span class="o">}</span>
-</span><span class='line'>  <span class="o">}</span>
-</span><span class='line'>  
-</span><span class='line'>  <span class="err">…</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<blockquote><p>Please note the <code>JsResult.map</code> and <code>JsResult.recover</code> functions allowing to compose result and deal with errors.</p></blockquote>
-
-<p>Now let&#8217;s describe JSON transformers with samples</p>
-
-<h2><a name="step-pick">Case 1: Pick JSON value in JsPath</a></h2>
-
-<h3><a name="step-pick-1">Pick value as JsValue</a></h3>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json._</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">val</span> <span class="n">jsonTransformer</span> <span class="k">=</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;key2</span> <span class="o">\</span> <span class="-Symbol">&#39;key23</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">pick</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="n">json</span><span class="o">.</span><span class="n">validate</span><span class="o">(</span><span class="n">jsonTransformer</span><span class="o">)</span>
-</span><span class='line'><span class="n">res9</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsResult</span><span class="o">[</span><span class="kt">play.api.libs.json.JsValue</span><span class="o">]</span> <span class="k">=</span>
-</span><span class='line'>  <span class="nc">JsSuccess</span><span class="o">(</span>
-</span><span class='line'>    <span class="o">[</span><span class="err">&quot;</span><span class="kt">alpha</span><span class="err">&quot;</span>,<span class="err">&quot;</span><span class="kt">beta</span><span class="err">&quot;</span>,<span class="err">&quot;</span><span class="kt">gamma</span><span class="err">&quot;</span><span class="o">],</span>
-</span><span class='line'>    <span class="o">/</span><span class="n">key2</span><span class="o">/</span><span class="n">key23</span>
-</span><span class='line'>  <span class="o">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h5><code>(__ \ 'key2 \ 'key23).json...</code></h5>
-
-<ul>
-<li>All JSON transformers are in <code>JsPath.json.</code></li>
-</ul>
-
-
-<h5><code>(__ \ 'key2 \ 'key23).json.pick</code></h5>
-
-<ul>
-<li><code>pick</code> is a <code>Reads[JsValue]</code> which picks the value <strong>IN</strong> the given JsPath. Here <code>["alpha","beta","gamma"]</code></li>
-</ul>
-
-
-<h5><code>JsSuccess(["alpha","beta","gamma"],/key2/key23)</code></h5>
-
-<ul>
-<li>This is a simply successful <code>JsResult</code></li>
-<li>For info, <code>/key2/key23</code> represents the JsPath where data were read but don&#8217;t care about it, it&#8217;s mainly used by Play API to compose JsResult(s))</li>
-<li><code>["alpha","beta","gamma"]</code> is just due to the fact that we have overriden <code>toString</code></li>
-</ul>
-
-
-<blockquote><p><strong>To Remember</strong> <code>jsPath.json.pick</code> gets ONLY the value inside the JsPath</p></blockquote>
-
-<br/>
-
-
-<h3><a name="step-pick-2">Pick value as Type</a></h3>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json._</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">val</span> <span class="n">jsonTransformer</span> <span class="k">=</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;key2</span> <span class="o">\</span> <span class="-Symbol">&#39;key23</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">pick</span><span class="o">[</span><span class="kt">JsArray</span><span class="o">]</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="n">json</span><span class="o">.</span><span class="n">validate</span><span class="o">(</span><span class="n">jsonTransformer</span><span class="o">)</span>
-</span><span class='line'><span class="n">res10</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsResult</span><span class="o">[</span><span class="kt">play.api.libs.json.JsArray</span><span class="o">]</span> <span class="k">=</span>
-</span><span class='line'>  <span class="nc">JsSuccess</span><span class="o">(</span>
-</span><span class='line'>    <span class="o">[</span><span class="err">&quot;</span><span class="kt">alpha</span><span class="err">&quot;</span>,<span class="err">&quot;</span><span class="kt">beta</span><span class="err">&quot;</span>,<span class="err">&quot;</span><span class="kt">gamma</span><span class="err">&quot;</span><span class="o">],</span>
-</span><span class='line'>    <span class="o">/</span><span class="n">key2</span><span class="o">/</span><span class="n">key23</span>
-</span><span class='line'>  <span class="o">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h5><code>(__ \ 'key2 \ 'key23).json.pick[JsArray]</code></h5>
-
-<ul>
-<li><code>pick[T]</code> is a <code>Reads[T &lt;: JsValue]</code> which picks the value (as a <code>JsArray</code> in our case) <strong>IN</strong> the given JsPath</li>
-</ul>
-
-
-<blockquote><p><strong>To Remember: <code>jsPath.json.pick[T &lt;: JsValue]</code> extracts ONLY the typed value inside the JsPath</strong></p></blockquote>
-
-<br/>
-
-
-<h2><a name="step-pickbranch">Case 2: Pick branch following JsPath</a></h2>
-
-<h3><a name="step-pickbranch-1">Pick branch as JsValue</a></h3>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json._</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">val</span> <span class="n">jsonTransformer</span> <span class="k">=</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;key2</span> <span class="o">\</span> <span class="-Symbol">&#39;key24</span> <span class="o">\</span> <span class="-Symbol">&#39;key241</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">pickBranch</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="n">json</span><span class="o">.</span><span class="n">validate</span><span class="o">(</span><span class="n">jsonTransformer</span><span class="o">)</span>
-</span><span class='line'><span class="n">res11</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsResult</span><span class="o">[</span><span class="kt">play.api.libs.json.JsObject</span><span class="o">]</span> <span class="k">=</span>
-</span><span class='line'>  <span class="nc">JsSuccess</span><span class="o">(</span>
-</span><span class='line'>  <span class="o">{</span>
-</span><span class='line'>    <span class="s">&quot;key2&quot;</span><span class="k">:</span> <span class="o">{</span>
-</span><span class='line'>      <span class="err">&quot;</span><span class="kt">key24</span><span class="err">&quot;</span><span class="kt">:</span><span class="o">{</span>
-</span><span class='line'>        <span class="err">&quot;</span><span class="kt">key241</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">234</span><span class="kt">.</span><span class="err">123</span>
-</span><span class='line'>      <span class="o">}</span>
-</span><span class='line'>    <span class="o">}</span>
-</span><span class='line'>  <span class="o">},</span>
-</span><span class='line'>  <span class="o">/</span><span class="n">key2</span><span class="o">/</span><span class="n">key24</span><span class="o">/</span><span class="n">key241</span>
-</span><span class='line'>  <span class="o">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h5><code>(__ \ 'key2 \ 'key23).json.pickBranch</code></h5>
-
-<ul>
-<li><code>pickBranch</code> is a <code>Reads[JsValue]</code> which picks the branch from root to given JsPath</li>
-</ul>
-
-
-<h5><code>{"key2":{"key24":{"key242":"value242"}}}</code></h5>
-
-<ul>
-<li>The result is the branch from root to given JsPath including the JsValue in JsPath</li>
-</ul>
-
-
-<blockquote><p><strong>To Remember: <code>jsPath.json.pickBranch</code> extracts the single branch down to JsPath + the value inside JsPath</strong></p></blockquote>
-
-<br/>
-
-
-<h2><a name="step-copyfrom">Case 3: Copy a value from input JsPath into a new JsPath</a></h2>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json._</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">val</span> <span class="n">jsonTransformer</span> <span class="k">=</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;key25</span> <span class="o">\</span> <span class="-Symbol">&#39;key251</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">copyFrom</span><span class="o">(</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;key2</span> <span class="o">\</span> <span class="-Symbol">&#39;key21</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">pick</span> <span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="n">json</span><span class="o">.</span><span class="n">validate</span><span class="o">(</span><span class="n">jsonTransformer</span><span class="o">)</span>
-</span><span class='line'><span class="n">res12</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsResult</span><span class="o">[</span><span class="kt">play.api.libs.json.JsObject</span><span class="o">]</span>
-</span><span class='line'>  <span class="nc">JsSuccess</span><span class="o">(</span>
-</span><span class='line'>    <span class="o">{</span>
-</span><span class='line'>      <span class="s">&quot;key25&quot;</span><span class="k">:</span><span class="o">{</span>
-</span><span class='line'>        <span class="err">&quot;</span><span class="kt">key251</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">123</span>
-</span><span class='line'>      <span class="o">}</span>
-</span><span class='line'>    <span class="o">},</span>
-</span><span class='line'>    <span class="o">/</span><span class="n">key2</span><span class="o">/</span><span class="n">key21</span>
-</span><span class='line'>  <span class="o">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h5><code>(__ \ 'key25 \ 'key251).json.copyFrom( reads: Reads[A &lt;: JsValue] )</code></h5>
-
-<ul>
-<li><code>copyFrom</code> is a <code>Reads[JsValue]</code></li>
-<li><code>copyFrom</code> reads the JsValue from input JSON using provided Reads[A]</li>
-<li><code>copyFrom</code> copies this extracted JsValue as the leaf of a new branch corresponding to given JsPath</li>
-</ul>
-
-
-<h5><code>{"key25":{"key251":123}}</code></h5>
-
-<ul>
-<li><code>copyFrom</code> reads value <code>123</code></li>
-<li><code>copyFrom</code> copies this value into new branch <code>(__ \ 'key25 \ 'key251)</code></li>
-</ul>
-
-
-<blockquote><p><strong>To Remember: <code>jsPath.json.copyFrom(Reads[A &lt;: JsValue])</code> reads value from input JSON and creates a new branch with result as leaf</strong></p></blockquote>
-
-<br/>
-
-
-<h2><a name="step-update">Case 4: Copy full input Json &amp; update a branch</a></h2>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json._</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">val</span> <span class="n">jsonTransformer</span> <span class="k">=</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;key2</span> <span class="o">\</span> <span class="-Symbol">&#39;key24</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">update</span><span class="o">(</span>
-</span><span class='line'>  <span class="nc">__</span><span class="o">.</span><span class="n">read</span><span class="o">[</span><span class="kt">JsObject</span><span class="o">].</span><span class="n">map</span><span class="o">{</span> <span class="n">o</span> <span class="k">=&gt;</span> <span class="n">o</span> <span class="o">++</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span> <span class="s">&quot;field243&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;coucou&quot;</span> <span class="o">)</span> <span class="o">}</span>
-</span><span class='line'><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="n">json</span><span class="o">.</span><span class="n">validate</span><span class="o">(</span><span class="n">jsonTransformer</span><span class="o">)</span>
-</span><span class='line'><span class="n">res13</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsResult</span><span class="o">[</span><span class="kt">play.api.libs.json.JsObject</span><span class="o">]</span> <span class="k">=</span>
-</span><span class='line'>  <span class="nc">JsSuccess</span><span class="o">(</span>
-</span><span class='line'>    <span class="o">{</span>
-</span><span class='line'>      <span class="s">&quot;key1&quot;</span><span class="k">:</span><span class="err">&quot;</span><span class="kt">value1</span><span class="err">&quot;</span><span class="o">,</span>
-</span><span class='line'>      <span class="s">&quot;key2&quot;</span><span class="k">:</span><span class="o">{</span>
-</span><span class='line'>        <span class="err">&quot;</span><span class="kt">key21</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">123</span><span class="o">,</span>
-</span><span class='line'>        <span class="err">&quot;</span><span class="kt">key22</span><span class="err">&quot;</span><span class="kt">:true</span><span class="o">,</span>
-</span><span class='line'>        <span class="s">&quot;key23&quot;</span><span class="k">:</span><span class="err">[&quot;</span><span class="kt">alpha</span><span class="err">&quot;</span><span class="o">,</span><span class="s">&quot;beta&quot;</span><span class="o">,</span><span class="s">&quot;gamma&quot;</span><span class="err">]</span><span class="o">,</span>
-</span><span class='line'>        <span class="s">&quot;key24&quot;</span><span class="k">:</span><span class="o">{</span>
-</span><span class='line'>          <span class="err">&quot;</span><span class="kt">key241</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">234</span><span class="kt">.</span><span class="err">123</span><span class="o">,</span>
-</span><span class='line'>          <span class="err">&quot;</span><span class="kt">key242</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">value242</span><span class="err">&quot;</span><span class="o">,</span>
-</span><span class='line'>          <span class="s">&quot;field243&quot;</span><span class="k">:</span><span class="err">&quot;</span><span class="kt">coucou</span><span class="err">&quot;</span>
-</span><span class='line'>        <span class="o">}</span>
-</span><span class='line'>      <span class="o">},</span>
-</span><span class='line'>      <span class="s">&quot;key3&quot;</span><span class="k">:</span><span class="err">234</span>
-</span><span class='line'>    <span class="o">},</span>
-</span><span class='line'>  <span class="o">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h5><code>(__ \ 'key2).json.update(reads: Reads[A &lt; JsValue])</code></h5>
-
-<ul>
-<li>is a <code>Reads[JsObject]</code></li>
-</ul>
-
-
-<h5><code>(__ \ 'key2 \ 'key24).json.update(reads)</code> does 3 things:</h5>
-
-<ul>
-<li>extracts value from input JSON at JsPath <code>(__ \ 'key2 \ 'key24)</code></li>
-<li>applies <code>reads</code> on this relative value and re-creates a branch <code>(__ \ 'key2 \ 'key24)</code> adding result of <code>reads</code> as leaf</li>
-<li>merges this branch with full input JSON replacing existing branch (so it works only with input JsObject and not other type of JsValue)</li>
-</ul>
-
-
-<h5><code>JsSuccess({…},)</code></h5>
-
-<ul>
-<li>Just for info, there is no JsPath as 2nd parameter there because the JSON manipulation was done from Root JsPath</li>
-</ul>
-
-
-<blockquote><p><strong>To Remember: <code>jsPath.json.update(Reads[A &lt;: JsValue])</code> only works for JsObject, copies full input <code>JsObject</code> and updates jsPath with provided <code>Reads[A &lt;: JsValue]</code></strong></p></blockquote>
-
-<br/>
-
-
-<h2><a name="step-put">Case 5: Put a given value in a new branch</a></h2>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json._</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">val</span> <span class="n">jsonTransformer</span> <span class="k">=</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;key24</span> <span class="o">\</span> <span class="-Symbol">&#39;key241</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">put</span><span class="o">(</span><span class="nc">JsNumber</span><span class="o">(</span><span class="mi">456</span><span class="o">))</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="n">json</span><span class="o">.</span><span class="n">validate</span><span class="o">(</span><span class="n">jsonTransformer</span><span class="o">)</span>
-</span><span class='line'><span class="n">res14</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsResult</span><span class="o">[</span><span class="kt">play.api.libs.json.JsObject</span><span class="o">]</span> <span class="k">=</span>
-</span><span class='line'>  <span class="nc">JsSuccess</span><span class="o">(</span>
-</span><span class='line'>    <span class="o">{</span>
-</span><span class='line'>      <span class="s">&quot;key24&quot;</span><span class="k">:</span><span class="o">{</span>
-</span><span class='line'>        <span class="err">&quot;</span><span class="kt">key241</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">456</span>
-</span><span class='line'>      <span class="o">}</span>
-</span><span class='line'>    <span class="o">},</span>
-</span><span class='line'>  <span class="o">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h5><code>(__ \ 'key24 \ 'key241).json.put( a: =&gt; JsValue )</code></h5>
-
-<ul>
-<li>is a Reads[JsObject]</li>
-</ul>
-
-
-<h5><code>(__ \ 'key24 \ 'key241).json.put( a: =&gt; JsValue )</code></h5>
-
-<ul>
-<li>creates a new branch <code>(__ \ 'key24 \ 'key241)</code></li>
-<li>puts <code>a</code> as leaf of this branch.</li>
-</ul>
-
-
-<h5><code>jsPath.json.put( a: =&gt; JsValue )</code></h5>
-
-<ul>
-<li>takes a JsValue argument passed by name allowing to pass even a closure to it.</li>
-</ul>
-
-
-<h5><code>jsPath.json.put</code></h5>
-
-<ul>
-<li>doesn&#8217;t care at all about input JSON</li>
-<li>simply replace input JSON by given value</li>
-</ul>
-
-
-<blockquote><p><strong>To Remember: <code>jsPath.json.put( a: =&gt; Jsvalue )</code> creates a new branch with a given value without taking into account input JSON</strong></p></blockquote>
-
-<br/>
-
-
-<h2><a name="step-prune">Case 6: Prune a branch from input JSON</a></h2>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json._</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">val</span> <span class="n">jsonTransformer</span> <span class="k">=</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;key2</span> <span class="o">\</span> <span class="-Symbol">&#39;key22</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">prune</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="n">json</span><span class="o">.</span><span class="n">validate</span><span class="o">(</span><span class="n">jsonTransformer</span><span class="o">)</span>
-</span><span class='line'><span class="n">res15</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsResult</span><span class="o">[</span><span class="kt">play.api.libs.json.JsObject</span><span class="o">]</span> <span class="k">=</span>
-</span><span class='line'>  <span class="nc">JsSuccess</span><span class="o">(</span>
-</span><span class='line'>    <span class="o">{</span>
-</span><span class='line'>      <span class="s">&quot;key1&quot;</span><span class="k">:</span><span class="err">&quot;</span><span class="kt">value1</span><span class="err">&quot;</span><span class="o">,</span>
-</span><span class='line'>      <span class="s">&quot;key3&quot;</span><span class="k">:</span><span class="err">234</span><span class="o">,</span>
-</span><span class='line'>      <span class="s">&quot;key2&quot;</span><span class="k">:</span><span class="o">{</span>
-</span><span class='line'>        <span class="err">&quot;</span><span class="kt">key21</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">123</span><span class="o">,</span>
-</span><span class='line'>        <span class="err">&quot;</span><span class="kt">key23</span><span class="err">&quot;</span><span class="kt">:</span><span class="o">[</span><span class="err">&quot;</span><span class="kt">alpha</span><span class="err">&quot;</span>,<span class="err">&quot;</span><span class="kt">beta</span><span class="err">&quot;</span>,<span class="err">&quot;</span><span class="kt">gamma</span><span class="err">&quot;</span><span class="o">],</span>
-</span><span class='line'>        <span class="s">&quot;key24&quot;</span><span class="k">:</span><span class="o">{</span>
-</span><span class='line'>          <span class="err">&quot;</span><span class="kt">key241</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">234</span><span class="kt">.</span><span class="err">123</span><span class="o">,</span>
-</span><span class='line'>          <span class="err">&quot;</span><span class="kt">key242</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">value242</span><span class="err">&quot;</span>
-</span><span class='line'>        <span class="o">}</span>
-</span><span class='line'>      <span class="o">}</span>
-</span><span class='line'>    <span class="o">},</span>
-</span><span class='line'>    <span class="o">/</span><span class="n">key2</span><span class="o">/</span><span class="n">key22</span><span class="o">/</span><span class="n">key22</span>
-</span><span class='line'>  <span class="o">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h5><code>(__ \ 'key2 \ 'key22).json.prune</code></h5>
-
-<ul>
-<li>is a <code>Reads[JsObject]</code> that works only with JsObject</li>
-</ul>
-
-
-<h5><code>(__ \ 'key2 \ 'key22).json.prune</code></h5>
-
-<ul>
-<li>removes given JsPath from input JSON (<code>key22</code> has disappeared under <code>key2</code>)</li>
-</ul>
-
-
-<p>Please note the resulting JsObject hasn&#8217;t same keys order as input JsObject. This is due to the implementation of JsObject and to the merge mechanism. But this is not important since we have overriden <code>JsObject.equals</code> method to take this into account.</p>
-
-<blockquote><p><strong>To Remember: <code>jsPath.json.prune</code> only works with JsObject and removes given JsPath form input JSON)</strong>
-Please note that:</p>
-
-<ul>
-<li><code>prune</code> doesn&#8217;t work for recursive JsPath for the time being</li>
-<li>if <code>prune</code> doesn&#8217;t find any branch to delete, it doesn&#8217;t generate any error and returns unchanged JSON.</li>
-</ul>
-</blockquote>
-
-<h1><a name="more-complicated">More complicated cases</a></h1>
-
-<h2><a name="more-complicated-pick-update">Case 7: Pick a branch and update its content in 2 places</a></h2>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json._</span>
-</span><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json.Reads._</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">val</span> <span class="n">jsonTransformer</span> <span class="k">=</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;key2</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">pickBranch</span><span class="o">(</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;key21</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">update</span><span class="o">(</span>
-</span><span class='line'>    <span class="n">of</span><span class="o">[</span><span class="kt">JsNumber</span><span class="o">].</span><span class="n">map</span><span class="o">{</span> <span class="k">case</span> <span class="nc">JsNumber</span><span class="o">(</span><span class="n">nb</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="nc">JsNumber</span><span class="o">(</span><span class="n">nb</span> <span class="o">+</span> <span class="mi">10</span><span class="o">)</span> <span class="o">}</span>
-</span><span class='line'>  <span class="o">)</span> <span class="n">andThen</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;key23</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">update</span><span class="o">(</span>
-</span><span class='line'>    <span class="n">of</span><span class="o">[</span><span class="kt">JsArray</span><span class="o">].</span><span class="n">map</span><span class="o">{</span> <span class="k">case</span> <span class="nc">JsArray</span><span class="o">(</span><span class="n">arr</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="nc">JsArray</span><span class="o">(</span><span class="n">arr</span> <span class="o">:+</span> <span class="nc">JsString</span><span class="o">(</span><span class="s">&quot;delta&quot;</span><span class="o">))</span> <span class="o">}</span>
-</span><span class='line'>  <span class="o">)</span>
-</span><span class='line'><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="n">json</span><span class="o">.</span><span class="n">validate</span><span class="o">(</span><span class="n">jsonTransformer</span><span class="o">)</span>
-</span><span class='line'><span class="n">res16</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsResult</span><span class="o">[</span><span class="kt">play.api.libs.json.JsObject</span><span class="o">]</span> <span class="k">=</span>
-</span><span class='line'>  <span class="nc">JsSuccess</span><span class="o">(</span>
-</span><span class='line'>    <span class="o">{</span>
-</span><span class='line'>      <span class="s">&quot;key2&quot;</span><span class="k">:</span><span class="o">{</span>
-</span><span class='line'>        <span class="err">&quot;</span><span class="kt">key21</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">133</span><span class="o">,</span>
-</span><span class='line'>        <span class="err">&quot;</span><span class="kt">key22</span><span class="err">&quot;</span><span class="kt">:true</span><span class="o">,</span>
-</span><span class='line'>        <span class="s">&quot;key23&quot;</span><span class="k">:</span><span class="err">[&quot;</span><span class="kt">alpha</span><span class="err">&quot;</span><span class="o">,</span><span class="s">&quot;beta&quot;</span><span class="o">,</span><span class="s">&quot;gamma&quot;</span><span class="o">,</span><span class="s">&quot;delta&quot;</span><span class="err">]</span><span class="o">,</span>
-</span><span class='line'>        <span class="s">&quot;key24&quot;</span><span class="k">:</span><span class="o">{</span>
-</span><span class='line'>          <span class="err">&quot;</span><span class="kt">key241</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">234</span><span class="kt">.</span><span class="err">123</span><span class="o">,</span>
-</span><span class='line'>          <span class="err">&quot;</span><span class="kt">key242</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">value242</span><span class="err">&quot;</span>
-</span><span class='line'>        <span class="o">}</span>
-</span><span class='line'>      <span class="o">}</span>
-</span><span class='line'>    <span class="o">},</span>
-</span><span class='line'>    <span class="o">/</span><span class="n">key2</span>
-</span><span class='line'>  <span class="o">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h5><code>(__ \ 'key2).json.pickBranch(reads: Reads[A &lt;: JsValue])</code></h5>
-
-<ul>
-<li>extracts branch <code>__ \ 'key2</code> from input JSON and applies <code>reads</code> to the relative leaf of this branch (only to the content)</li>
-</ul>
-
-
-<h5><code>(__ \ 'key21).json.update(reads: Reads[A &lt;: JsValue])</code></h5>
-
-<ul>
-<li>updates <code>(__ \ 'key21)</code> branch</li>
-</ul>
-
-
-<h5><code>of[JsNumber]</code></h5>
-
-<ul>
-<li>is just a <code>Reads[JsNumber]</code></li>
-<li>extracts a JsNumber from <code>(__ \ 'key21)</code></li>
-</ul>
-
-
-<h5><code>of[JsNumber].map{ case JsNumber(nb) =&gt; JsNumber(nb + 10) }</code></h5>
-
-<ul>
-<li>reads a JsNumber (<em>value 123</em> in <code>__ \ 'key21</code>)</li>
-<li>uses <code>Reads[A].map</code> to increase it by <em>10</em> (in immutable way naturally)</li>
-</ul>
-
-
-<h5><code>andThen</code></h5>
-
-<ul>
-<li>is just the composition of 2 <code>Reads[A]</code></li>
-<li>first reads is applied and then result is piped to second reads</li>
-</ul>
-
-
-<h5><code>of[JsArray].map{ case JsArray(arr) =&gt; JsArray(arr :+ JsString("delta")</code></h5>
-
-<ul>
-<li>reads a JsArray (<em>value [alpha, beta, gamma] in <code>__ \ 'key23</code></em>)</li>
-<li>uses <code>Reads[A].map</code> to append <code>JsString("delta")</code> to it</li>
-</ul>
-
-
-<blockquote><p>Please note the result is just the <code>__ \ 'key2</code> branch since we picked only this branch</p></blockquote>
-
-<br/>
-
-
-<h2><a name="more-complicated-pick-prune">Case 8: Pick a branch and prune a sub-branch</a></h2>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json._</span>
-</span><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json.Reads._</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">val</span> <span class="n">jsonTransformer</span> <span class="k">=</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;key2</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">pickBranch</span><span class="o">(</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;key23</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">prune</span>
-</span><span class='line'><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="n">json</span><span class="o">.</span><span class="n">validate</span><span class="o">(</span><span class="n">jsonTransformer</span><span class="o">)</span>
-</span><span class='line'><span class="n">res18</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsResult</span><span class="o">[</span><span class="kt">play.api.libs.json.JsObject</span><span class="o">]</span> <span class="k">=</span>
-</span><span class='line'>  <span class="nc">JsSuccess</span><span class="o">(</span>
-</span><span class='line'>    <span class="o">{</span>
-</span><span class='line'>      <span class="s">&quot;key2&quot;</span><span class="k">:</span><span class="o">{</span>
-</span><span class='line'>        <span class="err">&quot;</span><span class="kt">key21</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">123</span><span class="o">,</span>
-</span><span class='line'>        <span class="err">&quot;</span><span class="kt">key22</span><span class="err">&quot;</span><span class="kt">:true</span><span class="o">,</span>
-</span><span class='line'>        <span class="s">&quot;key24&quot;</span><span class="k">:</span><span class="o">{</span>
-</span><span class='line'>          <span class="err">&quot;</span><span class="kt">key241</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">234</span><span class="kt">.</span><span class="err">123</span><span class="o">,</span>
-</span><span class='line'>          <span class="err">&quot;</span><span class="kt">key242</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">value242</span><span class="err">&quot;</span>
-</span><span class='line'>        <span class="o">}</span>
-</span><span class='line'>      <span class="o">}</span>
-</span><span class='line'>    <span class="o">},</span>
-</span><span class='line'>    <span class="o">/</span><span class="n">key2</span><span class="o">/</span><span class="n">key23</span>
-</span><span class='line'>  <span class="o">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h5><code>(__ \ 'key2).json.pickBranch(reads: Reads[A &lt;: JsValue])</code></h5>
-
-<ul>
-<li>extracts branch <code>__ \ 'key2</code> from input JSON and applies <code>reads</code> to the relative leaf of this branch (only to the content)</li>
-</ul>
-
-
-<h5><code>(__ \ 'key23).json.prune</code></h5>
-
-<ul>
-<li>removes branch <code>__ \ 'key23</code> from relative JSON</li>
-</ul>
-
-
-<blockquote><p>Please remark the result is just the <code>__ \ 'key2</code> branch without <code>key23</code> field.</p></blockquote>
-
-<h1><a name="combinators">What about combinators?</a></h1>
-
-<p>I stop there before it becomes boring (if not yet)…</p>
-
-<p>Just keep in mind that you have now a huge toolkit to create generic JSON transformers.<br/>
-You can compose, map, flatmap transformers together into other transformers. So possibilities are almost infinite.</p>
-
-<p>But there is a final point to treat: mixing those great new JSON transformers with previously presented Reads combinators.
-This is quite trivial as JSON transformers are just <code>Reads[A &lt;: JsValue]</code></p>
-
-<p>Let&#8217;s demonstrate by writing a <strong>Gizmo to Gremlin</strong> JSON transformer.</p>
-
-<p>Here is Gizmo:</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">gizmo</span> <span class="k">=</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span>
-</span><span class='line'>  <span class="s">&quot;name&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;gizmo&quot;</span><span class="o">,</span>
-</span><span class='line'>  <span class="s">&quot;description&quot;</span> <span class="o">-&gt;</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span>
-</span><span class='line'>      <span class="s">&quot;features&quot;</span> <span class="o">-&gt;</span> <span class="nc">Json</span><span class="o">.</span><span class="n">arr</span><span class="o">(</span> <span class="s">&quot;hairy&quot;</span><span class="o">,</span> <span class="s">&quot;cute&quot;</span><span class="o">,</span> <span class="s">&quot;gentle&quot;</span><span class="o">),</span>
-</span><span class='line'>      <span class="s">&quot;size&quot;</span> <span class="o">-&gt;</span> <span class="mi">10</span><span class="o">,</span>
-</span><span class='line'>      <span class="s">&quot;sex&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;undefined&quot;</span><span class="o">,</span>
-</span><span class='line'>      <span class="s">&quot;life_expectancy&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;very old&quot;</span><span class="o">,</span>
-</span><span class='line'>      <span class="s">&quot;danger&quot;</span> <span class="o">-&gt;</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span>
-</span><span class='line'>          <span class="s">&quot;wet&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;multiplies&quot;</span><span class="o">,</span>
-</span><span class='line'>          <span class="s">&quot;feed after midnight&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;becomes gremlin&quot;</span>
-</span><span class='line'>      <span class="o">)</span>
-</span><span class='line'>  <span class="o">),</span>
-</span><span class='line'>  <span class="s">&quot;loves&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;all&quot;</span>
-</span><span class='line'><span class="o">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Here is Gremlin:</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">gremlin</span> <span class="k">=</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span>
-</span><span class='line'>  <span class="s">&quot;name&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;gremlin&quot;</span><span class="o">,</span>
-</span><span class='line'>  <span class="s">&quot;description&quot;</span> <span class="o">-&gt;</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span>
-</span><span class='line'>      <span class="s">&quot;features&quot;</span> <span class="o">-&gt;</span> <span class="nc">Json</span><span class="o">.</span><span class="n">arr</span><span class="o">(</span><span class="s">&quot;skinny&quot;</span><span class="o">,</span> <span class="s">&quot;ugly&quot;</span><span class="o">,</span> <span class="s">&quot;evil&quot;</span><span class="o">),</span>
-</span><span class='line'>      <span class="s">&quot;size&quot;</span> <span class="o">-&gt;</span> <span class="mi">30</span><span class="o">,</span>
-</span><span class='line'>      <span class="s">&quot;sex&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;undefined&quot;</span><span class="o">,</span>
-</span><span class='line'>      <span class="s">&quot;life_expectancy&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;very old&quot;</span><span class="o">,</span>
-</span><span class='line'>      <span class="s">&quot;danger&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;always&quot;</span>
-</span><span class='line'>  <span class="o">),</span>
-</span><span class='line'>  <span class="s">&quot;hates&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;all&quot;</span>
-</span><span class='line'><span class="o">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Ok let&#8217;s write a JSON transformer to do this transformation</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json._</span>
-</span><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json.Reads._</span>
-</span><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json.util._</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">val</span> <span class="n">gizmo2gremlin</span> <span class="k">=</span> <span class="o">(</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;name</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">put</span><span class="o">(</span><span class="nc">JsString</span><span class="o">(</span><span class="s">&quot;gremlin&quot;</span><span class="o">))</span> <span class="n">and</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;description</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">pickBranch</span><span class="o">(</span>
-</span><span class='line'>      <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;size</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">update</span><span class="o">(</span> <span class="n">of</span><span class="o">[</span><span class="kt">JsNumber</span><span class="o">].</span><span class="n">map</span><span class="o">{</span> <span class="k">case</span> <span class="nc">JsNumber</span><span class="o">(</span><span class="n">size</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="nc">JsNumber</span><span class="o">(</span><span class="n">size</span> <span class="o">*</span> <span class="mi">3</span><span class="o">)</span> <span class="o">}</span> <span class="o">)</span> <span class="n">and</span>
-</span><span class='line'>      <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;features</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">put</span><span class="o">(</span> <span class="nc">Json</span><span class="o">.</span><span class="n">arr</span><span class="o">(</span><span class="s">&quot;skinny&quot;</span><span class="o">,</span> <span class="s">&quot;ugly&quot;</span><span class="o">,</span> <span class="s">&quot;evil&quot;</span><span class="o">)</span> <span class="o">)</span> <span class="n">and</span>
-</span><span class='line'>      <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;danger</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">put</span><span class="o">(</span><span class="nc">JsString</span><span class="o">(</span><span class="s">&quot;always&quot;</span><span class="o">))</span>
-</span><span class='line'>      <span class="n">reduce</span>
-</span><span class='line'>  <span class="o">)</span> <span class="n">and</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;hates</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">copyFrom</span><span class="o">(</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;loves</span><span class="o">).</span><span class="n">json</span><span class="o">.</span><span class="n">pick</span> <span class="o">)</span>
-</span><span class='line'><span class="o">)</span> <span class="n">reduce</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="n">gizmo</span><span class="o">.</span><span class="n">validate</span><span class="o">(</span><span class="n">gizmo2gremlin</span><span class="o">)</span>
-</span><span class='line'><span class="n">res22</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsResult</span><span class="o">[</span><span class="kt">play.api.libs.json.JsObject</span><span class="o">]</span> <span class="k">=</span>
-</span><span class='line'>  <span class="nc">JsSuccess</span><span class="o">(</span>
-</span><span class='line'>    <span class="o">{</span>
-</span><span class='line'>      <span class="s">&quot;name&quot;</span><span class="k">:</span><span class="err">&quot;</span><span class="kt">gremlin</span><span class="err">&quot;</span><span class="o">,</span>
-</span><span class='line'>      <span class="s">&quot;description&quot;</span><span class="k">:</span><span class="o">{</span>
-</span><span class='line'>        <span class="err">&quot;</span><span class="kt">features</span><span class="err">&quot;</span><span class="kt">:</span><span class="o">[</span><span class="err">&quot;</span><span class="kt">skinny</span><span class="err">&quot;</span>,<span class="err">&quot;</span><span class="kt">ugly</span><span class="err">&quot;</span>,<span class="err">&quot;</span><span class="kt">evil</span><span class="err">&quot;</span><span class="o">],</span>
-</span><span class='line'>        <span class="s">&quot;size&quot;</span><span class="k">:</span><span class="err">30</span><span class="o">,</span>
-</span><span class='line'>        <span class="s">&quot;sex&quot;</span><span class="k">:</span><span class="err">&quot;</span><span class="kt">undefined</span><span class="err">&quot;</span><span class="o">,</span>
-</span><span class='line'>        <span class="s">&quot;life_expectancy&quot;</span><span class="k">:</span>
-</span><span class='line'>        <span class="err">&quot;</span><span class="kt">very</span> <span class="kt">old</span><span class="err">&quot;</span><span class="o">,</span><span class="s">&quot;danger&quot;</span><span class="k">:</span><span class="err">&quot;</span><span class="kt">always</span><span class="err">&quot;</span>
-</span><span class='line'>      <span class="o">},</span>
-</span><span class='line'>      <span class="s">&quot;hates&quot;</span><span class="k">:</span><span class="err">&quot;</span><span class="kt">all</span><span class="err">&quot;</span>
-</span><span class='line'>    <span class="o">},</span>
-</span><span class='line'>  <span class="o">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Here we are ;)<br/>
-I&#8217;m not going to explain all of this because you should be able to understand now.<br/>
-Just remark:</p>
-
-<h5><code>(__ \ 'features).json.put(…)</code> is after <code>(__ \ 'size).json.update</code> so that it overwrites original <code>(__ \ 'features)</code></h5>
-
-<br/>
-
-
-<h5><code>(Reads[JsObject] and Reads[JsObject]) reduce</code></h5>
-
-<ul>
-<li>It merges results of both <code>Reads[JsObject]</code> (JsObject ++ JsObject)</li>
-<li>It also applies the same JSON to both <code>Reads[JsObject]</code> unlike <code>andThen</code> which injects the result of the first reads into second one.</li>
-</ul>
-
-
-<br/>
-
-
-<br/>
-
-
-<h1><a name="conclusion">Conclusion</a></h1>
-
-<p>After 3 long articles, I think we have done a full 360° around new features brought by Play2.1 JSON API.<br/>
-I hope you glimpse the whole new world of possiblities it can bring to us.<br/>
-Personnally, I&#8217;ve begun using it in projects and I don&#8217;t yet see the limits of it and how I&#8217;ll end using it.</p>
-
-<p><strong>The only thing I can say is that it has changed my way of manipulating JSON data flows in general.</strong></p>
-
-<blockquote><p>Next article coming soon: an applied example of a webapp following <em>Json coast-to-coast design</em> with <a href="http://www.reactivemongo.org">ReactiveMongo</a></p></blockquote>
-
-<p>Have fun ;););)</p>
 ]]></content>
   </entry>
   
