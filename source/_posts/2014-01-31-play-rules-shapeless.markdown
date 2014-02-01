@@ -477,7 +477,8 @@ def hfolder = Action(parse.json) { request =>
 
 Awesome... now, nobody can say 22 limits is still a problem ;)
 
-Have a look at the code on [Github](https://github.com/mandubian/shapeless-rules)
+Have a look at the code on [Github](https://github.com/mandubian/shapeless-rules).
+
 Have fun x 50!
 
 <br/>
