@@ -9,23 +9,7 @@
   <meta name="author" content="Pascal Voitot">
 
   
-  <meta name="description" content="Unveiling Play 2.1 Json API - Part 3 : JSON Transformers
-    
-    
-      
-        
-
-
-
-
-
-
-
-
-  
-
-
-Oct 29th, 2012 &hellip;">
+  <meta name="description" content="Unveiling Play 2.1 Json API - Bonus : JSON Inception (Based on Scala 2.10 Macros &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -126,6 +110,331 @@ Oct 29th, 2012 &hellip;">
     <div class="row-fluid">
       <div class="span9">
   
+  
+  
+    <article>
+      
+  <header class="page-header">
+    
+      <h1 class="entry-title"><a href="/2012/11/11/JSON-inception/">Unveiling Play 2.1 Json API - Bonus : JSON Inception (Based on Scala 2.10 Macros)</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-11-11T11:10:00+01:00" pubdate data-updated="true">Nov 11<span>th</span>, 2012</time>
+        
+         | <a href="/2012/11/11/JSON-inception/#disqus_thread">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><blockquote><p>A relatively short article, this time, to present an experimental feature developed by Sadek Drobi (<a href="http://www.twitter.com/sadache">@sadache</a>) &amp; I (<a href="http://www.twitter.com/mandubian">@mandubian</a>) and that we&#8217;ve decided to integrate into Play-2.1 because we think it&#8217;s really interesting and useful.</p></blockquote>
+
+<br/>
+
+
+<br/>
+
+
+<h1><a name="wtf-inception">WTF is JSON Inception???</a></h1>
+
+<h2><a name="wtf-inception-boring">Writing a default case class Reads/Writes/Format is so boring!!!</a></h2>
+
+<p>Remember how you write a <code>Reads[T]</code> for a case class.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='json'><span class='line'><span class="err">import</span> <span class="err">play.api.libs.json._</span>
+</span><span class='line'><span class="err">import</span> <span class="err">play.api.libs.functional.syntax._</span>
+</span><span class='line'>
+</span><span class='line'><span class="err">case</span> <span class="err">class</span> <span class="err">Person(name:</span> <span class="err">String,</span> <span class="err">age:</span> <span class="err">Int,</span> <span class="err">lovesChocolate:</span> <span class="err">Boolean)</span>
+</span><span class='line'>
+</span><span class='line'><span class="err">implicit</span> <span class="err">val</span> <span class="err">personReads</span> <span class="err">=</span> <span class="err">(</span>
+</span><span class='line'>  <span class="err">(__</span> <span class="err">\</span> <span class="err">&#39;name).reads</span><span class="p">[</span><span class="err">String</span><span class="p">]</span> <span class="err">and</span>
+</span><span class='line'>  <span class="err">(__</span> <span class="err">\</span> <span class="err">&#39;age).reads</span><span class="p">[</span><span class="err">Int</span><span class="p">]</span> <span class="err">and</span>
+</span><span class='line'>  <span class="err">(__</span> <span class="err">\</span> <span class="err">&#39;lovesChocolate).reads</span><span class="p">[</span><span class="err">Boolean</span><span class="p">]</span>
+</span><span class='line'><span class="err">)(Person)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>So you write 4 lines for this case class.<br/>
+You know what? We have had a few complaints from some people who think it&#8217;s not cool to write a <code>Reads[TheirClass]</code> because usually Java JSON frameworks like Jackson or Gson do it behind the curtain without writing anything.<br/>
+We argued that Play2.1 JSON serializers/deserializers are:</p>
+
+<ul>
+<li>completely typesafe,</li>
+<li>fully compiled,</li>
+<li>nothing was performed using introspection/reflection at runtime.</li>
+</ul>
+
+
+<p>But for some, this didn’t justify the extra lines of code for case classes.</p>
+
+<p>We believe this is a really good approach so we persisted and proposed:</p>
+
+<ul>
+<li>JSON simplified syntax</li>
+<li>JSON combinators</li>
+<li>JSON transformers</li>
+</ul>
+
+
+<p>Added power, but nothing changed for the additional 4 lines.</p>
+
+<h2><a name="wtf-inception-minimalist">Let&#8217;s be minimalist</a></h2>
+
+<p>As we are perfectionist, now we propose a new way of writing the same code:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='json'><span class='line'><span class="err">import</span> <span class="err">play.api.libs.json._</span>
+</span><span class='line'><span class="err">import</span> <span class="err">play.api.libs.functional.syntax._</span>
+</span><span class='line'>
+</span><span class='line'><span class="err">case</span> <span class="err">class</span> <span class="err">Person(name:</span> <span class="err">String,</span> <span class="err">age:</span> <span class="err">Int,</span> <span class="err">lovesChocolate:</span> <span class="err">Boolean)</span>
+</span><span class='line'>
+</span><span class='line'><span class="err">implicit</span> <span class="err">val</span> <span class="err">personReads</span> <span class="err">=</span> <span class="err">Json.reads</span><span class="p">[</span><span class="err">Person</span><span class="p">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>1 line only.<br/>
+Questions you may ask immediately:</p>
+
+<blockquote><p>Does it use runtime bytecode enhancement? -> NO</p>
+
+<p>Does it use runtime introspection? -> NO</p>
+
+<p>Does it break type-safety? -> NO</p></blockquote>
+
+<p><strong>So what???</strong></p>
+
+<blockquote><p>As I&#8217;m currently in a mood of creating new expressions, after creating <strong>JSON coast-to-coast design</strong>, let&#8217;s call it <strong>JSON INCEPTION</strong> (cool word, quite puzzling isn&#8217;t it? ;)</p></blockquote>
+
+<br/>
+
+
+<br/>
+
+
+<h1><a name="json-incept">JSON Inception</a></h1>
+
+<h2><a name="json-incept-eq">Code Equivalence</a></h2>
+
+<p>As explained just before:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='json'><span class='line'><span class="err">implicit</span> <span class="err">val</span> <span class="err">personReads</span> <span class="err">=</span> <span class="err">Json.reads</span><span class="p">[</span><span class="err">Person</span><span class="p">]</span>
+</span><span class='line'>
+</span><span class='line'><span class="err">//</span> <span class="err">IS</span> <span class="err">STRICTLY</span> <span class="err">EQUIVALENT</span> <span class="err">TO</span> <span class="err">writing</span>
+</span><span class='line'>
+</span><span class='line'><span class="err">implicit</span> <span class="err">val</span> <span class="err">personReads</span> <span class="err">=</span> <span class="err">(</span>
+</span><span class='line'>  <span class="err">(__</span> <span class="err">\</span> <span class="err">&#39;name).reads</span><span class="p">[</span><span class="err">String</span><span class="p">]</span> <span class="err">and</span>
+</span><span class='line'>  <span class="err">(__</span> <span class="err">\</span> <span class="err">&#39;age).reads</span><span class="p">[</span><span class="err">Int</span><span class="p">]</span> <span class="err">and</span>
+</span><span class='line'>  <span class="err">(__</span> <span class="err">\</span> <span class="err">&#39;lovesChocolate).reads</span><span class="p">[</span><span class="err">Boolean</span><span class="p">]</span>
+</span><span class='line'><span class="err">)(Person)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2><a name="json-incept">Inception equation</a></h2>
+
+<p>Here is the equation describing the windy <em>Inception</em> concept:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='json'><span class='line'><span class="err">(Case</span> <span class="err">Class</span> <span class="err">INSPECTION)</span> <span class="err">+</span> <span class="err">(Code</span> <span class="err">INJECTION)</span> <span class="err">+</span> <span class="err">(COMPILE</span> <span class="err">Time)</span> <span class="err">=</span> <span class="err">INCEPTION</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<h4>Case Class Inspection</h4>
+
+<p>As you may deduce by yourself, in order to ensure preceding code equivalence, we need :</p>
+
+<ul>
+<li>to inspect <code>Person</code> case class,</li>
+<li>to extract the 3 fields <code>name</code>, <code>age</code>, <code>lovesChocolate</code> and their types,</li>
+<li>to resolve typeclasses implicits,</li>
+<li>to find <code>Person.apply</code>.</li>
+</ul>
+
+
+<br/>
+
+
+<h4>INJECTION??? Injjjjjectiiiiion….??? injectionnnnnnnn????</h4>
+
+<p>No I stop you immediately…</p>
+
+<blockquote><p><strong>Code injection is not dependency injection…</strong><br/>
+No Spring behind inception… No IOC, No DI… No No No ;)</p></blockquote>
+
+<p>I used this term on purpose because I know that injection is now linked immediately to IOC and Spring. But I&#8217;d like to re-establish this word with its real meaning.<br/>
+Here code injection just means that <strong>we inject code at compile-time into the compiled scala AST</strong> (Abstract Syntax Tree).</p>
+
+<p>So <code>Json.reads[Person]</code> is compiled and replaced in the compile AST by:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='json'><span class='line'><span class="err">(</span>
+</span><span class='line'>  <span class="err">(__</span> <span class="err">\</span> <span class="err">&#39;name).reads</span><span class="p">[</span><span class="err">String</span><span class="p">]</span> <span class="err">and</span>
+</span><span class='line'>  <span class="err">(__</span> <span class="err">\</span> <span class="err">&#39;age).reads</span><span class="p">[</span><span class="err">Int</span><span class="p">]</span> <span class="err">and</span>
+</span><span class='line'>  <span class="err">(__</span> <span class="err">\</span> <span class="err">&#39;lovesChocolate).reads</span><span class="p">[</span><span class="err">Boolean</span><span class="p">]</span>
+</span><span class='line'><span class="err">)(Person)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Nothing less, nothing more…</p>
+
+<br/>
+
+
+<h4>COMPILE-TIME</h4>
+
+<p>Yes everything is performed at compile-time.<br/>
+No runtime bytecode enhancement.<br/>
+No runtime introspection.</p>
+
+<blockquote><p>As everything is resolved at compile-time, you will have a compile error if you did not import the required implicits for all the types of the fields.</p></blockquote>
+
+<br/>
+
+
+<h1><a name="scala-macros">Json inception is Scala 2.10 Macros</a></h1>
+
+<p>We needed a Scala feature enabling:</p>
+
+<ul>
+<li>compile-time code enhancement</li>
+<li>compile-time class/implicits inspection</li>
+<li>compile-time code injection</li>
+</ul>
+
+
+<p>This is enabled by a new experimental feature introduced in Scala 2.10: <a href="http://scalamacros.org/">Scala Macros</a></p>
+
+<p>Scala macros is a new feature (still experimental) with a huge potential. You can :</p>
+
+<ul>
+<li>introspect code at compile-time based on Scala reflection API,</li>
+<li>access all imports, implicits in the current compile context</li>
+<li>create new code expressions, generate compiling errors and inject them into compile chain.</li>
+</ul>
+
+
+<p>Please note that:</p>
+
+<ul>
+<li><strong>We use Scala Macros because it corresponds exactly to our requirements.</strong></li>
+<li><strong>We use Scala macros as an enabler, not as an end in itself.</strong></li>
+<li><strong>The macro is a helper that generates the code you could write by yourself.</strong></li>
+<li><strong>It doesn&#8217;t add, hide unexpected code behind the curtain.</strong></li>
+<li><strong>We follow the <em>no-surprise</em> principle</strong></li>
+</ul>
+
+
+<p>As you may discover, writing a macro is not a trivial process since your macro code executes in the compiler runtime (or universe).</p>
+
+<pre><code>So you write macro code 
+  that is compiled and executed 
+  in a runtime that manipulates your code 
+     to be compiled and executed 
+     in a future runtime…           
+</code></pre>
+
+<p><strong>That&#8217;s also certainly why I called it <em>Inception</em> ;)</strong></p>
+
+<p>So it requires some mental exercises to follow exactly what you do. The API is also quite complex and not fully documented yet. Therefore, you must persevere when you begin using macros.</p>
+
+<p>I&#8217;ll certainly write other articles about Scala macros because there are lots of things to say.<br/>
+This article is also meant <strong>to begin the reflection about the right way to use Scala Macros</strong>.<br/>
+Great power means greater responsability so it&#8217;s better to discuss all together and establish a few good manners…</p>
+
+<br/>
+
+
+<h1><a name="writes-format">Writes[T] &amp; Format[T]</a></h1>
+
+<blockquote><p>Please remark that JSON inception just works for case class having <code>unapply/apply</code> functions.</p></blockquote>
+
+<p>Naturally, you can also <em>incept</em> <code>Writes[T]</code>and <code>Format[T]</code>.</p>
+
+<h2><a name="writes">Writes[T]</a></h2>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='json'><span class='line'><span class="err">import</span> <span class="err">play.api.libs.json._</span>
+</span><span class='line'><span class="err">import</span> <span class="err">play.api.libs.functional.syntax._</span>
+</span><span class='line'>
+</span><span class='line'><span class="err">implicit</span> <span class="err">val</span> <span class="err">personWrites</span> <span class="err">=</span> <span class="err">Json.writes</span><span class="p">[</span><span class="err">Person</span><span class="p">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2><a name="format">Format[T]</a></h2>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='json'><span class='line'><span class="err">import</span> <span class="err">play.api.libs.json._</span>
+</span><span class='line'><span class="err">import</span> <span class="err">play.api.libs.functional.syntax._</span>
+</span><span class='line'>
+</span><span class='line'><span class="err">implicit</span> <span class="err">val</span> <span class="err">personWrites</span> <span class="err">=</span> <span class="err">Json.format</span><span class="p">[</span><span class="err">Person</span><span class="p">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h1><a name="conclusion">Conclusion</a></h1>
+
+<blockquote><p>With the so-called <strong>JSON inception</strong>, we have added a <strong>helper</strong> providing a trivial way to define your <strong>default typesafe <code>Reads[T]/Writes[T]/Format[T]</code> for case classes</strong>.</p></blockquote>
+
+<p>If anyone tells me there is still 1 line to write, I think I might become unpolite ;)</p>
+
+<p>Have Macrofun!</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -4445,6 +4754,10 @@ object Application extends Controller {
     <li class="nav-header">Recent Posts</li>
     
       <li class="post">
+        <a href="/2014/02/13/zpark/">ZPark-Ztream: Driving Spark distributed stream with Scalaz-Stream</a>
+      </li>
+    
+      <li class="post">
         <a href="/2014/01/31/play-rules-shapeless/">New Play 2.3 Validation API : breaking the 22 limits with Shapeless</a>
       </li>
     
@@ -4458,10 +4771,6 @@ object Application extends Controller {
     
       <li class="post">
         <a href="/2013/07/11/play-autosource-datomisca/">Play AutoSource & Datomisca: Proofing the concept on Datomic, a Schema DB</a>
-      </li>
-    
-      <li class="post">
-        <a href="/2013/07/04/json-interpolation-pattern-matching/">Play2 Json Interpolation & Pattern Matching</a>
       </li>
     
   </ul>
