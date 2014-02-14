@@ -372,7 +372,7 @@ Is it possible to combine RDD Processes using scalaz-stream ?
 val p0 = naturalsEvery(100 milliseconds).take(50).discretize(250 milliseconds)
 val p1 = naturalsEvery(100 milliseconds).take(50).discretize(250 milliseconds)
 val p = 
- (p60 zipWith p61){ (a,b) => 
+ (p0 zipWith p1){ (a,b) => 
    new org.apache.spark.rdd.UnionRDD(ssc.sparkContext, Seq(a,b)) 
  }.countRDDByValue()
   .continuize()
