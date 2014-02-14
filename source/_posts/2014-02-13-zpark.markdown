@@ -171,7 +171,11 @@ Easy isn't it?
 All together :
 
 {% codeblock lang:scala %}
-val p = Process(1L, 1L, 2L, 2L, 3L, 3L, 4L, 4L).parallelize(4).countRDD().continuize()
+val p = 
+  Process(1L, 1L, 2L, 2L, 3L, 3L, 4L, 4L)
+  .parallelize(4)
+  .countRDD()
+  .continuize()
 {% endcodeblock %}
 
 Let' print the result in the console
@@ -192,7 +196,11 @@ def stdOutLines[I]: Sink[Task, I] =
 Let's do the same with `countByValue`:
 
 {% codeblock lang:scala %}
-val p = Process(1L, 1L, 2L, 2L, 3L, 3L, 4L, 4L).parallelize(4).countRDDByValue().continuize()
+val p = 
+  Process(1L, 1L, 2L, 2L, 3L, 3L, 4L, 4L)
+  .parallelize(4)
+  .countRDDByValue()
+  .continuize()
 
 (p through stdOutLines).run.run
 // 1 run for the process & 1 run for the Task
@@ -208,7 +216,12 @@ You can see that 4 comes before 3. This is due to the fact the 2nd slice of 4 el
 An example of map/reduce ?
 
 {% codeblock lang:scala %}
-val p = Process(1L, 1L, 2L, 2L, 3L, 3L, 4L, 4L).parallelize(4).mapRDD(_ + 1L).reduceRDD(_ + _).continuize()
+val p = 
+  Process(1L, 1L, 2L, 2L, 3L, 3L, 4L, 4L)
+  .parallelize(4)
+  .mapRDD(_ + 1L)
+  .reduceRDD(_ + _)
+  .continuize()
 
 (p through stdOutLines).run.run
  ----> [1392418619885745000] *** 10 (2+2+3+3)
@@ -230,7 +243,9 @@ First of all, let's define a continuous stream of positive integers:
 
 {% codeblock lang:scala %}
 def naturals: Process[Task, Int] = {
-  def go(i: Int): Process[Task, Int] = Process.await(Task.delay(i)){ i => Process.emit(i) ++ go(i+1) }
+  def go(i: Int): Process[Task, Int] = 
+    Process.await(Task.delay(i)){ i => Process.emit(i) ++ go(i+1) }
+
   go(0)
 }
 {% endcodeblock %}
@@ -245,7 +260,8 @@ def naturalsEvery(duration: Duration): Process[Task, Int] =
 Then, let's discretize the continuous stream with **ZPark-Ztream** API:
 
 {% codeblock lang:scala %}
-val p: Process[Task, RDD[Int]] = naturalsEvery(10 milliseconds).discretize(500 milliseconds)
+val p: Process[Task, RDD[Int]] = 
+  naturalsEvery(10 milliseconds).discretize(500 milliseconds)
 {% endcodeblock %}
 
 The stream is sliced in slice of 500ms and all elements emitted during these 500ms are gathered in a Spark `RDD`.
