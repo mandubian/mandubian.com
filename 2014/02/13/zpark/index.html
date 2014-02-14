@@ -357,7 +357,15 @@ This is simply an idea and I don&#8217;t even know whether it is viable or stupi
 <p>All together :</p>
 
 <figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">p</span> <span class="k">=</span> <span class="nc">Process</span><span class="o">(</span><span class="mi">1L</span><span class="o">,</span> <span class="mi">1L</span><span class="o">,</span> <span class="mi">2L</span><span class="o">,</span> <span class="mi">2L</span><span class="o">,</span> <span class="mi">3L</span><span class="o">,</span> <span class="mi">3L</span><span class="o">,</span> <span class="mi">4L</span><span class="o">,</span> <span class="mi">4L</span><span class="o">).</span><span class="n">parallelize</span><span class="o">(</span><span class="mi">4</span><span class="o">).</span><span class="n">countRDD</span><span class="o">().</span><span class="n">continuize</span><span class="o">()</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">p</span> <span class="k">=</span>
+</span><span class='line'>  <span class="nc">Process</span><span class="o">(</span><span class="mi">1L</span><span class="o">,</span> <span class="mi">1L</span><span class="o">,</span> <span class="mi">2L</span><span class="o">,</span> <span class="mi">2L</span><span class="o">,</span> <span class="mi">3L</span><span class="o">,</span> <span class="mi">3L</span><span class="o">,</span> <span class="mi">4L</span><span class="o">,</span> <span class="mi">4L</span><span class="o">)</span>
+</span><span class='line'>  <span class="o">.</span><span class="n">parallelize</span><span class="o">(</span><span class="mi">4</span><span class="o">)</span>
+</span><span class='line'>  <span class="o">.</span><span class="n">countRDD</span><span class="o">()</span>
+</span><span class='line'>  <span class="o">.</span><span class="n">continuize</span><span class="o">()</span>
 </span></code></pre></td></tr></table></div></figure>
 
 
@@ -395,7 +403,15 @@ This is simply an idea and I don&#8217;t even know whether it is viable or stupi
 <span class='line-number'>7</span>
 <span class='line-number'>8</span>
 <span class='line-number'>9</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">p</span> <span class="k">=</span> <span class="nc">Process</span><span class="o">(</span><span class="mi">1L</span><span class="o">,</span> <span class="mi">1L</span><span class="o">,</span> <span class="mi">2L</span><span class="o">,</span> <span class="mi">2L</span><span class="o">,</span> <span class="mi">3L</span><span class="o">,</span> <span class="mi">3L</span><span class="o">,</span> <span class="mi">4L</span><span class="o">,</span> <span class="mi">4L</span><span class="o">).</span><span class="n">parallelize</span><span class="o">(</span><span class="mi">4</span><span class="o">).</span><span class="n">countRDDByValue</span><span class="o">().</span><span class="n">continuize</span><span class="o">()</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">p</span> <span class="k">=</span>
+</span><span class='line'>  <span class="nc">Process</span><span class="o">(</span><span class="mi">1L</span><span class="o">,</span> <span class="mi">1L</span><span class="o">,</span> <span class="mi">2L</span><span class="o">,</span> <span class="mi">2L</span><span class="o">,</span> <span class="mi">3L</span><span class="o">,</span> <span class="mi">3L</span><span class="o">,</span> <span class="mi">4L</span><span class="o">,</span> <span class="mi">4L</span><span class="o">)</span>
+</span><span class='line'>  <span class="o">.</span><span class="n">parallelize</span><span class="o">(</span><span class="mi">4</span><span class="o">)</span>
+</span><span class='line'>  <span class="o">.</span><span class="n">countRDDByValue</span><span class="o">()</span>
+</span><span class='line'>  <span class="o">.</span><span class="n">continuize</span><span class="o">()</span>
 </span><span class='line'>
 </span><span class='line'><span class="o">(</span><span class="n">p</span> <span class="n">through</span> <span class="n">stdOutLines</span><span class="o">).</span><span class="n">run</span><span class="o">.</span><span class="n">run</span>
 </span><span class='line'><span class="c1">// 1 run for the process &amp; 1 run for the Task</span>
@@ -416,7 +432,17 @@ This is simply an idea and I don&#8217;t even know whether it is viable or stupi
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
 <span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">p</span> <span class="k">=</span> <span class="nc">Process</span><span class="o">(</span><span class="mi">1L</span><span class="o">,</span> <span class="mi">1L</span><span class="o">,</span> <span class="mi">2L</span><span class="o">,</span> <span class="mi">2L</span><span class="o">,</span> <span class="mi">3L</span><span class="o">,</span> <span class="mi">3L</span><span class="o">,</span> <span class="mi">4L</span><span class="o">,</span> <span class="mi">4L</span><span class="o">).</span><span class="n">parallelize</span><span class="o">(</span><span class="mi">4</span><span class="o">).</span><span class="n">mapRDD</span><span class="o">(</span><span class="k">_</span> <span class="o">+</span> <span class="mi">1L</span><span class="o">).</span><span class="n">reduceRDD</span><span class="o">(</span><span class="k">_</span> <span class="o">+</span> <span class="k">_</span><span class="o">).</span><span class="n">continuize</span><span class="o">()</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">p</span> <span class="k">=</span>
+</span><span class='line'>  <span class="nc">Process</span><span class="o">(</span><span class="mi">1L</span><span class="o">,</span> <span class="mi">1L</span><span class="o">,</span> <span class="mi">2L</span><span class="o">,</span> <span class="mi">2L</span><span class="o">,</span> <span class="mi">3L</span><span class="o">,</span> <span class="mi">3L</span><span class="o">,</span> <span class="mi">4L</span><span class="o">,</span> <span class="mi">4L</span><span class="o">)</span>
+</span><span class='line'>  <span class="o">.</span><span class="n">parallelize</span><span class="o">(</span><span class="mi">4</span><span class="o">)</span>
+</span><span class='line'>  <span class="o">.</span><span class="n">mapRDD</span><span class="o">(</span><span class="k">_</span> <span class="o">+</span> <span class="mi">1L</span><span class="o">)</span>
+</span><span class='line'>  <span class="o">.</span><span class="n">reduceRDD</span><span class="o">(</span><span class="k">_</span> <span class="o">+</span> <span class="k">_</span><span class="o">)</span>
+</span><span class='line'>  <span class="o">.</span><span class="n">continuize</span><span class="o">()</span>
 </span><span class='line'>
 </span><span class='line'><span class="o">(</span><span class="n">p</span> <span class="n">through</span> <span class="n">stdOutLines</span><span class="o">).</span><span class="n">run</span><span class="o">.</span><span class="n">run</span>
 </span><span class='line'> <span class="o">----&gt;</span> <span class="o">[</span><span class="err">1392418619885745000</span><span class="o">]</span> <span class="o">***</span> <span class="mi">10</span> <span class="o">(</span><span class="mi">2</span><span class="o">+</span><span class="mi">2</span><span class="o">+</span><span class="mi">3</span><span class="o">+</span><span class="mi">3</span><span class="o">)</span>
@@ -446,8 +472,12 @@ This is simply an idea and I don&#8217;t even know whether it is viable or stupi
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
 </pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">def</span> <span class="n">naturals</span><span class="k">:</span> <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">Int</span><span class="o">]</span> <span class="k">=</span> <span class="o">{</span>
-</span><span class='line'>  <span class="k">def</span> <span class="n">go</span><span class="o">(</span><span class="n">i</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)</span><span class="k">:</span> <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">Int</span><span class="o">]</span> <span class="k">=</span> <span class="nc">Process</span><span class="o">.</span><span class="n">await</span><span class="o">(</span><span class="nc">Task</span><span class="o">.</span><span class="n">delay</span><span class="o">(</span><span class="n">i</span><span class="o">)){</span> <span class="n">i</span> <span class="k">=&gt;</span> <span class="nc">Process</span><span class="o">.</span><span class="n">emit</span><span class="o">(</span><span class="n">i</span><span class="o">)</span> <span class="o">++</span> <span class="n">go</span><span class="o">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="o">)</span> <span class="o">}</span>
+</span><span class='line'>  <span class="k">def</span> <span class="n">go</span><span class="o">(</span><span class="n">i</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)</span><span class="k">:</span> <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">Int</span><span class="o">]</span> <span class="k">=</span>
+</span><span class='line'>    <span class="nc">Process</span><span class="o">.</span><span class="n">await</span><span class="o">(</span><span class="nc">Task</span><span class="o">.</span><span class="n">delay</span><span class="o">(</span><span class="n">i</span><span class="o">)){</span> <span class="n">i</span> <span class="k">=&gt;</span> <span class="nc">Process</span><span class="o">.</span><span class="n">emit</span><span class="o">(</span><span class="n">i</span><span class="o">)</span> <span class="o">++</span> <span class="n">go</span><span class="o">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="o">)</span> <span class="o">}</span>
+</span><span class='line'>
 </span><span class='line'>  <span class="n">go</span><span class="o">(</span><span class="mi">0</span><span class="o">)</span>
 </span><span class='line'><span class="o">}</span>
 </span></code></pre></td></tr></table></div></figure>
@@ -465,7 +495,9 @@ This is simply an idea and I don&#8217;t even know whether it is viable or stupi
 <p>Then, let&#8217;s discretize the continuous stream with <strong>ZPark-Ztream</strong> API:</p>
 
 <figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">p</span><span class="k">:</span> <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">RDD</span><span class="o">[</span><span class="kt">Int</span><span class="o">]]</span> <span class="k">=</span> <span class="n">naturalsEvery</span><span class="o">(</span><span class="mi">10</span> <span class="n">milliseconds</span><span class="o">).</span><span class="n">discretize</span><span class="o">(</span><span class="mi">500</span> <span class="n">milliseconds</span><span class="o">)</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">p</span><span class="k">:</span> <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">RDD</span><span class="o">[</span><span class="kt">Int</span><span class="o">]]</span> <span class="k">=</span>
+</span><span class='line'>  <span class="n">naturalsEvery</span><span class="o">(</span><span class="mi">10</span> <span class="n">milliseconds</span><span class="o">).</span><span class="n">discretize</span><span class="o">(</span><span class="mi">500</span> <span class="n">milliseconds</span><span class="o">)</span>
 </span></code></pre></td></tr></table></div></figure>
 
 
