@@ -4,7 +4,7 @@
   <title><![CDATA[Mandubian Blog]]></title>
   <link href="http://www.mandubian.com/atom.xml" rel="self"/>
   <link href="http://www.mandubian.com/"/>
-  <updated>2014-02-15T00:46:39+01:00</updated>
+  <updated>2014-02-15T01:33:16+01:00</updated>
   <id>http://www.mandubian.com/</id>
   <author>
     <name><![CDATA[Pascal Voitot]]></name>
@@ -195,7 +195,7 @@ This is simply an idea and I don&#8217;t even know whether it is viable or stupi
 </span></code></pre></td></tr></table></div></figure>
 
 
-<p>Ok folks, now, we have a discretized stream of <code>Int</code> that can be distributed across a Spark cluster.</p>
+<p>Ok folks, now, we have a discretized stream of <code>Long</code> that can be distributed across a Spark cluster.</p>
 
 <p><code>DStream</code> provides <code>count</code> API which count elements on each <code>RDD</code> in the stream.</p>
 
