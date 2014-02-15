@@ -148,7 +148,7 @@ val prdd: Process[Task, RDD[Long]] = p.parallelize(4)
 // Just to remind that Task is the Future equivalent in Scalaz
 {% endcodeblock %}
 
-Ok folks, now, we have a discretized stream of `Int` that can be distributed across a Spark cluster.
+Ok folks, now, we have a discretized stream of `Long` that can be distributed across a Spark cluster.
 
 `DStream` provides `count` API which count elements on each `RDD` in the stream.
 
