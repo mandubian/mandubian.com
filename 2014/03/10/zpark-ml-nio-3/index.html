@@ -5,12 +5,12 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Category: datomic - Mandubian Blog</title>
+  <title>ZPark-Ztream II (Part 3/3): Fancy Spark Streamed Machine-Learning & new Scalaz-Stream NIO API - Mandubian Blog</title>
   <meta name="author" content="Pascal Voitot">
 
   
-  <meta name="description" content="Category: datomic">
-  
+  <meta name="description" content="ZPark-Ztream II (Part 3/3): Fancy Spark Streamed Machine-Learning & New Scalaz-Stream NIO API &hellip;">
+  <meta name="keywords" content="scala,spark,scalaz-stream,NIO,machine learning,stream,map reduce,ML,recommendation">
 
   <!-- http://t.co/dKP3o1e -->
   <meta name="HandheldFriendly" content="True">
@@ -18,7 +18,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://www.mandubian.comblog/categories/datomic">
+  <link rel="canonical" href="http://www.mandubian.com/2014/03/10/zpark-ml-nio-3">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/bootstrap/bootstrap.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/stylesheets/bootstrap/responsive.css" media="screen, projection" rel="stylesheet" type="text/css">
@@ -109,102 +109,145 @@
   <div class="container">
     <div class="row-fluid">
       
-<article role="article" class="span9">
+<article class="hentry span9" role="article">
 
   
   <header class="page-header">
-    <h1 class="entry-title">Category: Datomic</h1>
+    
+      <h1 class="entry-title">ZPark-Ztream II (Part 3/3): Fancy Spark Streamed Machine-Learning & New Scalaz-Stream NIO API</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-03-10T19:19:00+01:00" pubdate data-updated="true">Mar 10<span>th</span>, 2014</time>
+        
+         | <a href="#disqus_thread">Comments</a>
+        
+      </p>
     
   </header>
+
+
+<div class="entry-content"><h2>Synopsis</h2>
+
+<p>The code &amp; sample apps can be found on <a href="https://github.com/mandubian/zpark-ztream">Github</a></p>
+
+<blockquote><p><a href="/2014-02-13-zpark">Zpark-Zstream I article</a> was a PoC trying to use <a href="https://github.com/scalaz/scalaz-stream">Scalaz-Stream</a> instead of DStream with <a href="https://spark.incubator.apache.org/">Spark-Streaming</a>. I had deliberately decided not to deal with fault-tolerance &amp; stream graph persistence to keep simple but without it, it was quite useless for real application&#8230;</p></blockquote>
+
+<div class="well">
+<p>Here is a tryptic of articles trying to do something <i>concrete</i> with <a href="https://github.com/scalaz/scalaz-stream">Scalaz-Stream</a> and <a href="https://spark.incubator.apache.org/">Spark</a>.</p>
+<p>So, what do I want? I wantttttttt <i>a shrewburyyyyyy</i> and to do the following:</p>
+<ol>
+<li>Plug Scalaz-Stream Process[Task, T] on Spark DStream[T] (Part 1)</li>
+<li>Build DStream using brand new Scalaz-Stream NIO API (client/server) (Part 2)</li>
+<li><b>Train Spark-ML <i>recommendation-like</i> model using NIO client/server (Part 3)</b></li>
+<li><b>Stream data from multiple NIO clients to the previous trained ML model mixing all together (Part 3)</b></li>
+</ol>
+</div>
+
+
+<h1>[Part 3/3] Fancy Spark Machine Learning with NIO client/server &amp; DStream&#8230;</h1>
+
+<p>Coming Soon</p>
+
+<br/>
+
+
+<br/>
+
+
+<blockquote><p><a href="/2014/03/09/zpark-ml-nio-2/">GO TO PART2</a> &lt;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;-</p></blockquote>
+
+<p>Have a look at the code on <a href="https://github.com/mandubian/zpark-ztream">Github</a>.</p>
+
+<p>Have distributed &amp; resilient yet continuous fun!</p>
+
+<br/>
+
+
+<br/>
+
+
+<br/>
+
+
+<br/>
+
+
+
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
   
-  <div id="blog-archives" class="category">
+
+<span class="byline author vcard">Posted by <span class="fn">Pascal Voitot</span></span>
+
+      
 
 
 
-  
-  <h1>2013</h1>
-
-<article>
-  <div class="well">
-
-<h2><a href="/2013/07/11/play-autosource-datomisca/">Play AutoSource & Datomisca: Proofing the concept on Datomic, a Schema DB</a></h2>
-<time datetime="2013-07-11T18:18:00+02:00" pubdate><span class='month'>Jul</span> <span class='day'>11</span> <span class='year'>2013</span></time>
-
-<footer>
-  <span class="categories">posted in <a class='category' href='/blog/categories/angularjs/'>angularjs</a>, <a class='category' href='/blog/categories/async/'>async</a>, <a class='category' href='/blog/categories/crud/'>crud</a>, <a class='category' href='/blog/categories/datasource/'>datasource</a>, <a class='category' href='/blog/categories/datomic/'>datomic</a>, <a class='category' href='/blog/categories/datomisca/'>datomisca</a>, <a class='category' href='/blog/categories/play-framework/'>play framework</a>, <a class='category' href='/blog/categories/rest/'>rest</a>, <a class='category' href='/blog/categories/scala/'>scala</a></span>
-</footer>
-
-</div>
-
-</article>
 
 
 
-<article>
-  <div class="well">
 
-<h2><a href="/2013/03/12/datomisca-shapeless-hlist/">Shapeless HList Schema-Type-Safe conversion to Datomisca/Datomic Entities</a></h2>
-<time datetime="2013-03-12T12:12:00+01:00" pubdate><span class='month'>Mar</span> <span class='day'>12</span> <span class='year'>2013</span></time>
-
-<footer>
-  <span class="categories">posted in <a class='category' href='/blog/categories/compile-time/'>compile-time</a>, <a class='category' href='/blog/categories/datomic/'>datomic</a>, <a class='category' href='/blog/categories/datomisca/'>datomisca</a>, <a class='category' href='/blog/categories/scala/'>scala</a>, <a class='category' href='/blog/categories/schema/'>schema</a>, <a class='category' href='/blog/categories/shapeless/'>shapeless</a>, <a class='category' href='/blog/categories/type-safe/'>type-safe</a></span>
-</footer>
-
-</div>
-
-</article>
-
-
-
-<article>
-  <div class="well">
-
-<h2><a href="/2013/03/04/datomisca-schema/">Datomisca Delicatessen -  Emulsion of Scala type-safety in Datomic Schema</a></h2>
-<time datetime="2013-03-04T00:00:00+01:00" pubdate><span class='month'>Mar</span> <span class='day'>04</span> <span class='year'>2013</span></time>
-
-<footer>
-  <span class="categories">posted in <a class='category' href='/blog/categories/database/'>database</a>, <a class='category' href='/blog/categories/datalog/'>datalog</a>, <a class='category' href='/blog/categories/datom/'>datom</a>, <a class='category' href='/blog/categories/datomic/'>datomic</a>, <a class='category' href='/blog/categories/datomisca/'>datomisca</a>, <a class='category' href='/blog/categories/scala/'>scala</a>, <a class='category' href='/blog/categories/schema/'>schema</a></span>
-</footer>
-
-</div>
-
-</article>
-
-
-
-<article>
-  <div class="well">
-
-<h2><a href="/2013/02/18/datomisca-fact-operations/">Datomisca Delicatessen - The Scala Reactive Cherry on the Datomic Cake of Facts</a></h2>
-<time datetime="2013-02-18T14:14:00+01:00" pubdate><span class='month'>Feb</span> <span class='day'>18</span> <span class='year'>2013</span></time>
-
-<footer>
-  <span class="categories">posted in <a class='category' href='/blog/categories/asynchronous/'>asynchronous</a>, <a class='category' href='/blog/categories/database/'>database</a>, <a class='category' href='/blog/categories/datalog/'>datalog</a>, <a class='category' href='/blog/categories/datom/'>datom</a>, <a class='category' href='/blog/categories/datomic/'>datomic</a>, <a class='category' href='/blog/categories/datomisca/'>datomisca</a>, <a class='category' href='/blog/categories/execution-context/'>execution context</a>, <a class='category' href='/blog/categories/future/'>future</a>, <a class='category' href='/blog/categories/non-blocking/'>non-blocking</a>, <a class='category' href='/blog/categories/reactive/'>reactive</a>, <a class='category' href='/blog/categories/scala/'>scala</a></span>
-</footer>
-
-</div>
-
-</article>
-
-
-
-<article>
-  <div class="well">
-
-<h2><a href="/2013/02/10/datomisca-query/">Datomisca Delicatessen - Datomic queries coated in a thin layer of Scala</a></h2>
-<time datetime="2013-02-10T13:13:00+01:00" pubdate><span class='month'>Feb</span> <span class='day'>10</span> <span class='year'>2013</span></time>
-
-<footer>
-  <span class="categories">posted in <a class='category' href='/blog/categories/datalog/'>datalog</a>, <a class='category' href='/blog/categories/datomic/'>datomic</a>, <a class='category' href='/blog/categories/datomisca/'>datomisca</a>, <a class='category' href='/blog/categories/scala/'>scala</a>, <a class='category' href='/blog/categories/scala-macro/'>scala-macro</a></span>
-</footer>
-
-</div>
-
-</article>
-
-</div>
 
   
+
+
+<time datetime="2014-03-10T19:19:00+01:00" pubdate data-updated="true">Mar 10<span>th</span>, 2014</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/ml/'>ML</a>, <a class='category' href='/blog/categories/nio/'>NIO</a>, <a class='category' href='/blog/categories/machine-learning/'>machine learning</a>, <a class='category' href='/blog/categories/map-reduce/'>map reduce</a>, <a class='category' href='/blog/categories/recommendation/'>recommendation</a>, <a class='category' href='/blog/categories/scala/'>scala</a>, <a class='category' href='/blog/categories/scalaz-stream/'>scalaz-stream</a>, <a class='category' href='/blog/categories/spark/'>spark</a>, <a class='category' href='/blog/categories/stream/'>stream</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://www.mandubian.com/2014/03/10/zpark-ml-nio-3/" data-via="mandubian" data-counturl="http://www.mandubian.com/2014/03/10/zpark-ml-nio-3/" >Tweet</a>
+  
+  
+  <div class="g-plusone" data-size="medium"></div>
+  
+  
+</div>
+
+    
+    
+    <section>
+      <h1>Comments</h1>
+      <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+    </section>
+    
+    <ul class="pager">
+      
+      <li class="previous"><a class="basic-alignment left"
+        href="/2014/03/09/zpark-ml-nio-2/" title="Previous Post:
+        ZPark-Ztream II (Part 2/3): Fancy Spark Streamed Machine-Learning & new Scalaz-Stream NIO API">&laquo; ZPark-Ztream II (Part 2/3): Fancy Spark Streamed Machine-Learning & new Scalaz-Stream NIO API</a></li>
+      
+      <li><a href="/blog/archives">Blog Archives</a></li>
+      
+    </ul>
+  </footer>
 </article>
 
 <aside class="sidebar-nav span3">
@@ -238,23 +281,23 @@
 
 
 <section class="well">
-  <ul id="tweets" class="nav" data-user="mandubian" data-count="4" data-replies="false">
-    <li class="loading">Status updating...</li>
-  </ul>
-  
-    <a href="http://twitter.com/mandubian" class="twitter-follow-button" data-show-count="false">Follow @mandubian</a>
-  
-</section>
-
-
-
-<section class="well">
   <ul id="gh_repos" data-user="mandubian" data-count="5" data-skip="true" class="nav">
 	<li class="nav-header">On GitHub</li>
     <li class="loading">Status updating...</li>
   </ul>
   
   <a class="github-follow" href="https://github.com/mandubian">Follow @mandubian</a>
+  
+</section>
+
+
+
+<section class="well">
+  <ul id="tweets" class="nav" data-user="mandubian" data-count="4" data-replies="false">
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+    <a href="http://twitter.com/mandubian" class="twitter-follow-button" data-show-count="false">Follow @mandubian</a>
   
 </section>
 
@@ -286,7 +329,10 @@
       var disqus_shortname = 'mandubian';
       
         
-        var disqus_script = 'count.js';
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://www.mandubian.com/2014/03/10/zpark-ml-nio-3/';
+        var disqus_url = 'http://www.mandubian.com/2014/03/10/zpark-ml-nio-3/';
+        var disqus_script = 'embed.js';
       
     (function () {
       var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
