@@ -4,7 +4,7 @@
   <title><![CDATA[Mandubian Blog]]></title>
   <link href="http://www.mandubian.com/atom.xml" rel="self"/>
   <link href="http://www.mandubian.com/"/>
-  <updated>2014-03-17T11:27:27+01:00</updated>
+  <updated>2014-03-17T11:29:20+01:00</updated>
   <id>http://www.mandubian.com/</id>
   <author>
     <name><![CDATA[Pascal Voitot]]></name>
@@ -417,7 +417,7 @@ It&#8217;s important to note that <code>NetworkReceiver</code> is also meant to 
 
 <p>That was fun but what can we do with that?</p>
 
-<p><strong>In <a href="./2014/03/09/zpark-ml-nio-2/">part2</a>, I propose to have more fun and stream data to <code>DStream</code> using the brand new Scalaz-Stream NIO API to create cool NIO client/server streams&#8230;</strong></p>
+<p><strong>In <a href="http://www.mandubian.com/2014/03/09/zpark-ml-nio-2/">part2</a>, I propose to have more fun and stream data to <code>DStream</code> using the brand new Scalaz-Stream NIO API to create cool NIO client/server streams&#8230;</strong></p>
 
 <br/>
 
