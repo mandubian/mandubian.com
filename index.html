@@ -9,7 +9,7 @@
   <meta name="author" content="Pascal Voitot">
 
   
-  <meta name="description" content="ZPark-Ztream II (Part 1/3): Fancy Spark Streamed Machine-Learning & New Scalaz-Stream NIO API &hellip;">
+  <meta name="description" content="ZPark-Ztream II (Part 2/3): Fancy Spark Streamed Machine-Learning & New Scalaz-Stream NIO API &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -110,6 +110,83 @@
     <div class="row-fluid">
       <div class="span9">
   
+  
+  
+    <article>
+      
+  <header class="page-header">
+    
+      <h1 class="entry-title"><a href="/2014/03/09/zpark-ml-nio-2/">ZPark-Ztream II (Part 2/3): Fancy Spark Streamed Machine-Learning & New Scalaz-Stream NIO API</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-03-09T19:19:00+01:00" pubdate data-updated="true">Mar 9<span>th</span>, 2014</time>
+        
+         | <a href="/2014/03/09/zpark-ml-nio-2/#disqus_thread">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><h2>Synopsis</h2>
+
+<p>The code &amp; sample apps can be found on <a href="https://github.com/mandubian/zpark-ztream">Github</a></p>
+
+<blockquote><p><a href="/2014-02-13-zpark">Zpark-Zstream I article</a> was a PoC trying to use <a href="https://github.com/scalaz/scalaz-stream">Scalaz-Stream</a> instead of DStream with <a href="https://spark.incubator.apache.org/">Spark-Streaming</a>. I had deliberately decided not to deal with fault-tolerance &amp; stream graph persistence to keep simple but without it, it was quite useless for real application&#8230;</p></blockquote>
+
+<div class="well">
+<p>Here is a tryptic of articles trying to do something <i>concrete</i> with <a href="https://github.com/scalaz/scalaz-stream">Scalaz-Stream</a> and <a href="https://spark.incubator.apache.org/">Spark</a>.</p>
+<p>So, what do I want? I wantttttttt <i>a shrewburyyyyyy</i> and to do the following:</p>
+<ol>
+<li>Plug Scalaz-Stream Process[Task, T] on Spark DStream[T] (Part 1)</li>
+<li><b>Build DStream using brand new Scalaz-Stream NIO API (client/server) (Part 2)</b></li>
+<li>Train Spark-ML <i>recommendation-like</i> model using NIO client/server (Part 3)</li>
+<li>Stream data from multiple NIO clients to the previous trained ML model mixing all together (Part 3)</li>
+</ol>
+</div>
+
+
+
+
+<br/>
+
+
+<h1>[Part 2/3] From Scalaz-Stream NIO client &amp; server to Spark DStream</h1>
+
+<h2>Coming very soon</h2>
+
+<br/>
+
+
+<br/>
+
+
+<br/>
+
+
+<br/>
+
+
+
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -5865,274 +5942,6 @@ If you need to add headers in your responses and params to querystring, it&#8217
 
     </article>
   
-  
-    <article>
-      
-  <header class="page-header">
-    
-      <h1 class="entry-title"><a href="/2013/05/01/jspath-pattern-matching/">Play2 Json Path Pattern Matching</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-05-01T17:17:00+02:00" pubdate data-updated="true">May 1<span>st</span>, 2013</time>
-        
-         | <a href="/2013/05/01/jspath-pattern-matching/#disqus_thread">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><h4>EXPERIMENTAL / DRAFT</h4>
-
-<br/>
-
-
-
-
-<div class="well">
-<p>While experimenting <b>Play21/Json Zipper</b> in my <a href="http://www.mandubian.com/2013/05/01/JsZipper/">previous article</a>, I needed to match patterns on <code>JsPath</code> and decided to explore a bit this topic.</p>
-<p>This article just presents my experimentations on <code>JsPath</code> pattern matching so that people interested in the topic can tell me if they like it or not and what they would add or remove. So don&#8217;t hesitate to let comments about it.</p>
-<p>If the result is satisfying, I&#8217;ll propose it to Play team ;)</p>
-</div>
-
-
-<p>Let&#8217;s go to samples as usual.</p>
-
-<h2>Very simple pattern matching</h2>
-
-<h3><code>match/scale</code>-style</h3>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;toto&quot;</span> <span class="k">match</span> <span class="o">{</span>
-</span><span class='line'>  <span class="k">case</span> <span class="nc">__</span> <span class="o">\</span> <span class="n">key</span> <span class="k">=&gt;</span> <span class="nc">Some</span><span class="o">(</span><span class="n">key</span><span class="o">)</span>
-</span><span class='line'>  <span class="k">case</span> <span class="k">_</span> <span class="k">=&gt;</span> <span class="nc">None</span>
-</span><span class='line'><span class="o">}</span>
-</span><span class='line'><span class="n">res0</span><span class="k">:</span> <span class="kt">Option</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="k">=</span> <span class="nc">Some</span><span class="o">(</span><span class="n">toto</span><span class="o">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h3><code>val</code>-style</h3>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="k">_</span> <span class="o">\</span> <span class="n">toto</span> <span class="k">=</span> <span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;toto&quot;</span>
-</span><span class='line'><span class="n">toto</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=</span> <span class="n">toto</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Note that I don&#8217;t write <code>val __ \ toto = __ \ "toto"</code> <em>(2x Underscore)</em> as you would expect.</p>
-
-<p>Why? Let&#8217;s write it:</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="nc">__</span> <span class="o">\</span> <span class="n">toto</span> <span class="k">=</span> <span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;toto&quot;</span>
-</span><span class='line'><span class="o">&lt;</span><span class="n">console</span><span class="k">&gt;:</span><span class="mi">20</span><span class="k">:</span> <span class="kt">error:</span> <span class="kt">recursive</span> <span class="kt">value</span> <span class="kt">x$1</span> <span class="kt">needs</span> <span class="k">type</span>
-</span><span class='line'><span class="kt">val</span> <span class="k">__</span> <span class="kt">\</span> <span class="kt">toto</span> <span class="o">=</span> <span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;toto&quot;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Actually, 1st <code>__</code> is considered as a variable to be affected by Scala compiler. Then the variable <code>__</code> appears on left and right side which is not good.</p>
-
-<p>So I use <code>_</code> to ignore its value because I know it&#8217;s <code>__</code>. If I absolutely wanted to match with <code>__</code>, you would have written:</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="nc">JsPath</span> <span class="o">\</span> <span class="n">toto</span> <span class="k">=</span> <span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;toto&quot;</span>
-</span><span class='line'><span class="n">toto</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=</span> <span class="n">toto</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-
-
-<br/>
-
-
-<h2>Pattern matching with indexed path</h2>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="o">(</span><span class="k">_</span> <span class="o">\</span> <span class="n">toto</span><span class="o">)@@</span><span class="n">idx</span> <span class="k">=</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;toto&quot;</span><span class="o">)(</span><span class="mi">2</span><span class="o">)</span>
-</span><span class='line'><span class="n">toto</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=</span> <span class="n">toto</span>
-</span><span class='line'><span class="n">idx</span><span class="k">:</span> <span class="kt">Int</span> <span class="o">=</span> <span class="mi">2</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;toto&quot;</span><span class="o">)(</span><span class="mi">2</span><span class="o">)</span> <span class="k">match</span> <span class="o">{</span>
-</span><span class='line'>  <span class="k">case</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;toto&quot;</span><span class="o">)@@</span><span class="n">idx</span> <span class="k">=&gt;</span> <span class="nc">Some</span><span class="o">(</span><span class="n">idx</span><span class="o">)</span>
-</span><span class='line'>  <span class="k">case</span> <span class="k">_</span>      <span class="k">=&gt;</span> <span class="nc">None</span>
-</span><span class='line'><span class="o">}</span>
-</span><span class='line'><span class="n">res1</span><span class="k">:</span> <span class="kt">Option</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="k">=</span> <span class="nc">Some</span><span class="o">(</span><span class="mi">2</span><span class="o">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Note the usage of <code>@@</code> operator that you can dislike. <em>I didn&#8217;t find anything better for now but if anyone has a better idea, please give it to me ;)</em></p>
-
-<br/>
-
-
-<h2>Pattern matching the last element of a JsPath</h2>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="k">_</span> <span class="o">\</span> <span class="n">last</span> <span class="k">=</span> <span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;alpha&quot;</span> <span class="o">\</span> <span class="s">&quot;beta&quot;</span> <span class="o">\</span> <span class="s">&quot;delta&quot;</span> <span class="o">\</span> <span class="s">&quot;gamma&quot;</span>
-</span><span class='line'><span class="n">last</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=</span> <span class="n">gamma</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Using <code>_</code>, I ignore everything before <code>gamma</code> node.</p>
-
-<br/>
-
-
-<h2>Matching only the first element and the last one</h2>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="k">_</span> <span class="o">\</span> <span class="n">first</span> <span class="o">\?\</span> <span class="n">last</span> <span class="k">=</span> <span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;alpha&quot;</span> <span class="o">\</span> <span class="s">&quot;beta&quot;</span> <span class="o">\</span> <span class="s">&quot;gamma&quot;</span> <span class="o">\</span> <span class="s">&quot;delta&quot;</span>
-</span><span class='line'><span class="n">first</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=</span> <span class="n">alpha</span>
-</span><span class='line'><span class="n">last</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=</span> <span class="n">delta</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="o">(</span><span class="k">_</span> <span class="o">\</span> <span class="n">first</span><span class="o">)@@</span><span class="n">idx</span> <span class="o">\?\</span> <span class="n">last</span> <span class="k">=</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;alpha&quot;</span><span class="o">)(</span><span class="mi">2</span><span class="o">)</span> <span class="o">\</span> <span class="s">&quot;beta&quot;</span> <span class="o">\</span> <span class="s">&quot;gamma&quot;</span> <span class="o">\</span> <span class="s">&quot;delta&quot;</span>
-</span><span class='line'><span class="n">first</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=</span> <span class="n">alpha</span>
-</span><span class='line'><span class="n">idx</span><span class="k">:</span> <span class="kt">Int</span> <span class="o">=</span> <span class="mi">2</span>
-</span><span class='line'><span class="n">last</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=</span> <span class="n">delta</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Note the <code>\?\</code> operator which is also a temporary choice: I didn&#8217;t want to choose <code>\\</code> ause <code>\?\</code> operator only works in the case where you match between the first and the last element of the path and not between anything and anything&#8230;</p>
-
-<br/>
-
-
-<h2>A few more complex cases</h2>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="o">(</span><span class="k">_</span> <span class="o">\</span> <span class="n">alpha</span><span class="o">)@@</span><span class="n">idx</span> <span class="o">\</span> <span class="n">beta</span> <span class="o">\</span> <span class="n">gamma</span> <span class="o">\</span> <span class="n">delta</span> <span class="k">=</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;alpha&quot;</span><span class="o">)(</span><span class="mi">2</span><span class="o">)</span> <span class="o">\</span> <span class="s">&quot;beta&quot;</span> <span class="o">\</span> <span class="s">&quot;gamma&quot;</span> <span class="o">\</span> <span class="s">&quot;delta&quot;</span>
-</span><span class='line'><span class="n">alpha</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=</span> <span class="n">alpha</span>
-</span><span class='line'><span class="n">idx</span><span class="k">:</span> <span class="kt">Int</span> <span class="o">=</span> <span class="mi">2</span>
-</span><span class='line'><span class="n">beta</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=</span> <span class="n">beta</span>
-</span><span class='line'><span class="n">gamma</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=</span> <span class="n">gamma</span>
-</span><span class='line'><span class="n">delta</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=</span> <span class="n">delta</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="o">(</span><span class="k">_</span> <span class="o">\</span> <span class="n">alpha</span><span class="o">)@@</span><span class="n">idx</span> <span class="o">\</span> <span class="k">_</span> <span class="o">\</span> <span class="k">_</span> <span class="o">\</span> <span class="n">delta</span> <span class="k">=</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;alpha&quot;</span><span class="o">)(</span><span class="mi">2</span><span class="o">)</span> <span class="o">\</span> <span class="s">&quot;beta&quot;</span> <span class="o">\</span> <span class="s">&quot;gamma&quot;</span> <span class="o">\</span> <span class="s">&quot;delta&quot;</span>
-</span><span class='line'><span class="n">alpha</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=</span> <span class="n">alpha</span>
-</span><span class='line'><span class="n">idx</span><span class="k">:</span> <span class="kt">Int</span> <span class="o">=</span> <span class="mi">2</span>
-</span><span class='line'><span class="n">delta</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=</span> <span class="n">delta</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="k">_</span><span class="o">@@</span><span class="n">idx</span> <span class="o">\?\</span> <span class="n">gamma</span> <span class="o">\</span> <span class="n">delta</span> <span class="k">=</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;alpha&quot;</span><span class="o">)(</span><span class="mi">2</span><span class="o">)</span> <span class="o">\</span> <span class="s">&quot;beta&quot;</span> <span class="o">\</span> <span class="s">&quot;gamma&quot;</span> <span class="o">\</span> <span class="s">&quot;delta&quot;</span>
-</span><span class='line'><span class="n">idx</span><span class="k">:</span> <span class="kt">Int</span> <span class="o">=</span> <span class="mi">2</span>
-</span><span class='line'><span class="n">gamma</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=</span> <span class="n">gamma</span>
-</span><span class='line'><span class="n">delta</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=</span> <span class="n">delta</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;alpha&quot;</span><span class="o">)(</span><span class="mi">2</span><span class="o">)</span> <span class="o">\</span> <span class="s">&quot;beta&quot;</span> <span class="o">\</span> <span class="s">&quot;gamma&quot;</span> <span class="o">\</span> <span class="s">&quot;delta&quot;</span> <span class="k">match</span> <span class="o">{</span>
-</span><span class='line'>  <span class="k">case</span> <span class="k">_</span><span class="o">@@</span><span class="mi">2</span> <span class="o">\</span> <span class="s">&quot;beta&quot;</span> <span class="o">\</span> <span class="s">&quot;gamma&quot;</span> <span class="o">\</span> <span class="k">_</span> <span class="k">=&gt;</span> <span class="kc">true</span>
-</span><span class='line'>  <span class="k">case</span> <span class="k">_</span> <span class="k">=&gt;</span> <span class="kc">false</span>
-</span><span class='line'><span class="o">}</span>
-</span><span class='line'><span class="n">res4</span><span class="k">:</span> <span class="kt">Boolean</span> <span class="o">=</span> <span class="kc">true</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-
-
-<br/>
-
-
-<h2>And finally using regex?</h2>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">pattern</span> <span class="k">=</span> <span class="s">&quot;&quot;&quot;al(\d)*pha&quot;&quot;&quot;</span><span class="o">.</span><span class="n">r</span>
-</span><span class='line'><span class="n">pattern</span><span class="k">:</span> <span class="kt">scala.util.matching.Regex</span> <span class="o">=</span> <span class="n">al</span><span class="o">(\</span><span class="n">d</span><span class="o">)*</span><span class="n">pha</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;foo&quot;</span><span class="o">)(</span><span class="mi">2</span><span class="o">)</span> <span class="o">\</span> <span class="s">&quot;al1234pha&quot;</span> <span class="o">\</span> <span class="s">&quot;bar&quot;</span> <span class="k">match</span> <span class="o">{</span>
-</span><span class='line'>  <span class="k">case</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;foo&quot;</span><span class="o">)@@</span><span class="n">idx</span> <span class="o">\</span> <span class="n">pattern</span><span class="o">(</span><span class="k">_</span><span class="o">)</span> <span class="o">\</span> <span class="s">&quot;bar&quot;</span> <span class="k">=&gt;</span> <span class="kc">true</span>
-</span><span class='line'>  <span class="k">case</span> <span class="k">_</span> <span class="k">=&gt;</span> <span class="kc">false</span>
-</span><span class='line'><span class="o">}</span>
-</span><span class='line'><span class="n">res6</span><span class="k">:</span> <span class="kt">Boolean</span> <span class="o">=</span> <span class="kc">true</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>So, I think we can provide more features and now I&#8217;m going to use it with my <code>JsZipper</code> stuff in my next article ;)</p>
-
-<p>If you like it, tell it!</p>
-
-<p>Have fun!</p>
-
-<br/>
-
-
-<br/>
-
-
-<br/>
-
-
-<br/>
-
-</div>
-  
-  
-
-
-    </article>
-  
   <ul class="pager">
     
     <li class="previous"><a href="/blog/page/2/">&larr; Older</a></li>
@@ -6148,6 +5957,10 @@ If you need to add headers in your responses and params to querystring, it&#8217
     <li class="nav-header">Recent Posts</li>
     
       <li class="post">
+        <a href="/2014/03/09/zpark-ml-nio-2/">ZPark-Ztream II (Part 2/3): Fancy Spark Streamed Machine-Learning & new Scalaz-Stream NIO API</a>
+      </li>
+    
+      <li class="post">
         <a href="/2014/03/08/zpark-ml-nio-1/">ZPark-Ztream II (Part 1/3): Fancy Spark Streamed Machine-Learning & new Scalaz-Stream NIO API</a>
       </li>
     
@@ -6161,10 +5974,6 @@ If you need to add headers in your responses and params to querystring, it&#8217
     
       <li class="post">
         <a href="/2013/09/22/play-actor-room/">Play 2.2 Actor Room: websocket (&more) room manager only with actors</a>
-      </li>
-    
-      <li class="post">
-        <a href="/2013/08/21/playztream/">Scalaz-Stream Plug&#8217;n&#8217;Play2 Iteratee/WS + Recursive streaming</a>
       </li>
     
   </ul>
