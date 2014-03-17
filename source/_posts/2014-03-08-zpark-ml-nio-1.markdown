@@ -13,7 +13,7 @@ keywords: scala,spark,scalaz-stream,NIO,machine learning,stream,map reduce,ML,re
 
 The code & sample apps can be found on [Github](https://github.com/mandubian/zpark-ztream)
 
-> [Zpark-Zstream I article](/2014-02-13-zpark) was a PoC trying to use [Scalaz-Stream](https://github.com/scalaz/scalaz-stream) instead of DStream with [Spark-Streaming](https://spark.incubator.apache.org/). I had deliberately decided not to deal with fault-tolerance & stream graph persistence to keep simple but without it, it was quite useless for real application...
+> [Zpark-Zstream I article](/2014/02/13/zpark/) was a PoC trying to use [Scalaz-Stream](https://github.com/scalaz/scalaz-stream) instead of DStream with [Spark-Streaming](https://spark.incubator.apache.org/). I had deliberately decided not to deal with fault-tolerance & stream graph persistence to keep simple but without it, it was quite useless for real application...
 
 <div class="well">
 <p>Here is a tryptic of articles trying to do something <i>concrete</i> with <a href="https://github.com/scalaz/scalaz-stream">Scalaz-Stream</a> and <a href="https://spark.incubator.apache.org/">Spark</a>.</p>
