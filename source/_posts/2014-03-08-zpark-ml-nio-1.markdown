@@ -193,35 +193,30 @@ ssc.stop()
 {% codeblock lang:scala %}
 14/03/11 11:32:09 WARN util.Utils: Your hostname, localhost.paris.zenexity.com resolves to a loopback address: 127.0.0.1; using 10.0.24.228 instead (on interface en0)
 14/03/11 11:32:09 WARN util.Utils: Set SPARK_LOCAL_IP if you need to bind to another address
-14/03/11 11:32:13 WARN storage.BlockManager: Block input-0-1394533932800 already exists on this machine; not re-adding it
-14/03/11 11:32:13 WARN storage.BlockManager: Block input-0-1394533933000 already exists on this machine; not re-adding it
-14/03/11 11:32:13 WARN storage.BlockManager: Block input-0-1394533933200 already exists on this machine; not re-adding it
 -------------------------------------------
 Time: 1394533933000 ms
 -------------------------------------------
 0
 
-14/03/11 11:32:13 WARN storage.BlockManager: Block input-0-1394533933600 already exists on this machine; not re-adding it
-14/03/11 11:32:14 WARN storage.BlockManager: Block input-0-1394533933800 already exists on this machine; not re-adding it
 -------------------------------------------
 Time: 1394533934000 ms
 -------------------------------------------
-20
+14
 
-14/03/11 11:32:14 WARN storage.BlockManager: Block input-0-1394533934000 already exists on this machine; not re-adding it
-14/03/11 11:32:14 WARN storage.BlockManager: Block input-0-1394533934200 already exists on this machine; not re-adding it
-14/03/11 11:32:14 WARN storage.BlockManager: Block input-0-1394533934400 already exists on this machine; not re-adding it
-14/03/11 11:32:14 WARN storage.BlockManager: Block input-0-1394533934600 already exists on this machine; not re-adding it
-14/03/11 11:32:15 WARN storage.BlockManager: Block input-0-1394533934800 already exists on this machine; not re-adding it
 -------------------------------------------
 Time: 1394533935000 ms
+-------------------------------------------
+20
+
+-------------------------------------------
+Time: 1394533936000 ms
 -------------------------------------------
 20
 
 ...
 {% endcodeblock %}
 
-> Ok cool, we can see a first empty window and then windows of 1 sec counting 20 elements which is great since one element every 50ms gives 20 elements in 1sec.
+> Ok cool, we can see a warmup phase at beginning and then windows of 1 sec counting 20 elements which is great since one element every 50ms gives 20 elements in 1sec.
 
 <br/>
 <br/>
