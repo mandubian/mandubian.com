@@ -233,7 +233,7 @@ Please not that as we run the `Process[Task, T]` on the Spark driver node, if th
 
 That was fun but what can we do with that?
 
-**In [part2](./2014/03/09/zpark-ml-nio-2/), I propose to have more fun and stream data to `DStream` using the brand new Scalaz-Stream NIO API to create cool NIO client/server streams...**
+**In [part2](/2014/03/09/zpark-ml-nio-2/), I propose to have more fun and stream data to `DStream` using the brand new Scalaz-Stream NIO API to create cool NIO client/server streams...**
 
 <br/>
 <br/>
