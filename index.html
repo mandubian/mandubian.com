@@ -9,23 +9,7 @@
   <meta name="author" content="Pascal Voitot">
 
   
-  <meta name="description" content="ZPark-Ztream: Driving Spark Distributed Stream With Scalaz-Stream
-    
-    
-      
-        
-
-
-
-
-
-
-
-
-  
-
-
-Feb 13th &hellip;">
+  <meta name="description" content="ZPark-Ztream II (Part 1/3): Fancy Spark Streamed Machine-Learning & New Scalaz-Stream NIO API &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -126,6 +110,417 @@ Feb 13th &hellip;">
     <div class="row-fluid">
       <div class="span9">
   
+  
+  
+    <article>
+      
+  <header class="page-header">
+    
+      <h1 class="entry-title"><a href="/2014/03/08/zpark-ml-nio-1/">ZPark-Ztream II (Part 1/3): Fancy Spark Streamed Machine-Learning & New Scalaz-Stream NIO API</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-03-08T19:19:00+01:00" pubdate data-updated="true">Mar 8<span>th</span>, 2014</time>
+        
+         | <a href="/2014/03/08/zpark-ml-nio-1/#disqus_thread">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><br/>
+
+
+<h2>Synopsis</h2>
+
+<p>The code &amp; sample apps can be found on <a href="https://github.com/mandubian/zpark-ztream">Github</a></p>
+
+<blockquote><p><a href="/2014-02-13-zpark">Zpark-Zstream I article</a> was a PoC trying to use <a href="https://github.com/scalaz/scalaz-stream">Scalaz-Stream</a> instead of DStream with <a href="https://spark.incubator.apache.org/">Spark-Streaming</a>. I had deliberately decided not to deal with fault-tolerance &amp; stream graph persistence to keep simple but without it, it was quite useless for real application&#8230;</p></blockquote>
+
+<div class="well">
+<p>Here is a tryptic of articles trying to do something <i>concrete</i> with <a href="https://github.com/scalaz/scalaz-stream">Scalaz-Stream</a> and <a href="https://spark.incubator.apache.org/">Spark</a>.</p>
+<p>So, what do I want? I wantttttttt <i>a shrewburyyyyyy</i> and to do the following:</p>
+<ol>
+<li><b>Plug Scalaz-Stream Process[Task, T] on Spark DStream[T] (Part 1)</b></li>
+<li>Build DStream using brand new Scalaz-Stream NIO API (client/server) (Part 2)</li>
+<li>Train Spark-ML <i>recommendation-like</i> model using NIO client/server (Part 3)</li>
+<li>Stream data from multiple NIO clients to the previous trained ML model mixing all together (Part 3)</li>
+</ol>
+</div>
+
+
+<h1>[Part 1/3] From Scalaz-Stream Process to Spark DStream</h1>
+
+<br/>
+
+
+<br/>
+
+
+<h2>Reminders on Process[Task, T]</h2>
+
+<p>Scalaz-stream <code>Process[Task, T]</code> is a stream of <code>T</code> elements that can interleave some <code>Task</code>s (representing an external something doing somewhat). <code>Process[Task, T]</code> is built as a state machine that you need to run to process all <code>Task</code> effects and emit a stream of <code>T</code>. This can manage both continuous or discrete, finite or infinite streams.</p>
+
+<blockquote><p>I restricted to <code>Task</code> for the purpose of this article but it can be any <code>F[_]</code>.</p></blockquote>
+
+<br/>
+
+
+<h2>Reminders on DStream[T]</h2>
+
+<p>Spark <code>DStream[T]</code> is a stream of <code>RDD[T]</code> built by discretizing a continuous stream of <code>T</code>. <code>RDD[T]</code> is a <em>resilient distributed dataset</em> which is the ground data-structure behind Spark for distributing in-memory batch/map/reduce operations to a cluster of nodes with fault-tolerance &amp; persistence.</p>
+
+<p>In a summary, <code>DStream</code> <em>slices</em> a continuous stream of <code>T</code> by windows of time and gathers all <code>T</code>s in the same window into one <code>RDD[T]</code>. So it discretizes the continuous stream into a stream of <code>RDD[T]</code>. Once built, those <code>RDD[T]</code>s are distributed to Spark cluster. Spark allows to perform transform/union/map/reduce/&#8230; operations on <code>RDD[T]</code>s. Therefore <code>DStream[T]</code> takes advantage if the same operations.</p>
+
+<p>Spark-Streaming also persists all operations &amp; relations between <code>DStream</code>s in a graph. Thus, in case of fault in a remote node while performing operations on <code>DStream</code>s, the whole transformation can be replayed (<em>it also means streamed data are also persisted</em>).</p>
+
+<p>Finally, the resulting <code>DStream</code> obtained after map/reduce operations can be <em>output</em> to a file, a console, a DB etc&#8230;</p>
+
+<blockquote><p>Please note that <code>DStream[T]</code> is built with respect to a <code>StreamingContext</code> which manages its distribution in Spark cluster and all operations performed on it. Moreover, <code>DStream</code> map/reduce operations &amp; output must be scheduled before starting the <code>StreamingContext</code>. It could be somewhat compared to a state machine that you build statically and run later.</p></blockquote>
+
+<br/>
+
+
+<h2>From Process[Task, T] to RDD[T]</h2>
+
+<blockquote><p>You may ask why not simply build a <code>RDD[T]</code> from a <code>Process[Task, T]</code> ?</p></blockquote>
+
+<p>Yes sure we can do it:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// Initialize Spark Context</span>
+</span><span class='line'><span class="k">implicit</span> <span class="n">scc</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">SparkContext</span><span class="o">(...)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Build a process</span>
+</span><span class='line'><span class="k">val</span> <span class="n">p</span><span class="k">:</span> <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">T</span><span class="o">]</span> <span class="k">=</span> <span class="o">...</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Run the process using `runLog` to aggregate all results</span>
+</span><span class='line'><span class="c1">// and build a RDD using spark context parallelization</span>
+</span><span class='line'><span class="k">val</span> <span class="n">rdd</span> <span class="k">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">parallelize</span><span class="o">(</span><span class="n">p</span><span class="o">.</span><span class="n">runLog</span><span class="o">.</span><span class="n">run</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This works but what if this <code>Process[Task, T]</code> emits huge quantity of data or is infinite?
+You&#8217;ll end in a <code>OutOfMemoryException</code>&#8230;</p>
+
+<p>So yes you can do it but it&#8217;s not so interesting. <code>DStream</code> seems more natural since it can manage stream of data as long as it can discretize it over time.</p>
+
+<br/>
+
+
+<br/>
+
+
+<h2>From Process[Task, T] to DStream[T]</h2>
+
+<br/>
+
+
+<h3>Pull from <code>Process[Task, T]</code>, Push to <code>DStream[T]</code> with <code>LocalInputDStream</code></h3>
+
+<p>To build a <code>DStream[T]</code> from a <code>Process[Task, T]</code>, the idea is to:</p>
+
+<ul>
+<li>Consume/pull the <code>T</code> emitted by <code>Process[Task, O]</code>,</li>
+<li>Gather emitted <code>T</code> during a window of time &amp; generate a <code>RDD[T]</code> with them,</li>
+<li>Inject <code>RDD[T]</code> into the <code>DStream[T]</code>,</li>
+<li>Go to next window of time&#8230;</li>
+</ul>
+
+
+<p>Spark-Streaming library provides different helpers to create <code>DStream</code> from different sources of data like files (local/HDFS), from sockets&#8230;</p>
+
+<p>The helper that seemed the most appropriate is the <code>NetworkInputDStream</code>:</p>
+
+<ul>
+<li>It provides a <code>NetworkReceiver</code> based on a Akka actor to which we can push streamed data.</li>
+<li><code>NetworkReceiver</code> gathers streamed data over windows of time and builds a <code>BlockRDD[T]</code> for each window.</li>
+<li>Each <code>BlockRDD[T]</code> is registered to the global Spark <code>BlockManager</code> (responsible for data persistence).</li>
+<li><code>BlockRDD[T]</code> is injected into the <code>DStream[T]</code>.</li>
+</ul>
+
+
+<p>So basically, <code>NetworkInputDStream</code> builds a stream of <code>BlockRDD[T]</code>.
+It&#8217;s important to note that <code>NetworkReceiver</code> is also meant to be sent to remote workers so that data can be gathered on several nodes at the same time.</p>
+
+<p>But in my case, the data source <code>Process[Task, T]</code> run on the Spark driver node (at least for now) so instead of <code>NetworkInputDStream</code>, a <code>LocalInputDStream</code> would be better. It would provide a <code>LocalReceiver</code> based on an actor to which we can push the data emitted by the process in an async way.</p>
+
+<blockquote><p><code>LocalInputDStream</code> doesn&#8217;t exist in Spark-Streaming library (or I haven&#8217;t looked well) so I&#8217;ve implemented it as I needed. It does exactly the same as <code>NetworkInputDStream</code> without the remoting aspect. The current code is <a href="https://github.com/mandubian/zpark-ztream/blob/master/src/main/scala/LocalInputDStream.scala">there</a>&#8230;</p></blockquote>
+
+<br/>
+
+
+<h3><code>Process</code> vs <code>DStream</code> ?</h3>
+
+<p>There is a common point between <code>DStream</code> and <code>Process</code>: both are built as state machines that are passive until run.</p>
+
+<ul>
+<li><p>In the case of <code>Process</code>, it is run by playing all the <code>Task</code> effects while gathering emitted values or without taking care of them, in blocking or non-blocking mode etc&#8230;</p></li>
+<li><p>In the case of <code>DStream</code>, it is built and registered in the context of a <code>SparkStreamingContext</code>. Then you must also declare some outputs for the <code>DStream</code> like a simple print, an <code>HDFS</code> file output, etc&#8230; Finally you start the <code>SparkStreamingContext</code> which manages everything for you until you stop it.</p></li>
+</ul>
+
+
+<p>So if we want to adapt a <code>Process[Task, T]</code> to a <code>DStream[T]</code>, we must perform 4 steps  (<em>on the Spark driver node</em>):</p>
+
+<ul>
+<li>build a <code>DStream[T]</code> using <code>LocalInputDStream[T]</code> providing a <code>Receiver</code> in which we&#8217;ll be able to push asynchronously <code>T</code>.</li>
+<li>build a custom scalaz-stream <code>Sink[Task, T, Unit]</code> in charge of consuming all emitted data from <code>Process[Task, T]</code> and pushing them using previous <code>Receiver</code>.</li>
+<li>pipe the <code>Process[Task, T]</code> to this <code>Sink[Task, T, Unit]</code> &amp; when <code>Process[Task, T]</code> has halted, stop previous <code>DStream[T]</code>: the result of this pipe operation is a <code>Process[Task, Unit]</code> which is a pure effectful process responsible for pushing <code>T</code> into the dstream without emitting anything.</li>
+<li>return previous <code>DStream[T]</code> and effectful consumer <code>Process[Task, Unit]</code>.</li>
+</ul>
+
+
+<h3><code>dstreamize</code> implementation</h3>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">def</span> <span class="n">dstreamize</span><span class="o">[</span><span class="kt">T</span> <span class="kt">:</span> <span class="kt">ClassTag</span><span class="o">](</span>
+</span><span class='line'>  <span class="n">p</span><span class="k">:</span> <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">T</span><span class="o">],</span>
+</span><span class='line'>  <span class="n">ssc</span><span class="k">:</span> <span class="kt">StreamingContext</span><span class="o">,</span>
+</span><span class='line'>  <span class="n">storageLevel</span><span class="k">:</span> <span class="kt">StorageLevel</span> <span class="o">=</span> <span class="nc">StorageLevel</span><span class="o">.</span><span class="nc">MEMORY_AND_DISK_SER_2</span>
+</span><span class='line'><span class="o">)</span><span class="k">:</span> <span class="o">(</span><span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">Unit</span><span class="o">],</span> <span class="nc">ZparkInputDStream</span><span class="o">[</span><span class="kt">T</span><span class="o">])</span> <span class="k">=</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// Build a custom LocalInputDStream</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">dstream</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">ZparkInputDStream</span><span class="o">[</span><span class="kt">T</span><span class="o">](</span><span class="n">ssc</span><span class="o">,</span> <span class="n">storageLevel</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// Build a Sink pushing into dstream receiver</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">sink</span> <span class="k">=</span> <span class="n">receiver2Sink</span><span class="o">[</span><span class="kt">T</span><span class="o">](</span><span class="n">dstream</span><span class="o">.</span><span class="n">receiver</span><span class="o">.</span><span class="n">asInstanceOf</span><span class="o">[</span><span class="kt">ZparkReceiver</span><span class="o">[</span><span class="kt">T</span><span class="o">]])</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// Finally pipe the process to the sink and when finished, closes the dstream</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">consumer</span><span class="k">:</span> <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">Unit</span><span class="o">]</span> <span class="k">=</span>
+</span><span class='line'>    <span class="o">(</span><span class="n">p</span> <span class="n">to</span> <span class="n">sink</span><span class="o">)</span>
+</span><span class='line'>    <span class="c1">// when finished, it closes the dstream</span>
+</span><span class='line'>    <span class="o">.</span><span class="n">append</span> <span class="o">(</span> <span class="n">eval</span><span class="o">(</span><span class="nc">Task</span><span class="o">.</span><span class="n">delay</span><span class="o">{</span> <span class="n">dstream</span><span class="o">.</span><span class="n">stop</span><span class="o">()</span> <span class="o">})</span> <span class="o">)</span>
+</span><span class='line'>    <span class="c1">// when error, it closes the dstream</span>
+</span><span class='line'>    <span class="o">.</span><span class="n">handle</span> <span class="o">{</span> <span class="k">case</span> <span class="n">e</span><span class="k">:</span> <span class="kt">Exception</span> <span class="o">=&gt;</span>
+</span><span class='line'>      <span class="n">println</span><span class="o">(</span><span class="s">&quot;Stopping on error &quot;</span><span class="o">+</span><span class="n">e</span><span class="o">.</span><span class="n">getMessage</span><span class="o">)</span>
+</span><span class='line'>      <span class="n">e</span><span class="o">.</span><span class="n">printStackTrace</span><span class="o">()</span>
+</span><span class='line'>      <span class="n">eval</span><span class="o">(</span><span class="nc">Task</span><span class="o">.</span><span class="n">delay</span><span class="o">{</span> <span class="n">dstream</span><span class="o">.</span><span class="n">stop</span><span class="o">()</span> <span class="o">})</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// Return the effectful consumer sink and the DStream</span>
+</span><span class='line'>  <span class="o">(</span><span class="n">consumer</span><span class="o">,</span> <span class="n">dstream</span><span class="o">)</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>Please remark that this builds a <code>Process[Task, Unit]</code> and a <code>DStream[T]</code> but nothing has happened yet in terms of data consumption &amp; streaming. Both need to be run now.</p></blockquote>
+
+<h3>Use it&#8230;</h3>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// First create a streaming context</span>
+</span><span class='line'><span class="k">val</span> <span class="n">ssc</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">StreamingContext</span><span class="o">(</span><span class="n">clusterUrl</span><span class="o">,</span> <span class="s">&quot;SparkStreamStuff&quot;</span><span class="o">,</span> <span class="nc">Seconds</span><span class="o">(</span><span class="mi">1</span><span class="o">))</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Create a data source sample as a process generating a natural every 50ms </span>
+</span><span class='line'><span class="c1">// (take 1000 elements)</span>
+</span><span class='line'><span class="k">val</span> <span class="n">p</span><span class="k">:</span> <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">Int</span><span class="o">]</span> <span class="k">=</span> <span class="n">naturalsEvery</span><span class="o">(</span><span class="mi">50</span> <span class="n">milliseconds</span><span class="o">).</span><span class="n">take</span><span class="o">(</span><span class="mi">1000</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Dstreamize the process in the streaming context</span>
+</span><span class='line'><span class="k">val</span> <span class="o">(</span><span class="n">consumer</span><span class="o">,</span> <span class="n">dstream</span><span class="o">)</span> <span class="k">=</span> <span class="n">dstreamize</span><span class="o">(</span><span class="n">p</span><span class="o">,</span> <span class="n">ssc</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Prepare the dstream operations (count) &amp; output (print)</span>
+</span><span class='line'><span class="n">dstream</span><span class="o">.</span><span class="n">count</span><span class="o">().</span><span class="n">print</span><span class="o">()</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Start the streaming context</span>
+</span><span class='line'><span class="n">ssc</span><span class="o">.</span><span class="n">start</span><span class="o">()</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Run the consumer for its effects (consuming p and pushing into dstream)</span>
+</span><span class='line'><span class="c1">// Note this is blocking but it could be runAsync too</span>
+</span><span class='line'><span class="n">consumer</span><span class="o">.</span><span class="n">run</span><span class="o">.</span><span class="n">run</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// await termination of stream with a timeout</span>
+</span><span class='line'><span class="n">ssc</span><span class="o">.</span><span class="n">awaitTermination</span><span class="o">(</span><span class="mi">1000</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// stops the streaming context</span>
+</span><span class='line'><span class="n">ssc</span><span class="o">.</span><span class="n">stop</span><span class="o">()</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>Please note that you have to:</p>
+
+<ul>
+<li>schedule your dstream operations/output before starting the streaming context.</li>
+<li>start the streaming context before running the consumer.</li>
+</ul>
+</blockquote>
+
+<h3>Run it&#8230;</h3>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="mi">14</span><span class="o">/</span><span class="mi">03</span><span class="o">/</span><span class="mi">11</span> <span class="mi">11</span><span class="k">:</span><span class="err">32</span><span class="kt">:</span><span class="err">09</span> <span class="kt">WARN</span> <span class="kt">util.Utils:</span> <span class="kt">Your</span> <span class="kt">hostname</span><span class="o">,</span> <span class="n">localhost</span><span class="o">.</span><span class="n">paris</span><span class="o">.</span><span class="n">zenexity</span><span class="o">.</span><span class="n">com</span> <span class="n">resolves</span> <span class="n">to</span> <span class="n">a</span> <span class="n">loopback</span> <span class="n">address</span><span class="k">:</span> <span class="err">127</span><span class="kt">.</span><span class="err">0</span><span class="kt">.</span><span class="err">0</span><span class="kt">.</span><span class="err">1</span><span class="o">;</span> <span class="n">using</span> <span class="mf">10.0</span><span class="o">.</span><span class="mf">24.228</span> <span class="n">instead</span> <span class="o">(</span><span class="n">on</span> <span class="n">interface</span> <span class="n">en0</span><span class="o">)</span>
+</span><span class='line'><span class="mi">14</span><span class="o">/</span><span class="mi">03</span><span class="o">/</span><span class="mi">11</span> <span class="mi">11</span><span class="k">:</span><span class="err">32</span><span class="kt">:</span><span class="err">09</span> <span class="kt">WARN</span> <span class="kt">util.Utils:</span> <span class="kt">Set</span> <span class="kt">SPARK_LOCAL_IP</span> <span class="kt">if</span> <span class="kt">you</span> <span class="kt">need</span> <span class="kt">to</span> <span class="kt">bind</span> <span class="kt">to</span> <span class="kt">another</span> <span class="kt">address</span>
+</span><span class='line'><span class="mi">14</span><span class="o">/</span><span class="mi">03</span><span class="o">/</span><span class="mi">11</span> <span class="mi">11</span><span class="k">:</span><span class="err">32</span><span class="kt">:</span><span class="err">13</span> <span class="kt">WARN</span> <span class="kt">storage.BlockManager:</span> <span class="kt">Block</span> <span class="kt">input-</span><span class="err">0</span><span class="kt">-</span><span class="err">1394533932800</span> <span class="kt">already</span> <span class="kt">exists</span> <span class="kt">on</span> <span class="kt">this</span> <span class="kt">machine</span><span class="o">;</span> <span class="n">not</span> <span class="n">re</span><span class="o">-</span><span class="n">adding</span> <span class="n">it</span>
+</span><span class='line'><span class="mi">14</span><span class="o">/</span><span class="mi">03</span><span class="o">/</span><span class="mi">11</span> <span class="mi">11</span><span class="k">:</span><span class="err">32</span><span class="kt">:</span><span class="err">13</span> <span class="kt">WARN</span> <span class="kt">storage.BlockManager:</span> <span class="kt">Block</span> <span class="kt">input-</span><span class="err">0</span><span class="kt">-</span><span class="err">1394533933000</span> <span class="kt">already</span> <span class="kt">exists</span> <span class="kt">on</span> <span class="kt">this</span> <span class="kt">machine</span><span class="o">;</span> <span class="n">not</span> <span class="n">re</span><span class="o">-</span><span class="n">adding</span> <span class="n">it</span>
+</span><span class='line'><span class="mi">14</span><span class="o">/</span><span class="mi">03</span><span class="o">/</span><span class="mi">11</span> <span class="mi">11</span><span class="k">:</span><span class="err">32</span><span class="kt">:</span><span class="err">13</span> <span class="kt">WARN</span> <span class="kt">storage.BlockManager:</span> <span class="kt">Block</span> <span class="kt">input-</span><span class="err">0</span><span class="kt">-</span><span class="err">1394533933200</span> <span class="kt">already</span> <span class="kt">exists</span> <span class="kt">on</span> <span class="kt">this</span> <span class="kt">machine</span><span class="o">;</span> <span class="n">not</span> <span class="n">re</span><span class="o">-</span><span class="n">adding</span> <span class="n">it</span>
+</span><span class='line'><span class="o">-------------------------------------------</span>
+</span><span class='line'><span class="nc">Time</span><span class="k">:</span> <span class="err">1394533933000</span> <span class="kt">ms</span>
+</span><span class='line'><span class="o">-------------------------------------------</span>
+</span><span class='line'><span class="mi">0</span>
+</span><span class='line'>
+</span><span class='line'><span class="mi">14</span><span class="o">/</span><span class="mi">03</span><span class="o">/</span><span class="mi">11</span> <span class="mi">11</span><span class="k">:</span><span class="err">32</span><span class="kt">:</span><span class="err">13</span> <span class="kt">WARN</span> <span class="kt">storage.BlockManager:</span> <span class="kt">Block</span> <span class="kt">input-</span><span class="err">0</span><span class="kt">-</span><span class="err">1394533933600</span> <span class="kt">already</span> <span class="kt">exists</span> <span class="kt">on</span> <span class="kt">this</span> <span class="kt">machine</span><span class="o">;</span> <span class="n">not</span> <span class="n">re</span><span class="o">-</span><span class="n">adding</span> <span class="n">it</span>
+</span><span class='line'><span class="mi">14</span><span class="o">/</span><span class="mi">03</span><span class="o">/</span><span class="mi">11</span> <span class="mi">11</span><span class="k">:</span><span class="err">32</span><span class="kt">:</span><span class="err">14</span> <span class="kt">WARN</span> <span class="kt">storage.BlockManager:</span> <span class="kt">Block</span> <span class="kt">input-</span><span class="err">0</span><span class="kt">-</span><span class="err">1394533933800</span> <span class="kt">already</span> <span class="kt">exists</span> <span class="kt">on</span> <span class="kt">this</span> <span class="kt">machine</span><span class="o">;</span> <span class="n">not</span> <span class="n">re</span><span class="o">-</span><span class="n">adding</span> <span class="n">it</span>
+</span><span class='line'><span class="o">-------------------------------------------</span>
+</span><span class='line'><span class="nc">Time</span><span class="k">:</span> <span class="err">1394533934000</span> <span class="kt">ms</span>
+</span><span class='line'><span class="o">-------------------------------------------</span>
+</span><span class='line'><span class="mi">20</span>
+</span><span class='line'>
+</span><span class='line'><span class="mi">14</span><span class="o">/</span><span class="mi">03</span><span class="o">/</span><span class="mi">11</span> <span class="mi">11</span><span class="k">:</span><span class="err">32</span><span class="kt">:</span><span class="err">14</span> <span class="kt">WARN</span> <span class="kt">storage.BlockManager:</span> <span class="kt">Block</span> <span class="kt">input-</span><span class="err">0</span><span class="kt">-</span><span class="err">1394533934000</span> <span class="kt">already</span> <span class="kt">exists</span> <span class="kt">on</span> <span class="kt">this</span> <span class="kt">machine</span><span class="o">;</span> <span class="n">not</span> <span class="n">re</span><span class="o">-</span><span class="n">adding</span> <span class="n">it</span>
+</span><span class='line'><span class="mi">14</span><span class="o">/</span><span class="mi">03</span><span class="o">/</span><span class="mi">11</span> <span class="mi">11</span><span class="k">:</span><span class="err">32</span><span class="kt">:</span><span class="err">14</span> <span class="kt">WARN</span> <span class="kt">storage.BlockManager:</span> <span class="kt">Block</span> <span class="kt">input-</span><span class="err">0</span><span class="kt">-</span><span class="err">1394533934200</span> <span class="kt">already</span> <span class="kt">exists</span> <span class="kt">on</span> <span class="kt">this</span> <span class="kt">machine</span><span class="o">;</span> <span class="n">not</span> <span class="n">re</span><span class="o">-</span><span class="n">adding</span> <span class="n">it</span>
+</span><span class='line'><span class="mi">14</span><span class="o">/</span><span class="mi">03</span><span class="o">/</span><span class="mi">11</span> <span class="mi">11</span><span class="k">:</span><span class="err">32</span><span class="kt">:</span><span class="err">14</span> <span class="kt">WARN</span> <span class="kt">storage.BlockManager:</span> <span class="kt">Block</span> <span class="kt">input-</span><span class="err">0</span><span class="kt">-</span><span class="err">1394533934400</span> <span class="kt">already</span> <span class="kt">exists</span> <span class="kt">on</span> <span class="kt">this</span> <span class="kt">machine</span><span class="o">;</span> <span class="n">not</span> <span class="n">re</span><span class="o">-</span><span class="n">adding</span> <span class="n">it</span>
+</span><span class='line'><span class="mi">14</span><span class="o">/</span><span class="mi">03</span><span class="o">/</span><span class="mi">11</span> <span class="mi">11</span><span class="k">:</span><span class="err">32</span><span class="kt">:</span><span class="err">14</span> <span class="kt">WARN</span> <span class="kt">storage.BlockManager:</span> <span class="kt">Block</span> <span class="kt">input-</span><span class="err">0</span><span class="kt">-</span><span class="err">1394533934600</span> <span class="kt">already</span> <span class="kt">exists</span> <span class="kt">on</span> <span class="kt">this</span> <span class="kt">machine</span><span class="o">;</span> <span class="n">not</span> <span class="n">re</span><span class="o">-</span><span class="n">adding</span> <span class="n">it</span>
+</span><span class='line'><span class="mi">14</span><span class="o">/</span><span class="mi">03</span><span class="o">/</span><span class="mi">11</span> <span class="mi">11</span><span class="k">:</span><span class="err">32</span><span class="kt">:</span><span class="err">15</span> <span class="kt">WARN</span> <span class="kt">storage.BlockManager:</span> <span class="kt">Block</span> <span class="kt">input-</span><span class="err">0</span><span class="kt">-</span><span class="err">1394533934800</span> <span class="kt">already</span> <span class="kt">exists</span> <span class="kt">on</span> <span class="kt">this</span> <span class="kt">machine</span><span class="o">;</span> <span class="n">not</span> <span class="n">re</span><span class="o">-</span><span class="n">adding</span> <span class="n">it</span>
+</span><span class='line'><span class="o">-------------------------------------------</span>
+</span><span class='line'><span class="nc">Time</span><span class="k">:</span> <span class="err">1394533935000</span> <span class="kt">ms</span>
+</span><span class='line'><span class="o">-------------------------------------------</span>
+</span><span class='line'><span class="mi">20</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">...</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>Ok cool, we can see a first empty window and then windows of 1 sec counting 20 elements which is great since one element every 50ms gives 20 elements in 1sec.</p></blockquote>
+
+<br/>
+
+
+<br/>
+
+
+<h2>Part 1&#8217;s conclusion</h2>
+
+<p>Now we can pipe a <code>Process[Task, T]</code> into a <code>DStream[T]</code>.</p>
+
+<p>Please not that as we run the <code>Process[Task, T]</code> on the Spark driver node, if this node fails, there is no real way to restore lost data. Yet, <code>LocalInputDStream</code> relies on <code>DStreamGraph</code> &amp; <code>BlockRDD</code>s which persist all DStream relations &amp; all received blocks. Moreover, <code>DStream</code> has exactly the same problem with respect to driver node for now.</p>
+
+<p>That was fun but what can we do with that?</p>
+
+<p><strong>In <a href="./2014/03/09/zpark-ml-nio-2/">part2</a>, I propose to have more fun and stream data to <code>DStream</code> using the brand new Scalaz-Stream NIO API to create cool NIO client/server streams&#8230;</strong></p>
+
+<br/>
+
+
+<br/>
+
+
+<blockquote><p>&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;-> <a href="/2014/03/09/zpark-ml-nio-2/">GO TO PART2</a></p></blockquote>
+
+<br/>
+
+
+<br/>
+
+
+<br/>
+
+
+<br/>
+
+
+
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -5738,295 +6133,6 @@ If you need to add headers in your responses and params to querystring, it&#8217
 
     </article>
   
-  
-    <article>
-      
-  <header class="page-header">
-    
-      <h1 class="entry-title"><a href="/2013/05/01/JsZipper/">JsZipper : Play2 Json Advanced (& Monadic) Manipulations</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-05-01T17:17:00+02:00" pubdate data-updated="true">May 1<span>st</span>, 2013</time>
-        
-         | <a href="/2013/05/01/JsZipper/#disqus_thread">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><h4>EXPERIMENTAL / DRAFT</h4>
-
-<br/>
-
-
-<p>The code is available on Github project <a href="https://github.com/mandubian/play-json-zipper">play-json-zipper</a></p>
-
-<div class="well">
-<p><b><code>JsZipper</code> is a new tool allowing much more complex & powerful manipulations of Json structures for Play2/Json Scala API (not a part of Play2 core for now)</b></p>
-<p><code>JsZipper</code> is inspired by the <a href="http://en.wikipedia.org/wiki/Zipper_(data_structure)">Zipper</a> concept introduced by <a href="http://en.wikipedia.org/wiki/Gérard_Huet">Gérard Huet</a> in 1997.</p>
-
-<p>The Zipper allows to update immutable traversable structures in an efficient way. Json is an immutable AST so it fits well. FYI, the Zipper behaves like a loupe that walks through each node of the AST (left/right/up/down) while keeping aware of the nodes on its left, its right and its upper. The interesting idea behind the loupe is that when it targets a node, it can modify and even delete the focused node. The analogy to the pants zipper is quite good too because when it goes down the tree, it behaves as if it was <i>opening</i> the tree to be able to drive the loupe through all nodes and when it goes up, it <i>closes</i> back the tree&#8230; I won&#8217;t tell more here, it would be too long.</p>
-
-<p><code>JsZipper</code> is a specific interpretation of Zipper concept for Play/Json API based on :
-<ul><li>Scala Streams to go through / update / construct Json AST nodes in a lazy way</li>
-<li>Monadic aspects to provide <i>funnier</i> ways of manipulating the Json AST (plz see below)</li>
-</ul>
-</p>
-<br/>
-<p><i>Please note, <code>JsZipper</code> is not an end in itself but a tool useful to provide new API to manipulate Json.</i></p>
-</div>
-
-
-<p>Let&#8217;s go to samples because it explains everything.</p>
-
-<p>We&#8217;ll use following Json Object.</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">js</span> <span class="k">=</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span>
-</span><span class='line'>  <span class="s">&quot;key1&quot;</span> <span class="o">-&gt;</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span>
-</span><span class='line'>    <span class="s">&quot;key11&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;TO_FIND&quot;</span><span class="o">,</span>
-</span><span class='line'>    <span class="s">&quot;key12&quot;</span> <span class="o">-&gt;</span> <span class="mi">123L</span><span class="o">,</span>
-</span><span class='line'>    <span class="s">&quot;key13&quot;</span> <span class="o">-&gt;</span> <span class="nc">JsNull</span>
-</span><span class='line'>  <span class="o">),</span>
-</span><span class='line'>  <span class="s">&quot;key2&quot;</span> <span class="o">-&gt;</span> <span class="mi">123</span><span class="o">,</span>
-</span><span class='line'>  <span class="s">&quot;key3&quot;</span> <span class="o">-&gt;</span> <span class="kc">true</span><span class="o">,</span>
-</span><span class='line'>  <span class="s">&quot;key4&quot;</span> <span class="o">-&gt;</span> <span class="nc">Json</span><span class="o">.</span><span class="n">arr</span><span class="o">(</span><span class="s">&quot;TO_FIND&quot;</span><span class="o">,</span> <span class="mf">345.6</span><span class="o">,</span> <span class="s">&quot;test&quot;</span><span class="o">,</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span><span class="s">&quot;key411&quot;</span> <span class="o">-&gt;</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span><span class="s">&quot;key4111&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;TO_FIND&quot;</span><span class="o">)))</span>
-</span><span class='line'><span class="o">)</span>
-</span><span class='line'><span class="n">js</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsObject</span> <span class="o">=</span> <span class="o">{</span><span class="s">&quot;key1&quot;</span><span class="k">:</span><span class="o">{</span><span class="err">&quot;</span><span class="kt">key11</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">TO_FIND</span><span class="err">&quot;</span><span class="o">,</span><span class="err">&quot;</span><span class="kt">key12</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">123</span><span class="o">,</span><span class="s">&quot;key13&quot;</span><span class="k">:</span><span class="kt">null</span><span class="o">},</span><span class="s">&quot;key2&quot;</span><span class="k">:</span><span class="err">123</span><span class="o">,</span><span class="s">&quot;key3&quot;</span><span class="k">:</span><span class="kt">true</span><span class="o">,</span><span class="s">&quot;key4&quot;</span><span class="k">:</span><span class="err">[&quot;</span><span class="kt">TO_FIND</span><span class="err">&quot;</span><span class="o">,</span><span class="mf">345.6</span><span class="o">,</span><span class="s">&quot;test&quot;</span><span class="o">,{</span><span class="s">&quot;key411&quot;</span><span class="k">:</span><span class="o">{</span><span class="err">&quot;</span><span class="kt">key4111</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">TO_FIND</span><span class="err">&quot;</span><span class="o">}}</span><span class="err">]</span><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h1>Basic manipulations</h1>
-
-<h2>Setting multiple paths/values</h2>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="n">js</span><span class="o">.</span><span class="n">set</span><span class="o">(</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;key4&quot;</span><span class="o">)(</span><span class="mi">2</span><span class="o">)</span> <span class="o">-&gt;</span> <span class="nc">JsNumber</span><span class="o">(</span><span class="mf">765.23</span><span class="o">),</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;key1&quot;</span> <span class="o">\</span> <span class="s">&quot;key12&quot;</span><span class="o">)</span> <span class="o">-&gt;</span> <span class="nc">JsString</span><span class="o">(</span><span class="s">&quot;toto&quot;</span><span class="o">)</span>
-</span><span class='line'><span class="o">)</span>
-</span><span class='line'><span class="n">res1</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsValue</span> <span class="o">=</span> <span class="o">{</span><span class="s">&quot;key1&quot;</span><span class="k">:</span><span class="o">{</span><span class="err">&quot;</span><span class="kt">key11</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">TO_FIND</span><span class="err">&quot;</span><span class="o">,</span><span class="err">&quot;</span><span class="kt">key12</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">toto</span><span class="err">&quot;</span><span class="o">,</span><span class="s">&quot;key13&quot;</span><span class="k">:</span><span class="kt">null</span><span class="o">},</span><span class="s">&quot;key2&quot;</span><span class="k">:</span><span class="err">123</span><span class="o">,</span><span class="s">&quot;key3&quot;</span><span class="k">:</span><span class="kt">true</span><span class="o">,</span><span class="s">&quot;key4&quot;</span><span class="k">:</span><span class="err">[&quot;</span><span class="kt">TO_FIND</span><span class="err">&quot;</span><span class="o">,</span><span class="mf">345.6</span><span class="o">,</span><span class="mf">765.23</span><span class="o">,{</span><span class="s">&quot;key411&quot;</span><span class="k">:</span><span class="o">{</span><span class="err">&quot;</span><span class="kt">key4111</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">TO_FIND</span><span class="err">&quot;</span><span class="o">}}</span><span class="err">]</span><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>Deleting multiple paths/values</h2>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="n">js</span><span class="o">.</span><span class="n">delete</span><span class="o">(</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;key4&quot;</span><span class="o">)(</span><span class="mi">2</span><span class="o">),</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;key1&quot;</span> <span class="o">\</span> <span class="s">&quot;key12&quot;</span><span class="o">),</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;key1&quot;</span> <span class="o">\</span> <span class="s">&quot;key13&quot;</span><span class="o">)</span>
-</span><span class='line'><span class="o">)</span>
-</span><span class='line'><span class="n">res2</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsValue</span> <span class="o">=</span> <span class="o">{</span><span class="s">&quot;key1&quot;</span><span class="k">:</span><span class="o">{</span><span class="err">&quot;</span><span class="kt">key11</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">TO_FIND</span><span class="err">&quot;</span><span class="o">},</span><span class="s">&quot;key2&quot;</span><span class="k">:</span><span class="err">123</span><span class="o">,</span><span class="s">&quot;key3&quot;</span><span class="k">:</span><span class="kt">true</span><span class="o">,</span><span class="s">&quot;key4&quot;</span><span class="k">:</span><span class="err">[&quot;</span><span class="kt">TO_FIND</span><span class="err">&quot;</span><span class="o">,</span><span class="mf">345.6</span><span class="o">,{</span><span class="s">&quot;key411&quot;</span><span class="k">:</span><span class="o">{</span><span class="err">&quot;</span><span class="kt">key4111</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">TO_FIND</span><span class="err">&quot;</span><span class="o">}}</span><span class="err">]</span><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>Finding paths/values according to a filter</h2>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="n">js</span><span class="o">.</span><span class="n">findAll</span><span class="o">(</span> <span class="k">_</span> <span class="o">==</span> <span class="nc">JsString</span><span class="o">(</span><span class="s">&quot;TO_FIND&quot;</span><span class="o">)</span> <span class="o">).</span><span class="n">toList</span>
-</span><span class='line'><span class="n">res5</span><span class="k">:</span> <span class="kt">List</span><span class="o">[(</span><span class="kt">play.api.libs.json.JsPath</span>, <span class="kt">play.api.libs.json.JsValue</span><span class="o">)]</span> <span class="k">=</span> <span class="nc">List</span><span class="o">(</span>
-</span><span class='line'>  <span class="o">(/</span><span class="n">key1</span><span class="o">/</span><span class="n">key11</span><span class="o">,</span><span class="s">&quot;TO_FIND&quot;</span><span class="o">),</span>
-</span><span class='line'>  <span class="o">(/</span><span class="n">key4</span><span class="o">(</span><span class="mi">0</span><span class="o">),</span><span class="s">&quot;TO_FIND&quot;</span><span class="o">),</span>
-</span><span class='line'>  <span class="o">(/</span><span class="n">key4</span><span class="o">(</span><span class="mi">3</span><span class="o">)/</span><span class="n">key411</span><span class="o">/</span><span class="n">key4111</span><span class="o">,</span><span class="s">&quot;TO_FIND&quot;</span><span class="o">)</span>
-</span><span class='line'><span class="o">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>Updating values according to a filter based on value</h2>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="n">js</span><span class="o">.</span><span class="n">updateAll</span><span class="o">(</span> <span class="o">(</span><span class="k">_:</span><span class="kt">JsValue</span><span class="o">)</span> <span class="o">==</span> <span class="nc">JsString</span><span class="o">(</span><span class="s">&quot;TO_FIND&quot;</span><span class="o">)</span> <span class="o">){</span> <span class="n">js</span> <span class="k">=&gt;</span>
-</span><span class='line'>  <span class="k">val</span> <span class="nc">JsString</span><span class="o">(</span><span class="n">str</span><span class="o">)</span> <span class="k">=</span> <span class="n">js</span>
-</span><span class='line'>  <span class="nc">JsString</span><span class="o">(</span><span class="n">str</span> <span class="o">+</span> <span class="s">&quot;2&quot;</span><span class="o">)</span>
-</span><span class='line'><span class="o">}</span>
-</span><span class='line'><span class="n">res6</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsValue</span> <span class="o">=</span> <span class="o">{</span><span class="s">&quot;key1&quot;</span><span class="k">:</span><span class="o">{</span><span class="err">&quot;</span><span class="kt">key11</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">TO_FIND2</span><span class="err">&quot;</span><span class="o">,</span><span class="err">&quot;</span><span class="kt">key12</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">123</span><span class="o">,</span><span class="s">&quot;key13&quot;</span><span class="k">:</span><span class="kt">null</span><span class="o">},</span><span class="s">&quot;key2&quot;</span><span class="k">:</span><span class="err">123</span><span class="o">,</span><span class="s">&quot;key3&quot;</span><span class="k">:</span><span class="kt">true</span><span class="o">,</span><span class="s">&quot;key4&quot;</span><span class="k">:</span><span class="err">[&quot;</span><span class="kt">TO_FIND2</span><span class="err">&quot;</span><span class="o">,</span><span class="mf">345.6</span><span class="o">,</span><span class="s">&quot;test&quot;</span><span class="o">,{</span><span class="s">&quot;key411&quot;</span><span class="k">:</span><span class="o">{</span><span class="err">&quot;</span><span class="kt">key4111</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">TO_FIND2</span><span class="err">&quot;</span><span class="o">}}</span><span class="err">]</span><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>Updating values according to a filter based on path+value</h2>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="n">js</span><span class="o">.</span><span class="n">updateAll</span><span class="o">{</span> <span class="o">(</span><span class="n">path</span><span class="o">,</span> <span class="n">js</span><span class="o">)</span> <span class="k">=&gt;</span>
-</span><span class='line'>  <span class="nc">JsPathExtension</span><span class="o">.</span><span class="n">hasKey</span><span class="o">(</span><span class="n">path</span><span class="o">)</span> <span class="o">==</span> <span class="nc">Some</span><span class="o">(</span><span class="s">&quot;key4111&quot;</span><span class="o">)</span>
-</span><span class='line'><span class="o">}{</span> <span class="o">(</span><span class="n">path</span><span class="o">,</span> <span class="n">js</span><span class="o">)</span> <span class="k">=&gt;</span>
-</span><span class='line'>  <span class="k">val</span> <span class="nc">JsString</span><span class="o">(</span><span class="n">str</span><span class="o">)</span> <span class="k">=</span> <span class="n">js</span>
-</span><span class='line'>  <span class="nc">JsString</span><span class="o">(</span><span class="n">str</span> <span class="o">+</span> <span class="n">path</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">last</span><span class="o">)</span>
-</span><span class='line'><span class="o">}</span>
-</span><span class='line'><span class="n">res1</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsValue</span> <span class="o">=</span> <span class="o">{</span><span class="s">&quot;key1&quot;</span><span class="k">:</span><span class="o">{</span><span class="err">&quot;</span><span class="kt">key11</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">TO_FIND</span><span class="err">&quot;</span><span class="o">,</span><span class="err">&quot;</span><span class="kt">key12</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">123</span><span class="o">,</span><span class="s">&quot;key13&quot;</span><span class="k">:</span><span class="kt">null</span><span class="o">},</span><span class="s">&quot;key2&quot;</span><span class="k">:</span><span class="err">123</span><span class="o">,</span><span class="s">&quot;key3&quot;</span><span class="k">:</span><span class="kt">true</span><span class="o">,</span><span class="s">&quot;key4&quot;</span><span class="k">:</span><span class="err">[&quot;</span><span class="kt">TO_FIND</span><span class="err">&quot;</span><span class="o">,</span><span class="mf">345.6</span><span class="o">,</span><span class="s">&quot;test&quot;</span><span class="o">,{</span><span class="s">&quot;key411&quot;</span><span class="k">:</span><span class="o">{</span><span class="err">&quot;</span><span class="kt">key4111</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">TO_FIND/key4111</span><span class="err">&quot;</span><span class="o">}}</span><span class="err">]</span><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>Creating an object from scratch</h2>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">build</span> <span class="k">=</span> <span class="nc">JsExtensions</span><span class="o">.</span><span class="n">buildJsObject</span><span class="o">(</span>
-</span><span class='line'>  <span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;key1&quot;</span> <span class="o">\</span> <span class="s">&quot;key11&quot;</span> <span class="o">-&gt;</span> <span class="nc">JsString</span><span class="o">(</span><span class="s">&quot;toto&quot;</span><span class="o">),</span>
-</span><span class='line'>  <span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;key1&quot;</span> <span class="o">\</span> <span class="s">&quot;key12&quot;</span> <span class="o">-&gt;</span> <span class="nc">JsNumber</span><span class="o">(</span><span class="mi">123L</span><span class="o">),</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;key2&quot;</span><span class="o">)(</span><span class="mi">0</span><span class="o">)</span>      <span class="o">-&gt;</span> <span class="nc">JsBoolean</span><span class="o">(</span><span class="kc">true</span><span class="o">),</span>
-</span><span class='line'>  <span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;key3&quot;</span>           <span class="o">-&gt;</span> <span class="nc">Json</span><span class="o">.</span><span class="n">arr</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span> <span class="mi">2</span><span class="o">,</span> <span class="mi">3</span><span class="o">)</span>
-</span><span class='line'><span class="o">)</span>
-</span><span class='line'><span class="n">build</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsValue</span> <span class="o">=</span> <span class="o">{</span><span class="s">&quot;key1&quot;</span><span class="k">:</span><span class="o">{</span><span class="err">&quot;</span><span class="kt">key11</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">toto</span><span class="err">&quot;</span><span class="o">,</span><span class="err">&quot;</span><span class="kt">key12</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">123</span><span class="o">},</span><span class="s">&quot;key3&quot;</span><span class="k">:</span><span class="err">[1</span><span class="o">,</span><span class="mi">2</span><span class="o">,</span><span class="mi">3</span><span class="err">]</span><span class="o">,</span><span class="s">&quot;key2&quot;</span><span class="k">:</span><span class="err">[</span><span class="kt">true</span><span class="err">]</span><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-
-
-<br/>
-
-
-<h1>Let&#8217;s be funnier with Monads now</h1>
-
-<blockquote><p>Let&#8217;s use <code>Future</code> as our Monad because it&#8217;s&#8230; coooool to do things in the future ;)</p></blockquote>
-
-<p>Imagine you call several services returning <code>Future[JsValue]</code> and you want to build/update a <code>JsObject</code> from it.
-Until now, if you wanted to do that with Play2/Json, it was quite tricky and required some code.</p>
-
-<p>Here is what you can do now.</p>
-
-<h2>Updating multiple <em>FUTURE</em> values at given paths</h2>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">maybeJs</span> <span class="k">=</span> <span class="n">js</span><span class="o">.</span><span class="n">setM</span><span class="o">[</span><span class="kt">Future</span><span class="o">](</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;key4&quot;</span><span class="o">)(</span><span class="mi">2</span><span class="o">)</span>        <span class="o">-&gt;</span> <span class="n">future</span><span class="o">{</span> <span class="nc">JsNumber</span><span class="o">(</span><span class="mf">765.23</span><span class="o">)</span> <span class="o">},</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;key1&quot;</span> <span class="o">\</span> <span class="s">&quot;key12&quot;</span><span class="o">)</span> <span class="o">-&gt;</span> <span class="n">future</span><span class="o">{</span> <span class="nc">JsString</span><span class="o">(</span><span class="s">&quot;toto&quot;</span><span class="o">)</span> <span class="o">}</span>
-</span><span class='line'><span class="o">)</span>
-</span><span class='line'><span class="n">maybeJs</span><span class="k">:</span> <span class="kt">scala.concurrent.Future</span><span class="o">[</span><span class="kt">play.api.libs.json.JsValue</span><span class="o">]</span> <span class="k">=</span> <span class="n">scala</span><span class="o">.</span><span class="n">concurrent</span><span class="o">.</span><span class="n">impl</span><span class="o">.</span><span class="nc">Promise$DefaultPromise</span><span class="k">@</span><span class="mi">6</span><span class="n">beb722d</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="nc">Await</span><span class="o">.</span><span class="n">result</span><span class="o">(</span><span class="n">maybeJs</span><span class="o">,</span> <span class="nc">Duration</span><span class="o">(</span><span class="s">&quot;2 seconds&quot;</span><span class="o">))</span>
-</span><span class='line'><span class="n">res4</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsValue</span> <span class="o">=</span> <span class="o">{</span><span class="s">&quot;key1&quot;</span><span class="k">:</span><span class="o">{</span><span class="err">&quot;</span><span class="kt">key11</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">TO_FIND</span><span class="err">&quot;</span><span class="o">,</span><span class="err">&quot;</span><span class="kt">key12</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">toto</span><span class="err">&quot;</span><span class="o">,</span><span class="s">&quot;key13&quot;</span><span class="k">:</span><span class="kt">null</span><span class="o">},</span><span class="s">&quot;key2&quot;</span><span class="k">:</span><span class="err">123</span><span class="o">,</span><span class="s">&quot;key3&quot;</span><span class="k">:</span><span class="kt">true</span><span class="o">,</span><span class="s">&quot;key4&quot;</span><span class="k">:</span><span class="err">[&quot;</span><span class="kt">TO_FIND</span><span class="err">&quot;</span><span class="o">,</span><span class="mf">345.6</span><span class="o">,</span><span class="mf">765.23</span><span class="o">,{</span><span class="s">&quot;key411&quot;</span><span class="k">:</span><span class="o">{</span><span class="err">&quot;</span><span class="kt">key4111</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">TO_FIND</span><span class="err">&quot;</span><span class="o">}}</span><span class="err">]</span><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>Update multiple <em>FUTURE</em> values according to a filter</h2>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">maybeJs</span> <span class="k">=</span> <span class="n">js</span><span class="o">.</span><span class="n">updateAllM</span><span class="o">[</span><span class="kt">Future</span><span class="o">](</span> <span class="o">(</span><span class="k">_:</span><span class="kt">JsValue</span><span class="o">)</span> <span class="o">==</span> <span class="nc">JsString</span><span class="o">(</span><span class="s">&quot;TO_FIND&quot;</span><span class="o">)</span> <span class="o">){</span> <span class="n">js</span> <span class="k">=&gt;</span>
-</span><span class='line'>  <span class="n">future</span> <span class="o">{</span>
-</span><span class='line'>    <span class="k">val</span> <span class="nc">JsString</span><span class="o">(</span><span class="n">str</span><span class="o">)</span> <span class="k">=</span> <span class="n">js</span>
-</span><span class='line'>    <span class="nc">JsString</span><span class="o">(</span><span class="n">str</span> <span class="o">+</span> <span class="s">&quot;2&quot;</span><span class="o">)</span>
-</span><span class='line'>  <span class="o">}</span>
-</span><span class='line'><span class="o">}</span>
-</span><span class='line'><span class="n">maybeJs</span><span class="k">:</span> <span class="kt">scala.concurrent.Future</span><span class="o">[</span><span class="kt">play.api.libs.json.JsValue</span><span class="o">]</span> <span class="k">=</span> <span class="n">scala</span><span class="o">.</span><span class="n">concurrent</span><span class="o">.</span><span class="n">impl</span><span class="o">.</span><span class="nc">Promise$DefaultPromise</span><span class="k">@</span><span class="mi">35</span><span class="n">a4bb1a</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="nc">Await</span><span class="o">.</span><span class="n">result</span><span class="o">(</span><span class="n">maybeJs</span><span class="o">,</span> <span class="nc">Duration</span><span class="o">(</span><span class="s">&quot;2 seconds&quot;</span><span class="o">))</span>
-</span><span class='line'><span class="n">res6</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsValue</span> <span class="o">=</span> <span class="o">{</span><span class="s">&quot;key1&quot;</span><span class="k">:</span><span class="o">{</span><span class="err">&quot;</span><span class="kt">key11</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">TO_FIND2</span><span class="err">&quot;</span><span class="o">,</span><span class="err">&quot;</span><span class="kt">key12</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">123</span><span class="o">,</span><span class="s">&quot;key13&quot;</span><span class="k">:</span><span class="kt">null</span><span class="o">},</span><span class="s">&quot;key2&quot;</span><span class="k">:</span><span class="err">123</span><span class="o">,</span><span class="s">&quot;key3&quot;</span><span class="k">:</span><span class="kt">true</span><span class="o">,</span><span class="s">&quot;key4&quot;</span><span class="k">:</span><span class="err">[&quot;</span><span class="kt">TO_FIND2</span><span class="err">&quot;</span><span class="o">,</span><span class="mf">345.6</span><span class="o">,</span><span class="s">&quot;test&quot;</span><span class="o">,{</span><span class="s">&quot;key411&quot;</span><span class="k">:</span><span class="o">{</span><span class="err">&quot;</span><span class="kt">key4111</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">&quot;</span><span class="kt">TO_FIND2</span><span class="err">&quot;</span><span class="o">}}</span><span class="err">]</span><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>Creating a <em>FUTURE</em> JsArray from scratch</h2>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">maybeArr</span> <span class="k">=</span> <span class="nc">JsExtensions</span><span class="o">.</span><span class="n">buildJsArrayM</span><span class="o">[</span><span class="kt">Future</span><span class="o">](</span>
-</span><span class='line'>  <span class="n">future</span> <span class="o">{</span> <span class="nc">JsNumber</span><span class="o">(</span><span class="mf">123.45</span><span class="o">)</span> <span class="o">},</span>
-</span><span class='line'>  <span class="n">future</span> <span class="o">{</span> <span class="nc">JsString</span><span class="o">(</span><span class="s">&quot;toto&quot;</span><span class="o">)</span> <span class="o">}</span>
-</span><span class='line'><span class="o">)</span>
-</span><span class='line'><span class="n">maybeArr</span><span class="k">:</span> <span class="kt">scala.concurrent.Future</span><span class="o">[</span><span class="kt">play.api.libs.json.JsValue</span><span class="o">]</span> <span class="k">=</span> <span class="n">scala</span><span class="o">.</span><span class="n">concurrent</span><span class="o">.</span><span class="n">impl</span><span class="o">.</span><span class="nc">Promise$DefaultPromise</span><span class="k">@</span><span class="mi">220</span><span class="n">d48e4</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="nc">Await</span><span class="o">.</span><span class="n">result</span><span class="o">(</span><span class="n">maybeArr</span><span class="o">,</span> <span class="nc">Duration</span><span class="o">(</span><span class="s">&quot;2 seconds&quot;</span><span class="o">))</span>
-</span><span class='line'><span class="n">res0</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsValue</span> <span class="o">=</span> <span class="o">[</span><span class="err">123</span><span class="kt">.</span><span class="err">45</span>,<span class="err">&quot;</span><span class="kt">toto</span><span class="err">&quot;</span><span class="o">]</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>It&#8217;s still draft so it can be improved but if you like it, don&#8217;t hesitate to comment and if people like it, it could become a part of Play Framework itself</p>
-
-<p>Have fun!</p>
-
-<br/>
-
-
-<br/>
-
-
-<br/>
-
-
-<br/>
-
-</div>
-  
-  
-
-
-    </article>
-  
   <ul class="pager">
     
     <li class="previous"><a href="/blog/page/2/">&larr; Older</a></li>
@@ -6042,6 +6148,10 @@ Until now, if you wanted to do that with Play2/Json, it was quite tricky and req
     <li class="nav-header">Recent Posts</li>
     
       <li class="post">
+        <a href="/2014/03/08/zpark-ml-nio-1/">ZPark-Ztream II (Part 1/3): Fancy Spark Streamed Machine-Learning & new Scalaz-Stream NIO API</a>
+      </li>
+    
+      <li class="post">
         <a href="/2014/02/13/zpark/">ZPark-Ztream: Driving Spark distributed stream with Scalaz-Stream</a>
       </li>
     
@@ -6055,10 +6165,6 @@ Until now, if you wanted to do that with Play2/Json, it was quite tricky and req
     
       <li class="post">
         <a href="/2013/08/21/playztream/">Scalaz-Stream Plug&#8217;n&#8217;Play2 Iteratee/WS + Recursive streaming</a>
-      </li>
-    
-      <li class="post">
-        <a href="/2013/07/11/play-autosource-datomisca/">Play AutoSource & Datomisca: Proofing the concept on Datomic, a Schema DB</a>
       </li>
     
   </ul>
