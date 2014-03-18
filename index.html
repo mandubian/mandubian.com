@@ -161,7 +161,860 @@
 
 <h1>[Part 3/3] Fancy Spark Machine Learning with NIO client/server &amp; DStream&#8230;</h1>
 
-<p>Coming Soon</p>
+<br/>
+
+
+<blockquote><p>Let&#8217;s remind that I&#8217;m not an expert in ML but more a student. So if I tell or do stupid ML things, be indulgent ;)</p></blockquote>
+
+<p>Here is what I propose:</p>
+
+<ul>
+<li><p>Train a collaborative filtering rating model for a recommendation system (as explained in Spark doc <a href="https://spark.incubator.apache.org/docs/0.9.0/mllib-guide.html#collaborative-filtering-1">there</a>) using a first NIO server and a client as presented in part 2.</p></li>
+<li><p>When model is trained, create a second server that will accept client connections to receive data.</p></li>
+<li><p>Stream/merge all received data into one single stream, dstreamize it and perform streamed predictions using previous model.</p></li>
+</ul>
+
+
+<h2>Train collaborative filtering model</h2>
+
+<h3>Training client</h3>
+
+<p>As explained in Spark doc about collaborative filtering, we first need some data to train the model. I want to send those data using a NIO client.</p>
+
+<p>Here is a function doing this:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">//////////////////////////////////////////////////</span>
+</span><span class='line'><span class="c1">// TRAINING CLIENT</span>
+</span><span class='line'><span class="k">def</span> <span class="n">trainingClient</span><span class="o">(</span><span class="n">addr</span><span class="k">:</span> <span class="kt">InetSocketAddress</span><span class="o">)</span><span class="k">:</span> <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">Bytes</span><span class="o">]</span> <span class="k">=</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// naturally you could provide much more data</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">basicTrainingData</span> <span class="k">=</span> <span class="nc">Seq</span><span class="o">(</span>
+</span><span class='line'>    <span class="c1">// user ID, item ID, Rating</span>
+</span><span class='line'>    <span class="s">&quot;1,1,5.0&quot;</span><span class="o">,</span>
+</span><span class='line'>    <span class="s">&quot;1,2,1.0&quot;</span><span class="o">,</span>
+</span><span class='line'>    <span class="s">&quot;1,3,5.0&quot;</span><span class="o">,</span>
+</span><span class='line'>    <span class="s">&quot;1,4,1.0&quot;</span><span class="o">,</span>
+</span><span class='line'>    <span class="s">&quot;2,4,1.0&quot;</span><span class="o">,</span>
+</span><span class='line'>    <span class="s">&quot;2,2,5.0&quot;</span>
+</span><span class='line'>  <span class="o">)</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">trainingProcess</span> <span class="k">=</span>
+</span><span class='line'>    <span class="nc">Process</span><span class="o">.</span><span class="n">emitAll</span><span class="o">(</span><span class="n">basicTrainingData</span> <span class="n">map</span> <span class="o">(</span><span class="n">s</span> <span class="k">=&gt;</span> <span class="nc">Bytes</span><span class="o">.</span><span class="n">of</span><span class="o">((</span><span class="n">s</span><span class="o">+</span><span class="s">&quot;\n&quot;</span><span class="o">).</span><span class="n">getBytes</span><span class="o">)))</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// sendAndCheckSize is a special client sending all data emitted </span>
+</span><span class='line'>  <span class="c1">// by the process and verifying the server received all data </span>
+</span><span class='line'>  <span class="c1">// by acknowledging all data size</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">client</span> <span class="k">=</span> <span class="nc">NioClient</span><span class="o">.</span><span class="n">sendAndCheckSize</span><span class="o">(</span><span class="n">addr</span><span class="o">,</span> <span class="n">trainingProcess</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="n">client</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<h3>Training server</h3>
+
+<p>Now we need the training NIO server waiting for the training client to connect and piping the received data to the model.</p>
+
+<p>Here is a useful function to help creating a server as described in previous article part:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">def</span> <span class="n">server</span><span class="o">(</span><span class="n">addr</span><span class="k">:</span> <span class="kt">InetSocketAddress</span><span class="o">)</span><span class="k">:</span> <span class="o">(</span><span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">Bytes</span><span class="o">],</span> <span class="nc">Signal</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">])</span> <span class="k">=</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">val</span> <span class="n">stop</span> <span class="k">=</span> <span class="n">async</span><span class="o">.</span><span class="n">signal</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span>
+</span><span class='line'>  <span class="n">stop</span><span class="o">.</span><span class="n">set</span><span class="o">(</span><span class="kc">false</span><span class="o">).</span><span class="n">run</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// this is a server that is controlled by a stop signal</span>
+</span><span class='line'>  <span class="c1">// and that acknowledges all received data by their size</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">server</span> <span class="k">=</span>
+</span><span class='line'>    <span class="o">(</span> <span class="n">stop</span><span class="o">.</span><span class="n">discrete</span> <span class="n">wye</span> <span class="nc">NioServer</span><span class="o">.</span><span class="n">ackSize</span><span class="o">(</span><span class="n">addr</span><span class="o">)</span> <span class="o">)(</span><span class="n">wye</span><span class="o">.</span><span class="n">interrupt</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// returns a stream of received data &amp; a signal to stop server</span>
+</span><span class='line'>  <span class="o">(</span><span class="n">server</span><span class="o">,</span> <span class="n">stop</span><span class="o">)</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>We can create the training server with it:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">trainingAddr</span> <span class="k">=</span> <span class="nc">NioUtils</span><span class="o">.</span><span class="n">localAddress</span><span class="o">(</span><span class="mi">11100</span><span class="o">)</span>
+</span><span class='line'><span class="c1">//////////////////////////////////////////////////</span>
+</span><span class='line'><span class="c1">// TRAINING SERVER</span>
+</span><span class='line'><span class="k">val</span> <span class="o">(</span><span class="n">trainingServer</span><span class="o">,</span> <span class="n">trainingStop</span><span class="o">)</span> <span class="k">=</span> <span class="n">server</span><span class="o">(</span><span class="n">trainingAddr</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>trainingServer</code> is a <code>Process[Task, Bytes]</code> streaming the training data received from training client. We are going to train the rating model with them.</p>
+
+<br/>
+
+
+<h3>Training model</h3>
+
+<p>To train a model, we can use the following API:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// the rating with user ID, product ID &amp; rating</span>
+</span><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">Rating</span><span class="o">(</span><span class="k">val</span> <span class="n">user</span><span class="k">:</span> <span class="kt">Int</span><span class="o">,</span> <span class="k">val</span> <span class="n">product</span><span class="k">:</span> <span class="kt">Int</span><span class="o">,</span> <span class="k">val</span> <span class="n">rating</span><span class="k">:</span> <span class="kt">Double</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// A RDD of ratings</span>
+</span><span class='line'><span class="k">val</span> <span class="n">ratings</span><span class="k">:</span> <span class="kt">RDD</span><span class="o">[</span><span class="kt">Rating</span><span class="o">]</span> <span class="k">=</span> <span class="o">...</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// train the model with it</span>
+</span><span class='line'><span class="k">val</span> <span class="n">model</span><span class="k">:</span> <span class="kt">MatrixFactorizationModel</span> <span class="o">=</span> <span class="nc">ALS</span><span class="o">.</span><span class="n">train</span><span class="o">(</span><span class="n">ratings</span><span class="o">,</span> <span class="mi">1</span><span class="o">,</span> <span class="mi">20</span><span class="o">,</span> <span class="mf">0.01</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>Building <code>RDD[Rating]</code> from server stream</h3>
+
+<p>Imagine that we have a continuous flow of training data that can be very long.</p>
+
+<p>We want to train the model with just a slice of this flow. To do this, we can:</p>
+
+<ul>
+<li><code>dstreamize</code> the server output stream</li>
+<li>run the dstream for some time</li>
+<li>retrieve the <code>RDD</code>s received during this time</li>
+<li>union all of those <code>RDD</code>s</li>
+<li>push them to the model</li>
+</ul>
+
+
+<p>Here is the whole code with previous client:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+<span class='line-number'>49</span>
+<span class='line-number'>50</span>
+<span class='line-number'>51</span>
+<span class='line-number'>52</span>
+<span class='line-number'>53</span>
+<span class='line-number'>54</span>
+<span class='line-number'>55</span>
+<span class='line-number'>56</span>
+<span class='line-number'>57</span>
+<span class='line-number'>58</span>
+<span class='line-number'>59</span>
+<span class='line-number'>60</span>
+<span class='line-number'>61</span>
+<span class='line-number'>62</span>
+<span class='line-number'>63</span>
+<span class='line-number'>64</span>
+<span class='line-number'>65</span>
+<span class='line-number'>66</span>
+<span class='line-number'>67</span>
+<span class='line-number'>68</span>
+<span class='line-number'>69</span>
+<span class='line-number'>70</span>
+<span class='line-number'>71</span>
+<span class='line-number'>72</span>
+<span class='line-number'>73</span>
+<span class='line-number'>74</span>
+<span class='line-number'>75</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">trainingAddr</span> <span class="k">=</span> <span class="nc">NioUtils</span><span class="o">.</span><span class="n">localAddress</span><span class="o">(</span><span class="mi">11100</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">//////////////////////////////////////////////////</span>
+</span><span class='line'><span class="c1">// TRAINING SERVER</span>
+</span><span class='line'><span class="k">val</span> <span class="o">(</span><span class="n">trainingServer</span><span class="o">,</span> <span class="n">trainingStop</span><span class="o">)</span> <span class="k">=</span> <span class="n">server</span><span class="o">(</span><span class="n">trainingAddr</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">//////////////////////////////////////////////////</span>
+</span><span class='line'><span class="c1">// TRAINING CLIENT</span>
+</span><span class='line'><span class="k">val</span> <span class="n">tclient</span> <span class="k">=</span> <span class="n">trainingClient</span><span class="o">(</span><span class="n">trainingAddr</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">//////////////////////////////////////////////////</span>
+</span><span class='line'><span class="c1">// DStreamize server received data</span>
+</span><span class='line'><span class="k">val</span> <span class="o">(</span><span class="n">trainingServerSink</span><span class="o">,</span> <span class="n">trainingDstream</span><span class="o">)</span> <span class="k">=</span> <span class="n">dstreamize</span><span class="o">(</span>
+</span><span class='line'>  <span class="n">trainingServer</span>
+</span><span class='line'>      <span class="c1">// converts bytes to String (doesn&#39;t care about encoding, it shall be UTF8)</span>
+</span><span class='line'>      <span class="o">.</span><span class="n">map</span>  <span class="o">(</span> <span class="n">bytes</span> <span class="k">=&gt;</span> <span class="k">new</span> <span class="nc">String</span><span class="o">(</span><span class="n">bytes</span><span class="o">.</span><span class="n">toArray</span><span class="o">)</span> <span class="o">)</span>
+</span><span class='line'>      <span class="c1">// rechunk received strings based on a separator \n </span>
+</span><span class='line'>      <span class="c1">// to keep only triplets: &quot;USER_ID,PROD_ID,RATING&quot;</span>
+</span><span class='line'>      <span class="o">.</span><span class="n">pipe</span> <span class="o">(</span><span class="nc">NioUtils</span><span class="o">.</span><span class="n">rechunk</span> <span class="o">{</span> <span class="n">s</span><span class="k">:</span><span class="kt">String</span> <span class="o">=&gt;</span> <span class="o">(</span><span class="n">s</span><span class="o">.</span><span class="n">split</span><span class="o">(</span><span class="s">&quot;\n&quot;</span><span class="o">).</span><span class="n">toVector</span><span class="o">,</span> <span class="n">s</span><span class="o">.</span><span class="n">last</span> <span class="o">==</span> <span class="sc">&#39;\n&#39;</span><span class="o">)</span> <span class="o">}</span> <span class="o">)</span>
+</span><span class='line'>  <span class="o">,</span> <span class="n">ssc</span>
+</span><span class='line'><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">//////////////////////////////////////////////////</span>
+</span><span class='line'><span class="c1">// Prepare dstream output </span>
+</span><span class='line'><span class="c1">// (here we print to know what has been received)</span>
+</span><span class='line'><span class="n">trainingDstream</span><span class="o">.</span><span class="n">print</span><span class="o">()</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">//////////////////////////////////////////////////</span>
+</span><span class='line'><span class="c1">// RUN</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Note the time before</span>
+</span><span class='line'><span class="k">val</span> <span class="n">before</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">Time</span><span class="o">(</span><span class="nc">System</span><span class="o">.</span><span class="n">currentTimeMillis</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Start SSC</span>
+</span><span class='line'><span class="n">ssc</span><span class="o">.</span><span class="n">start</span><span class="o">()</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Launch server</span>
+</span><span class='line'><span class="n">trainingServerSink</span><span class="o">.</span><span class="n">run</span><span class="o">.</span><span class="n">runAsync</span><span class="o">(</span> <span class="k">_</span> <span class="k">=&gt;</span> <span class="o">()</span> <span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Sleeps a bit to let server listen</span>
+</span><span class='line'><span class="nc">Thread</span><span class="o">.</span><span class="n">sleep</span><span class="o">(</span><span class="mi">300</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Launches client and awaits until it ends</span>
+</span><span class='line'><span class="n">tclient</span><span class="o">.</span><span class="n">run</span><span class="o">.</span><span class="n">run</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Stop server</span>
+</span><span class='line'><span class="n">trainingStop</span><span class="o">.</span><span class="n">set</span><span class="o">(</span><span class="kc">true</span><span class="o">).</span><span class="n">run</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Note the time after</span>
+</span><span class='line'><span class="k">val</span> <span class="n">after</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">Time</span><span class="o">(</span><span class="nc">System</span><span class="o">.</span><span class="n">currentTimeMillis</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// retrieves all dstreamized RDD during this period</span>
+</span><span class='line'><span class="k">val</span> <span class="n">rdds</span> <span class="k">=</span> <span class="n">trainingDstream</span><span class="o">.</span><span class="n">slice</span><span class="o">(</span>
+</span><span class='line'>  <span class="n">before</span><span class="o">.</span><span class="n">floor</span><span class="o">(</span><span class="nc">Milliseconds</span><span class="o">(</span><span class="mi">1000</span><span class="o">)),</span> <span class="n">after</span><span class="o">.</span><span class="n">floor</span><span class="o">(</span><span class="nc">Milliseconds</span><span class="o">(</span><span class="mi">1000</span><span class="o">))</span>
+</span><span class='line'><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// unions them (this operation can be expensive)</span>
+</span><span class='line'><span class="k">val</span> <span class="n">union</span><span class="k">:</span> <span class="kt">RDD</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">UnionRDD</span><span class="o">(</span><span class="n">ssc</span><span class="o">.</span><span class="n">sparkContext</span><span class="o">,</span> <span class="n">rdds</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// converts &quot;USER_ID,PROD_ID,RATING&quot; triplets into Ratings</span>
+</span><span class='line'><span class="k">val</span> <span class="n">ratings</span> <span class="k">=</span> <span class="n">union</span> <span class="n">map</span> <span class="o">{</span> <span class="n">e</span> <span class="k">=&gt;</span>
+</span><span class='line'>  <span class="n">e</span><span class="o">.</span><span class="n">split</span><span class="o">(</span><span class="sc">&#39;,&#39;</span><span class="o">)</span> <span class="k">match</span> <span class="o">{</span>
+</span><span class='line'>    <span class="k">case</span> <span class="nc">Array</span><span class="o">(</span><span class="n">user</span><span class="o">,</span> <span class="n">item</span><span class="o">,</span> <span class="n">rate</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="nc">Rating</span><span class="o">(</span><span class="n">user</span><span class="o">.</span><span class="n">toInt</span><span class="o">,</span> <span class="n">item</span><span class="o">.</span><span class="n">toInt</span><span class="o">,</span> <span class="n">rate</span><span class="o">.</span><span class="n">toDouble</span><span class="o">)</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// finally train the model with it</span>
+</span><span class='line'><span class="k">val</span> <span class="n">model</span> <span class="k">=</span> <span class="nc">ALS</span><span class="o">.</span><span class="n">train</span><span class="o">(</span><span class="n">ratings</span><span class="o">,</span> <span class="mi">1</span><span class="o">,</span> <span class="mi">20</span><span class="o">,</span> <span class="mf">0.01</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Predict</span>
+</span><span class='line'><span class="n">println</span><span class="o">(</span><span class="s">&quot;Prediction(1,3)=&quot;</span> <span class="o">+</span> <span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span> <span class="mi">3</span><span class="o">))</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">//////////////////////////////////////////////////</span>
+</span><span class='line'><span class="c1">// Stop SSC</span>
+</span><span class='line'><span class="n">ssc</span><span class="o">.</span><span class="n">stop</span><span class="o">()</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>Run it</h3>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="o">-------------------------------------------</span>
+</span><span class='line'><span class="nc">Time</span><span class="k">:</span> <span class="err">1395079621000</span> <span class="kt">ms</span>
+</span><span class='line'><span class="o">-------------------------------------------</span>
+</span><span class='line'><span class="mi">1</span><span class="o">,</span><span class="mi">1</span><span class="o">,</span><span class="mf">5.0</span>
+</span><span class='line'><span class="mi">1</span><span class="o">,</span><span class="mi">2</span><span class="o">,</span><span class="mf">1.0</span>
+</span><span class='line'><span class="mi">1</span><span class="o">,</span><span class="mi">3</span><span class="o">,</span><span class="mf">5.0</span>
+</span><span class='line'><span class="mi">1</span><span class="o">,</span><span class="mi">4</span><span class="o">,</span><span class="mf">1.0</span>
+</span><span class='line'><span class="mi">2</span><span class="o">,</span><span class="mi">4</span><span class="o">,</span><span class="mf">1.0</span>
+</span><span class='line'><span class="mi">2</span><span class="o">,</span><span class="mi">2</span><span class="o">,</span><span class="mf">5.0</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">-------------------------------------------</span>
+</span><span class='line'><span class="nc">Time</span><span class="k">:</span> <span class="err">1395079622000</span> <span class="kt">ms</span>
+</span><span class='line'><span class="o">-------------------------------------------</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">-------------------------------------------</span>
+</span><span class='line'><span class="nc">Time</span><span class="k">:</span> <span class="err">1395079623000</span> <span class="kt">ms</span>
+</span><span class='line'><span class="o">-------------------------------------------</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">-------------------------------------------</span>
+</span><span class='line'><span class="nc">Time</span><span class="k">:</span> <span class="err">1395079624000</span> <span class="kt">ms</span>
+</span><span class='line'><span class="o">-------------------------------------------</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">-------------------------------------------</span>
+</span><span class='line'><span class="nc">Time</span><span class="k">:</span> <span class="err">1395079625000</span> <span class="kt">ms</span>
+</span><span class='line'><span class="o">-------------------------------------------</span>
+</span><span class='line'>
+</span><span class='line'><span class="nc">Prediction</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span><span class="mi">3</span><span class="o">)</span><span class="k">=</span><span class="mf">4.94897842056338</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>Fantastic, we have trained our model in a very fancy way, haven&#8217;t we?</p>
+
+<p>Personally, I find it interesting that we can take advantage of both APIs&#8230;</p></blockquote>
+
+<br/>
+
+
+<br/>
+
+
+<h2>Predict Ratings</h2>
+
+<p>Now that we have a trained model, we can create a new server to receive data from clients for rating prediction.</p>
+
+<br/>
+
+
+<h3>Prediction client</h3>
+
+<p>Firstly, let&#8217;s generate some random data to send for prediction.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">//////////////////////////////////////////////////</span>
+</span><span class='line'><span class="c1">// PREDICTION CLIENT</span>
+</span><span class='line'><span class="k">def</span> <span class="n">predictionClient</span><span class="o">(</span><span class="n">addr</span><span class="k">:</span> <span class="kt">InetSocketAddress</span><span class="o">)</span><span class="k">:</span> <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">Bytes</span><span class="o">]</span> <span class="k">=</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// PREDICTION DATA</span>
+</span><span class='line'>  <span class="k">def</span> <span class="n">rndData</span> <span class="k">=</span>
+</span><span class='line'>    <span class="c1">// userID</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">Math</span><span class="o">.</span><span class="n">abs</span><span class="o">(</span><span class="n">scala</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="nc">Random</span><span class="o">.</span><span class="n">nextInt</span><span class="o">)</span> <span class="o">%</span> <span class="mi">4</span> <span class="o">+</span> <span class="mi">1</span><span class="o">).</span><span class="n">toString</span> <span class="o">+</span>
+</span><span class='line'>    <span class="c1">// productID</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">Math</span><span class="o">.</span><span class="n">abs</span><span class="o">(</span><span class="n">scala</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="nc">Random</span><span class="o">.</span><span class="n">nextInt</span><span class="o">)</span> <span class="o">%</span> <span class="mi">4</span> <span class="o">+</span> <span class="mi">1</span><span class="o">).</span><span class="n">toString</span> <span class="o">+</span>
+</span><span class='line'>    <span class="s">&quot;\n&quot;</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">val</span> <span class="n">rndDataProcess</span> <span class="k">=</span> <span class="nc">Process</span><span class="o">.</span><span class="n">eval</span><span class="o">(</span><span class="nc">Task</span><span class="o">.</span><span class="n">delay</span><span class="o">{</span> <span class="n">rndData</span> <span class="o">}).</span><span class="n">repeat</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// a 1000 elements process emitting every 10ms</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">predictDataProcess</span> <span class="k">=</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">Process</span><span class="o">.</span><span class="n">awakeEvery</span><span class="o">(</span><span class="mi">10</span> <span class="n">milliseconds</span><span class="o">)</span> <span class="n">zipWith</span> <span class="n">rndDataProcess</span><span class="o">){</span> <span class="o">(</span><span class="k">_</span><span class="o">,</span> <span class="n">s</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="nc">Bytes</span><span class="o">.</span><span class="n">of</span><span class="o">(</span><span class="n">s</span><span class="o">.</span><span class="n">getBytes</span><span class="o">)</span> <span class="o">}</span>
+</span><span class='line'>      <span class="o">.</span><span class="n">take</span><span class="o">(</span><span class="mi">1000</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">val</span> <span class="n">client</span> <span class="k">=</span> <span class="nc">NioClient</span><span class="o">.</span><span class="n">sendAndCheckSize</span><span class="o">(</span><span class="n">addr</span><span class="o">,</span> <span class="n">predictDataProcess</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="n">client</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>Prediction server</h3>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">predictAddr</span> <span class="k">=</span> <span class="nc">NioUtils</span><span class="o">.</span><span class="n">localAddress</span><span class="o">(</span><span class="mi">11101</span><span class="o">)</span>
+</span><span class='line'><span class="c1">//////////////////////////////////////////////////</span>
+</span><span class='line'><span class="c1">// PREDICTION SERVER</span>
+</span><span class='line'><span class="k">val</span> <span class="o">(</span><span class="n">predictServer</span><span class="o">,</span> <span class="n">predictStop</span><span class="o">)</span> <span class="k">=</span> <span class="n">server</span><span class="o">(</span><span class="n">predictAddr</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>Prediction Stream</h3>
+
+<p><code>predictServer</code> is the stream of data to predict. Let&#8217;s stream it to the model by <code>dstreamizing</code> it and transforming all built <code>RDD</code>s by passing them through model</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">//////////////////////////////////////////////////</span>
+</span><span class='line'><span class="c1">// DStreamize server</span>
+</span><span class='line'><span class="k">val</span> <span class="o">(</span><span class="n">predictServerSink</span><span class="o">,</span> <span class="n">predictDstream</span><span class="o">)</span> <span class="k">=</span> <span class="n">dstreamize</span><span class="o">(</span>
+</span><span class='line'>  <span class="n">predictServer</span>
+</span><span class='line'>      <span class="c1">// converts bytes to String (doesn&#39;t care about encoding, it shall be UTF8)</span>
+</span><span class='line'>      <span class="o">.</span><span class="n">map</span>  <span class="o">(</span> <span class="n">bytes</span> <span class="k">=&gt;</span> <span class="k">new</span> <span class="nc">String</span><span class="o">(</span><span class="n">bytes</span><span class="o">.</span><span class="n">toArray</span><span class="o">)</span> <span class="o">)</span>
+</span><span class='line'>      <span class="c1">// rechunk received strings based on a separator \n</span>
+</span><span class='line'>      <span class="o">.</span><span class="n">pipe</span> <span class="o">(</span><span class="nc">NioUtils</span><span class="o">.</span><span class="n">rechunk</span> <span class="o">{</span> <span class="n">s</span><span class="k">:</span><span class="kt">String</span> <span class="o">=&gt;</span> <span class="o">(</span><span class="n">s</span><span class="o">.</span><span class="n">split</span><span class="o">(</span><span class="s">&quot;\n&quot;</span><span class="o">).</span><span class="n">toVector</span><span class="o">,</span> <span class="n">s</span><span class="o">.</span><span class="n">last</span> <span class="o">==</span> <span class="sc">&#39;\n&#39;</span><span class="o">)</span> <span class="o">}</span> <span class="o">)</span>
+</span><span class='line'>  <span class="o">,</span> <span class="n">ssc</span>
+</span><span class='line'><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">//////////////////////////////////////////////////</span>
+</span><span class='line'><span class="c1">// pipe dstreamed RDD to prediction model</span>
+</span><span class='line'><span class="c1">// and print result</span>
+</span><span class='line'><span class="n">predictDstream</span> <span class="n">map</span> <span class="o">{</span> <span class="k">_</span><span class="o">.</span><span class="n">split</span><span class="o">(</span><span class="sc">&#39;,&#39;</span><span class="o">)</span> <span class="k">match</span> <span class="o">{</span>
+</span><span class='line'>  <span class="c1">// converts to integers required by the model (USER_ID, PRODUCT_ID)</span>
+</span><span class='line'>  <span class="k">case</span> <span class="nc">Array</span><span class="o">(</span><span class="n">user</span><span class="o">,</span> <span class="n">item</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="o">(</span><span class="n">user</span><span class="o">.</span><span class="n">toInt</span><span class="o">,</span> <span class="n">item</span><span class="o">.</span><span class="n">toInt</span><span class="o">)</span>
+</span><span class='line'><span class="o">}}</span> <span class="n">transform</span> <span class="o">{</span> <span class="n">rdd</span> <span class="k">=&gt;</span>
+</span><span class='line'>  <span class="c1">// prediction happens here</span>
+</span><span class='line'>  <span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="o">(</span><span class="n">rdd</span><span class="o">)</span>
+</span><span class='line'><span class="o">}</span> <span class="n">print</span><span class="o">()</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>Running all in same <code>StreamingContext</code></h3>
+
+<p>I&#8217;ve discovered a problem here because the recommendation model is built in a <code>StreamingContext</code> and uses <code>RDD</code>s built in it. So you must use the same <code>StreamingContext</code> for prediction. So I must build my training dstreamized client/server &amp; prediction dstreamized client/server in the same context and thus I must schedule both things before starting this context.</p>
+
+<p>Yet the prediction model is built from training data received after starting the context so it&#8217;s not known before&#8230; So it&#8217;s very painful and I decided to be nasty and consider the model as a variable that will be set later. For this, I used a horrible <code>SyncVar</code> to set the prediction model when it&#8217;s ready&#8230; <em>Sorry about that but I need to study more about this issue to see if I can find better solutions because I&#8217;m not satisfied about it at all&#8230;</em></p>
+
+<p>So here is the whole training/predicting painful code:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+<span class='line-number'>49</span>
+<span class='line-number'>50</span>
+<span class='line-number'>51</span>
+<span class='line-number'>52</span>
+<span class='line-number'>53</span>
+<span class='line-number'>54</span>
+<span class='line-number'>55</span>
+<span class='line-number'>56</span>
+<span class='line-number'>57</span>
+<span class='line-number'>58</span>
+<span class='line-number'>59</span>
+<span class='line-number'>60</span>
+<span class='line-number'>61</span>
+<span class='line-number'>62</span>
+<span class='line-number'>63</span>
+<span class='line-number'>64</span>
+<span class='line-number'>65</span>
+<span class='line-number'>66</span>
+<span class='line-number'>67</span>
+<span class='line-number'>68</span>
+<span class='line-number'>69</span>
+<span class='line-number'>70</span>
+<span class='line-number'>71</span>
+<span class='line-number'>72</span>
+<span class='line-number'>73</span>
+<span class='line-number'>74</span>
+<span class='line-number'>75</span>
+<span class='line-number'>76</span>
+<span class='line-number'>77</span>
+<span class='line-number'>78</span>
+<span class='line-number'>79</span>
+<span class='line-number'>80</span>
+<span class='line-number'>81</span>
+<span class='line-number'>82</span>
+<span class='line-number'>83</span>
+<span class='line-number'>84</span>
+<span class='line-number'>85</span>
+<span class='line-number'>86</span>
+<span class='line-number'>87</span>
+<span class='line-number'>88</span>
+<span class='line-number'>89</span>
+<span class='line-number'>90</span>
+<span class='line-number'>91</span>
+<span class='line-number'>92</span>
+<span class='line-number'>93</span>
+<span class='line-number'>94</span>
+<span class='line-number'>95</span>
+<span class='line-number'>96</span>
+<span class='line-number'>97</span>
+<span class='line-number'>98</span>
+<span class='line-number'>99</span>
+<span class='line-number'>100</span>
+<span class='line-number'>101</span>
+<span class='line-number'>102</span>
+<span class='line-number'>103</span>
+<span class='line-number'>104</span>
+<span class='line-number'>105</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">//////////////////////////////////////////////////</span>
+</span><span class='line'><span class="c1">// TRAINING</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">trainingAddr</span> <span class="k">=</span> <span class="nc">NioUtils</span><span class="o">.</span><span class="n">localAddress</span><span class="o">(</span><span class="mi">11100</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// TRAINING SERVER</span>
+</span><span class='line'><span class="k">val</span> <span class="o">(</span><span class="n">trainingServer</span><span class="o">,</span> <span class="n">trainingStop</span><span class="o">)</span> <span class="k">=</span> <span class="n">server</span><span class="o">(</span><span class="n">trainingAddr</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// TRAINING CLIENT</span>
+</span><span class='line'><span class="k">val</span> <span class="n">tclient</span> <span class="k">=</span> <span class="n">trainingClient</span><span class="o">(</span><span class="n">trainingAddr</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// DStreamize server</span>
+</span><span class='line'><span class="k">val</span> <span class="o">(</span><span class="n">trainingServerSink</span><span class="o">,</span> <span class="n">trainingDstream</span><span class="o">)</span> <span class="k">=</span> <span class="n">dstreamize</span><span class="o">(</span>
+</span><span class='line'>  <span class="n">trainingServer</span>
+</span><span class='line'>      <span class="c1">// converts bytes to String (doesn&#39;t care about encoding, it shall be UTF8)</span>
+</span><span class='line'>      <span class="o">.</span><span class="n">map</span>  <span class="o">(</span> <span class="n">bytes</span> <span class="k">=&gt;</span> <span class="k">new</span> <span class="nc">String</span><span class="o">(</span><span class="n">bytes</span><span class="o">.</span><span class="n">toArray</span><span class="o">)</span> <span class="o">)</span>
+</span><span class='line'>      <span class="c1">// rechunk received strings based on a separator \n</span>
+</span><span class='line'>      <span class="o">.</span><span class="n">pipe</span> <span class="o">(</span><span class="nc">NioUtils</span><span class="o">.</span><span class="n">rechunk</span> <span class="o">{</span> <span class="n">s</span><span class="k">:</span><span class="kt">String</span> <span class="o">=&gt;</span> <span class="o">(</span><span class="n">s</span><span class="o">.</span><span class="n">split</span><span class="o">(</span><span class="s">&quot;\n&quot;</span><span class="o">).</span><span class="n">toVector</span><span class="o">,</span> <span class="n">s</span><span class="o">.</span><span class="n">last</span> <span class="o">==</span> <span class="sc">&#39;\n&#39;</span><span class="o">)</span> <span class="o">}</span> <span class="o">)</span>
+</span><span class='line'>  <span class="o">,</span> <span class="n">ssc</span>
+</span><span class='line'><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// THE HORRIBLE SYNCVAR CLUDGE (could have used atomic but not better IMHO)</span>
+</span><span class='line'><span class="k">var</span> <span class="n">model</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">SyncVar</span><span class="o">[</span><span class="kt">org.apache.spark.mllib.recommendation.MatrixFactorizationModel</span><span class="o">]</span>
+</span><span class='line'><span class="c1">// THE HORRIBLE SYNCVAR CLUDGE (could have used atomic but not better IMHO)</span>
+</span><span class='line'>
+</span><span class='line'>
+</span><span class='line'><span class="c1">//////////////////////////////////////////////////</span>
+</span><span class='line'><span class="c1">// PREDICTING</span>
+</span><span class='line'><span class="k">val</span> <span class="n">predictAddr</span> <span class="k">=</span> <span class="nc">NioUtils</span><span class="o">.</span><span class="n">localAddress</span><span class="o">(</span><span class="mi">11101</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// PREDICTION SERVER</span>
+</span><span class='line'><span class="k">val</span> <span class="o">(</span><span class="n">predictServer</span><span class="o">,</span> <span class="n">predictStop</span><span class="o">)</span> <span class="k">=</span> <span class="n">server</span><span class="o">(</span><span class="n">predictAddr</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// PREDICTION CLIENT</span>
+</span><span class='line'><span class="k">val</span> <span class="n">pClient</span> <span class="k">=</span> <span class="n">predictionClient</span><span class="o">(</span><span class="n">predictAddr</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// DStreamize server</span>
+</span><span class='line'><span class="k">val</span> <span class="o">(</span><span class="n">predictServerSink</span><span class="o">,</span> <span class="n">predictDstream</span><span class="o">)</span> <span class="k">=</span> <span class="n">dstreamize</span><span class="o">(</span>
+</span><span class='line'>  <span class="n">predictServer</span>
+</span><span class='line'>      <span class="c1">// converts bytes to String (doesn&#39;t care about encoding, it shall be UTF8)</span>
+</span><span class='line'>      <span class="o">.</span><span class="n">map</span>  <span class="o">(</span> <span class="n">bytes</span> <span class="k">=&gt;</span> <span class="k">new</span> <span class="nc">String</span><span class="o">(</span><span class="n">bytes</span><span class="o">.</span><span class="n">toArray</span><span class="o">)</span> <span class="o">)</span>
+</span><span class='line'>      <span class="c1">// rechunk received strings based on a separator \n</span>
+</span><span class='line'>      <span class="o">.</span><span class="n">pipe</span> <span class="o">(</span> <span class="nc">NioUtils</span><span class="o">.</span><span class="n">rechunk</span> <span class="o">{</span> <span class="n">s</span><span class="k">:</span><span class="kt">String</span> <span class="o">=&gt;</span> <span class="o">(</span><span class="n">s</span><span class="o">.</span><span class="n">split</span><span class="o">(</span><span class="s">&quot;\n&quot;</span><span class="o">).</span><span class="n">toVector</span><span class="o">,</span> <span class="n">s</span><span class="o">.</span><span class="n">last</span> <span class="o">==</span> <span class="sc">&#39;\n&#39;</span><span class="o">)</span> <span class="o">}</span> <span class="o">)</span>
+</span><span class='line'>  <span class="o">,</span> <span class="n">ssc</span>
+</span><span class='line'><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Piping received data to the model</span>
+</span><span class='line'><span class="n">predictDstream</span><span class="o">.</span><span class="n">map</span> <span class="o">{</span>
+</span><span class='line'>  <span class="k">_</span><span class="o">.</span><span class="n">split</span><span class="o">(</span><span class="sc">&#39;,&#39;</span><span class="o">)</span> <span class="k">match</span> <span class="o">{</span>
+</span><span class='line'>    <span class="k">case</span> <span class="nc">Array</span><span class="o">(</span><span class="n">user</span><span class="o">,</span> <span class="n">item</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="o">(</span><span class="n">user</span><span class="o">.</span><span class="n">toInt</span><span class="o">,</span> <span class="n">item</span><span class="o">.</span><span class="n">toInt</span><span class="o">)</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">}.</span><span class="n">transform</span> <span class="o">{</span> <span class="n">rdd</span> <span class="k">=&gt;</span>
+</span><span class='line'>  <span class="c1">// USE THE HORRIBLE SYNCVAR</span>
+</span><span class='line'>  <span class="n">model</span><span class="o">.</span><span class="n">get</span><span class="o">.</span><span class="n">predict</span><span class="o">(</span><span class="n">rdd</span><span class="o">)</span>
+</span><span class='line'><span class="o">}.</span><span class="n">print</span><span class="o">()</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">//////////////////////////////////////////////////</span>
+</span><span class='line'><span class="c1">// RUN ALL</span>
+</span><span class='line'><span class="k">val</span> <span class="n">before</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">Time</span><span class="o">(</span><span class="nc">System</span><span class="o">.</span><span class="n">currentTimeMillis</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Start SSC</span>
+</span><span class='line'><span class="n">ssc</span><span class="o">.</span><span class="n">start</span><span class="o">()</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Launch training server</span>
+</span><span class='line'><span class="n">trainingServerSink</span><span class="o">.</span><span class="n">run</span><span class="o">.</span><span class="n">runAsync</span><span class="o">(</span> <span class="k">_</span> <span class="k">=&gt;</span> <span class="o">()</span> <span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Sleeps a bit to let server listen</span>
+</span><span class='line'><span class="nc">Thread</span><span class="o">.</span><span class="n">sleep</span><span class="o">(</span><span class="mi">300</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Launch training client</span>
+</span><span class='line'><span class="n">tclient</span><span class="o">.</span><span class="n">run</span><span class="o">.</span><span class="n">run</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Await SSC termination a bit</span>
+</span><span class='line'><span class="n">ssc</span><span class="o">.</span><span class="n">awaitTermination</span><span class="o">(</span><span class="mi">1000</span><span class="o">)</span>
+</span><span class='line'><span class="c1">// Stop training server</span>
+</span><span class='line'><span class="n">trainingStop</span><span class="o">.</span><span class="n">set</span><span class="o">(</span><span class="kc">true</span><span class="o">).</span><span class="n">run</span>
+</span><span class='line'><span class="k">val</span> <span class="n">after</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">Time</span><span class="o">(</span><span class="nc">System</span><span class="o">.</span><span class="n">currentTimeMillis</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">rdds</span> <span class="k">=</span> <span class="n">trainingDstream</span><span class="o">.</span><span class="n">slice</span><span class="o">(</span><span class="n">before</span><span class="o">.</span><span class="n">floor</span><span class="o">(</span><span class="nc">Milliseconds</span><span class="o">(</span><span class="mi">1000</span><span class="o">)),</span> <span class="n">after</span><span class="o">.</span><span class="n">floor</span><span class="o">(</span><span class="nc">Milliseconds</span><span class="o">(</span><span class="mi">1000</span><span class="o">)))</span>
+</span><span class='line'><span class="k">val</span> <span class="n">union</span><span class="k">:</span> <span class="kt">RDD</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">UnionRDD</span><span class="o">(</span><span class="n">ssc</span><span class="o">.</span><span class="n">sparkContext</span><span class="o">,</span> <span class="n">rdds</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">ratings</span> <span class="k">=</span> <span class="n">union</span> <span class="n">map</span> <span class="o">{</span>
+</span><span class='line'>  <span class="k">_</span><span class="o">.</span><span class="n">split</span><span class="o">(</span><span class="sc">&#39;,&#39;</span><span class="o">)</span> <span class="k">match</span> <span class="o">{</span>
+</span><span class='line'>    <span class="k">case</span> <span class="nc">Array</span><span class="o">(</span><span class="n">user</span><span class="o">,</span> <span class="n">item</span><span class="o">,</span> <span class="n">rate</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="nc">Rating</span><span class="o">(</span><span class="n">user</span><span class="o">.</span><span class="n">toInt</span><span class="o">,</span> <span class="n">item</span><span class="o">.</span><span class="n">toInt</span><span class="o">,</span> <span class="n">rate</span><span class="o">.</span><span class="n">toDouble</span><span class="o">)</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// SET THE HORRIBLE SYNCVAR</span>
+</span><span class='line'><span class="n">model</span><span class="o">.</span><span class="n">set</span><span class="o">(</span><span class="nc">ALS</span><span class="o">.</span><span class="n">train</span><span class="o">(</span><span class="n">ratings</span><span class="o">,</span> <span class="mi">1</span><span class="o">,</span> <span class="mi">20</span><span class="o">,</span> <span class="mf">0.01</span><span class="o">))</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">println</span><span class="o">(</span><span class="s">&quot;**** Model Trained -&gt; Prediction(1,3)=&quot;</span> <span class="o">+</span> <span class="n">model</span><span class="o">.</span><span class="n">get</span><span class="o">.</span><span class="n">predict</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span> <span class="mi">3</span><span class="o">))</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Launch prediction server</span>
+</span><span class='line'><span class="n">predictServerSink</span><span class="o">.</span><span class="n">run</span><span class="o">.</span><span class="n">runAsync</span><span class="o">(</span> <span class="k">_</span> <span class="k">=&gt;</span> <span class="o">()</span> <span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Sleeps a bit to let server listen</span>
+</span><span class='line'><span class="nc">Thread</span><span class="o">.</span><span class="n">sleep</span><span class="o">(</span><span class="mi">300</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Launch prediction client</span>
+</span><span class='line'><span class="n">pClient</span><span class="o">.</span><span class="n">run</span><span class="o">.</span><span class="n">run</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Await SSC termination a bit</span>
+</span><span class='line'><span class="n">ssc</span><span class="o">.</span><span class="n">awaitTermination</span><span class="o">(</span><span class="mi">1000</span><span class="o">)</span>
+</span><span class='line'><span class="c1">// Stop server</span>
+</span><span class='line'><span class="n">predictStop</span><span class="o">.</span><span class="n">set</span><span class="o">(</span><span class="kc">true</span><span class="o">).</span><span class="n">run</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>Run it&#8230;</h2>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="o">-------------------------------------------</span>
+</span><span class='line'><span class="nc">Time</span><span class="k">:</span> <span class="err">1395144379000</span> <span class="kt">ms</span>
+</span><span class='line'><span class="o">-------------------------------------------</span>
+</span><span class='line'><span class="mi">1</span><span class="o">,</span><span class="mi">1</span><span class="o">,</span><span class="mf">5.0</span>
+</span><span class='line'><span class="mi">1</span><span class="o">,</span><span class="mi">2</span><span class="o">,</span><span class="mf">1.0</span>
+</span><span class='line'><span class="mi">1</span><span class="o">,</span><span class="mi">3</span><span class="o">,</span><span class="mf">5.0</span>
+</span><span class='line'><span class="mi">1</span><span class="o">,</span><span class="mi">4</span><span class="o">,</span><span class="mf">1.0</span>
+</span><span class='line'><span class="mi">2</span><span class="o">,</span><span class="mi">4</span><span class="o">,</span><span class="mf">1.0</span>
+</span><span class='line'><span class="mi">2</span><span class="o">,</span><span class="mi">2</span><span class="o">,</span><span class="mf">5.0</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">****</span> <span class="nc">Model</span> <span class="nc">Trained</span> <span class="o">-&gt;</span> <span class="nc">Prediction</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span><span class="mi">3</span><span class="o">)</span><span class="k">=</span><span class="mf">4.919459410565401</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">...</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">-------------------------------------------</span>
+</span><span class='line'><span class="nc">Time</span><span class="k">:</span> <span class="err">1395144384000</span> <span class="kt">ms</span>
+</span><span class='line'><span class="o">-------------------------------------------</span>
+</span><span class='line'><span class="o">----------------</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">-------------------------------------------</span>
+</span><span class='line'><span class="nc">Time</span><span class="k">:</span> <span class="err">1395144385000</span> <span class="kt">ms</span>
+</span><span class='line'><span class="o">-------------------------------------------</span>
+</span><span class='line'><span class="nc">Rating</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span><span class="mi">1</span><span class="o">,</span><span class="mf">4.919459410565401</span><span class="o">)</span>
+</span><span class='line'><span class="nc">Rating</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span><span class="mi">1</span><span class="o">,</span><span class="mf">4.919459410565401</span><span class="o">)</span>
+</span><span class='line'><span class="nc">Rating</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span><span class="mi">1</span><span class="o">,</span><span class="mf">4.919459410565401</span><span class="o">)</span>
+</span><span class='line'><span class="nc">Rating</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span><span class="mi">1</span><span class="o">,</span><span class="mf">4.919459410565401</span><span class="o">)</span>
+</span><span class='line'><span class="nc">Rating</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span><span class="mi">2</span><span class="o">,</span><span class="mf">1.631952450379809</span><span class="o">)</span>
+</span><span class='line'><span class="nc">Rating</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span><span class="mi">3</span><span class="o">,</span><span class="mf">4.919459410565401</span><span class="o">)</span>
+</span><span class='line'><span class="nc">Rating</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span><span class="mi">3</span><span class="o">,</span><span class="mf">4.919459410565401</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">-------------------------------------------</span>
+</span><span class='line'><span class="nc">Time</span><span class="k">:</span> <span class="err">1395144386000</span> <span class="kt">ms</span>
+</span><span class='line'><span class="o">-------------------------------------------</span>
+</span><span class='line'><span class="nc">Rating</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span><span class="mi">1</span><span class="o">,</span><span class="mf">4.919459410565401</span><span class="o">)</span>
+</span><span class='line'><span class="nc">Rating</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span><span class="mi">1</span><span class="o">,</span><span class="mf">4.919459410565401</span><span class="o">)</span>
+</span><span class='line'><span class="nc">Rating</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span><span class="mi">3</span><span class="o">,</span><span class="mf">4.919459410565401</span><span class="o">)</span>
+</span><span class='line'><span class="nc">Rating</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span><span class="mi">3</span><span class="o">,</span><span class="mf">4.919459410565401</span><span class="o">)</span>
+</span><span class='line'><span class="nc">Rating</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span><span class="mi">3</span><span class="o">,</span><span class="mf">4.919459410565401</span><span class="o">)</span>
+</span><span class='line'><span class="nc">Rating</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span><span class="mi">4</span><span class="o">,</span><span class="mf">0.40813133837755494</span><span class="o">)</span>
+</span><span class='line'><span class="nc">Rating</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span><span class="mi">4</span><span class="o">,</span><span class="mf">0.40813133837755494</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">...</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<br/>
+
+
+<h2>Final conclusion</h2>
+
+<p>3 long articles to end in training a poor recommendation system with 2 clients/servers&#8230; A bit bloated isn&#8217;t it? :)</p>
+
+<p>Anyway, I hope I printed in your brain a few ideas, concepts about spark &amp; scalaz-stream and if I&#8217;ve reached this target, it&#8217;s already enough!</p>
+
+<p>Yet, I&#8217;m not satisfied about a few things:</p>
+
+<ul>
+<li>Training a model and using it in the same <code>StreamingContext</code> is still clumsy and I must say that calling <code>model.predict</code> from a <code>map</code> function in a <code>DStream</code> might not be so good in a cluster environment. I haven&#8217;t been digging this code enough to have a clear mind on it.</li>
+<li>I tried using multiple clients for prediction (like 100 in parallel) and it works quite well but I have encountered problems ending both my clients/servers and the streaming context and I often end into having zombies SBT process that I can&#8217;t kill until reboot (some threads remain RUNNING while other AWAITS and sockets aren&#8217;t released&#8230; resources issues&#8230;). Closing cleanly all of these tools creating threads &amp; more after intensive work isn&#8217;t yet good.</li>
+</ul>
+
+
+<p><strong>But, I&#8217;m satisfied globally:</strong></p>
+
+<ul>
+<li><strong>Piping a scalaz-stream <code>Process</code> into a spark <code>DStream</code> works quite well and might be interesting after all.</strong></li>
+<li><strong>The new scalaz-stream NIO API considering clients &amp; servers as pure streams of data gave me so many ideas that my free-time has suddenly been frightened and went away.</strong></li>
+</ul>
+
 
 <br/>
 
