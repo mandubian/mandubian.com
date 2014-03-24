@@ -316,7 +316,7 @@ class MyCustomSender extends Actor {
 Then you must initialize your websocket with it
 
 {% codeblock lang:scala %}
-  def connect(id: String) = room.websocket[JsValue](id, Props[Receiver], Props[MyCustomSender])
+  def connect(id: String) = room.websocket[JsValue](_ => id, Props[Receiver], Props[MyCustomSender])
 {% endcodeblock %}
 
 
