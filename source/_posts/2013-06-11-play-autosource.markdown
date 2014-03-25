@@ -8,7 +8,8 @@ categories: [datasource,rest,crud,scala,play framework,reactivemongo,angularjs,a
 keywords: datasource,rest,crud,scala,play framework,reactivemongo,angularjs,async
 ---
 
-#### EXPERIMENTAL / DRAFT
+#### Now you should use play-autosource 2.0 correcting a few issues & introducing ActionBuilder from play2.2
+
 The module code and sample app can be found on Github [here](https://github.com/mandubian/play-autosource)
 
 <br/>
