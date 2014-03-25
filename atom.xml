@@ -4,7 +4,7 @@
   <title><![CDATA[Mandubian Blog]]></title>
   <link href="http://www.mandubian.com/atom.xml" rel="self"/>
   <link href="http://www.mandubian.com/"/>
-  <updated>2014-03-24T18:29:56+01:00</updated>
+  <updated>2014-03-25T09:48:42+01:00</updated>
   <id>http://www.mandubian.com/</id>
   <author>
     <name><![CDATA[Pascal Voitot]]></name>
@@ -5461,7 +5461,9 @@ Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,
     <link href="http://www.mandubian.com/2013/07/11/play-autosource-datomisca/"/>
     <updated>2013-07-11T18:18:00+02:00</updated>
     <id>http://www.mandubian.com/2013/07/11/play-autosource-datomisca</id>
-    <content type="html"><![CDATA[<p>The code for all autosources &amp; sample apps can be found on Github <a href="https://github.com/mandubian/play-autosource/tree/master/datomisca">here</a></p>
+    <content type="html"><![CDATA[<h4>Now you should use play-autosource 2.0 correcting a few issues &amp; introducing ActionBuilder from play2.2</h4>
+
+<p>The code for all autosources &amp; sample apps can be found on Github <a href="https://github.com/mandubian/play-autosource/tree/master/datomisca">here</a></p>
 
 <div class="well">
   <h3>Brand New Autosources</h3>
@@ -6329,7 +6331,7 @@ Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,
     <link href="http://www.mandubian.com/2013/06/11/play-autosource/"/>
     <updated>2013-06-11T18:18:00+02:00</updated>
     <id>http://www.mandubian.com/2013/06/11/play-autosource</id>
-    <content type="html"><![CDATA[<h4>EXPERIMENTAL / DRAFT</h4>
+    <content type="html"><![CDATA[<h4>Now you should use play-autosource 2.0 correcting a few issues &amp; introducing ActionBuilder from play2.2</h4>
 
 <p>The module code and sample app can be found on Github <a href="https://github.com/mandubian/play-autosource">here</a></p>
 
@@ -9622,7 +9624,9 @@ Suggestions are welcome too</p>
     <link href="http://www.mandubian.com/2013/02/21/play-json-stand-alone/"/>
     <updated>2013-02-21T14:14:00+01:00</updated>
     <id>http://www.mandubian.com/2013/02/21/play-json-stand-alone</id>
-    <content type="html"><![CDATA[<p>In a very recent <a href="https://github.com/playframework/Play20/pull/754">Pull Request</a>, `play-json has been made a stand-alone module in <a href="https://github.com/playframework/Play20">Play2.2-SNAPSHOT master</a> as play-iteratees.</p>
+    <content type="html"><![CDATA[<h4>Now play-json stand-alone is officially a stand-alone module in Play2.2. So you don&#8217;t have to use the dependency given in this article anymore but use Typesafe one like &#8220;com.typesafe.play:play-json:2.2&#8221;</h4>
+
+<p>In a very recent <a href="https://github.com/playframework/Play20/pull/754">Pull Request</a>, `play-json has been made a stand-alone module in <a href="https://github.com/playframework/Play20">Play2.2-SNAPSHOT master</a> as play-iteratees.</p>
 
 <p>It means:</p>
 
