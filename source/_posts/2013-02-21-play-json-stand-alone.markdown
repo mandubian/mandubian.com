@@ -8,8 +8,9 @@ categories: [play framework,json,play 2.1,scala]
 keywords: play framework,json,play 2.1,scala
 ---
 
-#### Now play-json stand-alone is officially a stand-alone module in Play2.2. So you don't have to use the dependency given in this article anymore but use Typesafe one like "com.typesafe.play:play-json:2.2"
+> Now _play-json stand-alone_ is officially a stand-alone module in Play2.2. So you don't have to use the dependency given in this article anymore but use Typesafe one like _com.typesafe.play:play-json:2.2_
 
+<br/>
 In a very recent [Pull Request](https://github.com/playframework/Play20/pull/754), `play-json has been made a stand-alone module in [Play2.2-SNAPSHOT master](https://github.com/playframework/Play20) as play-iteratees.
 
 It means: 

@@ -8,8 +8,9 @@ categories: [datasource,rest,crud,scala,play framework,datomic,datomisca,angular
 keywords: datasource,rest,crud,scala,play framework,datomic,datomisca,angularjs,async
 ---
 
-#### Now you should use play-autosource 2.0 correcting a few issues & introducing ActionBuilder from play2.2
+> Now you should use play-autosource 2.0 correcting a few issues & introducing ActionBuilder from play2.2
 
+<br/>
 The code for all autosources & sample apps can be found on Github [here](https://github.com/mandubian/play-autosource/tree/master/datomisca)
 
 <div class="well">
