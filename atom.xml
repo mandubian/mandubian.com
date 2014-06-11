@@ -4,7 +4,7 @@
   <title><![CDATA[Mandubian Blog]]></title>
   <link href="http://www.mandubian.com/atom.xml" rel="self"/>
   <link href="http://www.mandubian.com/"/>
-  <updated>2014-06-11T23:15:25+02:00</updated>
+  <updated>2014-06-11T23:25:49+02:00</updated>
   <id>http://www.mandubian.com/</id>
   <author>
     <name><![CDATA[Pascal Voitot]]></name>
@@ -47,7 +47,7 @@
 <span class='line-number'>8</span>
 <span class='line-number'>9</span>
 </pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="nc">Await</span><span class="o">.</span><span class="n">result</span><span class="o">(</span>
-</span><span class='line'>  <span class="n">monadic</span><span class="o">[</span><span class="kt">Future</span>, <span class="kt">List</span>, <span class="kt">Option</span><span class="o">]</span> <span class="o">{</span>
+</span><span class='line'>  <span class="n">monadic</span><span class="o">[</span><span class="kt">Future</span>, <span class="kt">Option</span><span class="o">]</span> <span class="o">{</span>
 </span><span class='line'>    <span class="k">val</span> <span class="n">a</span> <span class="k">=</span> <span class="nc">Future</span> <span class="o">(</span> <span class="nc">Some</span><span class="o">(</span><span class="mi">9</span><span class="o">)</span> <span class="o">)</span>
 </span><span class='line'>    <span class="k">val</span> <span class="n">b</span> <span class="k">=</span> <span class="nc">Some</span><span class="o">(</span><span class="mi">7</span><span class="o">)</span>
 </span><span class='line'>    <span class="k">val</span> <span class="n">c</span> <span class="k">=</span> <span class="mi">10</span>
@@ -190,7 +190,7 @@ That&#8217;s enough for you need in your everyday life, right?</p>
 <span class='line-number'>8</span>
 <span class='line-number'>9</span>
 </pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="nc">Await</span><span class="o">.</span><span class="n">result</span><span class="o">(</span>
-</span><span class='line'>  <span class="n">monadic</span><span class="o">[</span><span class="kt">Future</span>, <span class="kt">List</span>, <span class="kt">Option</span><span class="o">]</span> <span class="o">{</span>
+</span><span class='line'>  <span class="n">monadic</span><span class="o">[</span><span class="kt">Future</span>, <span class="kt">Option</span><span class="o">]</span> <span class="o">{</span>
 </span><span class='line'>    <span class="k">val</span> <span class="n">a</span> <span class="k">=</span> <span class="nc">Future</span> <span class="o">(</span> <span class="nc">Some</span><span class="o">(</span><span class="mi">9</span><span class="o">)</span> <span class="o">)</span>
 </span><span class='line'>    <span class="k">val</span> <span class="n">b</span> <span class="k">=</span> <span class="nc">Some</span><span class="o">(</span><span class="mi">7</span><span class="o">)</span>
 </span><span class='line'>    <span class="k">val</span> <span class="n">c</span> <span class="k">=</span> <span class="mi">10</span>
@@ -205,7 +205,7 @@ That&#8217;s enough for you need in your everyday life, right?</p>
 
 <ul>
 <li><code>monadic</code> marks the monadic block</li>
-<li><code>monadic[Future, List, Option]</code> declares that you manipulate a stack <code>Future[List[Option]]</code> (and no other)</li>
+<li><code>monadic[Future, Option]</code> declares that you manipulate a stack <code>Future[List[Option]]</code> (and no other)</li>
 <li><code>snoopX</code> means that you want to snoop the monad value at X-th level (1, 2, 3, 4 and no more for now)</li>
 <li>the macro checks for implicit instances of monads (here <code>List</code>, <code>Option</code>, <code>Future</code>) and monad transformers (here <code>OptionT</code> &amp; <code>ListT</code>) for this stack</li>
 <li>the macro translates this code into crazy embedded <code>Monad.bind/point/lift/run</code>&#8230;</li>
