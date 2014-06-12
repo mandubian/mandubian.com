@@ -348,6 +348,7 @@ That&#8217;s enough for you need in your everyday life, right?</p>
 <li><code>snoopX</code> means that you want to snoop the monad value at X-th level (1, 2, 3, 4 and no more for now)</li>
 <li>the macro checks for implicit instances of monads (here <code>List</code>, <code>Option</code>, <code>Future</code>) and monad transformers (here <code>OptionT</code> &amp; <code>ListT</code>) for this stack</li>
 <li>the macro translates this code into crazy embedded <code>Monad.bind/point/lift/run</code>&#8230;</li>
+<li><code>snoop2</code> is used in first position: if you have used <code>snoop1</code>, the macro would have rejected your monadic block. It&#8217;s logical, when you use <code>flatMap</code>, you always start with the deeper stack of monad and I chose not to change the order of your code as I find this macro is already far too intrusive :)</li>
 </ul>
 
 
@@ -379,6 +380,44 @@ That&#8217;s enough for you need in your everyday life, right?</p>
 <li>monadic block assigned to a val not explicitly typed.</li>
 <li>many things or edge-cases with mixed monad depth and if/match.</li>
 <li>can&#8217;t use advanced monad transformers like StateT or WriterT in monadic block because Scala compiler doesn&#8217;t allow what I expected with type lambdas. <em>This needs to be studied further.</em></li>
+</ul>
+
+
+<h2>A very stupid example to finish with 4-depth stack</h2>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">it</span> <span class="n">should</span> <span class="s">&quot;&quot;&quot;snoop4 on stupid stack&quot;&quot;&quot;</span> <span class="n">in</span> <span class="o">{</span>
+</span><span class='line'>    <span class="k">type</span> <span class="kt">S</span><span class="o">[</span><span class="kt">T</span><span class="o">]</span> <span class="k">=</span> <span class="o">({</span> <span class="k">type</span> <span class="kt">l</span><span class="o">[</span><span class="kt">T</span><span class="o">]</span> <span class="k">=</span> <span class="o">\/[</span><span class="kt">String</span>, <span class="kt">T</span><span class="o">]</span> <span class="o">})</span><span class="k">#</span><span class="n">l</span><span class="o">[</span><span class="kt">T</span><span class="o">]</span>
+</span><span class='line'>    <span class="nc">Await</span><span class="o">.</span><span class="n">result</span><span class="o">(</span>
+</span><span class='line'>      <span class="n">monadic</span><span class="o">[</span><span class="kt">Future</span>, <span class="kt">S</span>, <span class="kt">List</span>, <span class="kt">Option</span><span class="o">]</span> <span class="o">{</span>
+</span><span class='line'>        <span class="k">val</span> <span class="n">a</span><span class="k">:</span> <span class="kt">Future</span><span class="o">[</span><span class="kt">S</span><span class="o">[</span><span class="kt">List</span><span class="o">[</span><span class="kt">Option</span><span class="o">[</span><span class="kt">Int</span><span class="o">]]]]</span> <span class="k">=</span> <span class="nc">Future</span><span class="o">(\/-(</span><span class="nc">List</span><span class="o">(</span><span class="nc">Some</span><span class="o">(</span><span class="mi">5</span><span class="o">),</span> <span class="nc">Some</span><span class="o">(</span><span class="mi">10</span><span class="o">))))</span>
+</span><span class='line'>        <span class="k">val</span> <span class="n">b</span><span class="k">:</span> <span class="kt">S</span><span class="o">[</span><span class="kt">List</span><span class="o">[</span><span class="kt">Option</span><span class="o">[</span><span class="kt">Int</span><span class="o">]]]</span> <span class="k">=</span> <span class="o">\/-(</span><span class="nc">List</span><span class="o">(</span><span class="nc">Some</span><span class="o">(</span><span class="mi">1</span><span class="o">),</span> <span class="nc">Some</span><span class="o">(</span><span class="mi">2</span><span class="o">)))</span>
+</span><span class='line'>        <span class="k">val</span> <span class="n">c</span><span class="k">:</span> <span class="kt">List</span><span class="o">[</span><span class="kt">Option</span><span class="o">[</span><span class="kt">Int</span><span class="o">]]</span> <span class="k">=</span> <span class="nc">List</span><span class="o">(</span><span class="nc">Some</span><span class="o">(</span><span class="mi">3</span><span class="o">),</span> <span class="nc">Some</span><span class="o">(</span><span class="mi">4</span><span class="o">))</span>
+</span><span class='line'>        <span class="k">val</span> <span class="n">d</span><span class="k">:</span> <span class="kt">Option</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="k">=</span> <span class="nc">Some</span><span class="o">(</span><span class="mi">2</span><span class="o">)</span>
+</span><span class='line'>        <span class="o">(</span><span class="n">snoop4</span><span class="o">(</span><span class="n">a</span><span class="o">)</span> <span class="o">+</span> <span class="n">snoop3</span><span class="o">(</span><span class="n">b</span><span class="o">)</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">-</span> <span class="n">snoop2</span><span class="o">(</span><span class="n">c</span><span class="o">))</span> <span class="o">/</span> <span class="n">snoop1</span><span class="o">(</span><span class="n">d</span><span class="o">)</span>
+</span><span class='line'>      <span class="o">},</span> <span class="n">duration</span><span class="o">.</span><span class="nc">Duration</span><span class="o">(</span><span class="s">&quot;1 second&quot;</span><span class="o">)</span>
+</span><span class='line'>    <span class="o">)</span> <span class="n">should</span> <span class="n">equal</span> <span class="o">(\/-(</span><span class="nc">List</span><span class="o">(</span><span class="nc">Some</span><span class="o">(</span><span class="mi">2</span><span class="o">),</span> <span class="nc">Some</span><span class="o">(</span><span class="mi">1</span><span class="o">),</span> <span class="nc">Some</span><span class="o">(</span><span class="mi">3</span><span class="o">),</span> <span class="nc">Some</span><span class="o">(</span><span class="mi">2</span><span class="o">),</span> <span class="nc">Some</span><span class="o">(</span><span class="mi">4</span><span class="o">),</span> <span class="nc">Some</span><span class="o">(</span><span class="mi">4</span><span class="o">),</span> <span class="nc">Some</span><span class="o">(</span><span class="mi">5</span><span class="o">),</span> <span class="nc">Some</span><span class="o">(</span><span class="mi">5</span><span class="o">))))</span>
+</span><span class='line'>  <span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Note that:</p>
+
+<ul>
+<li>you have to use a type alias to Scalaz \/ to one parametric type.</li>
+<li>you have to help a bit the compiler about type alias S or it will infer \/[A, B] which is not what we want for the monad. This might seem tedious but I&#8217;ll study if I can go around this.</li>
+<li>look at the result: you have a 2 elements list and at the end, you have a 8 elements list: WHAT???? No it&#8217;s normal, this is the result <code>flatmap</code> between first list and second list. 2<sup>2</sup> = 8&#8230; nothing strange but it can be surprising at first glance ;)</li>
 </ul>
 
 
