@@ -4,7 +4,7 @@
   <title><![CDATA[Mandubian Blog]]></title>
   <link href="http://www.mandubian.com/atom.xml" rel="self"/>
   <link href="http://www.mandubian.com/"/>
-  <updated>2014-06-12T12:21:10+02:00</updated>
+  <updated>2014-06-12T13:50:28+02:00</updated>
   <id>http://www.mandubian.com/</id>
   <author>
     <name><![CDATA[Pascal Voitot]]></name>
@@ -205,7 +205,7 @@ That&#8217;s enough for you need in your everyday life, right?</p>
 
 <ul>
 <li><code>monadic</code> marks the monadic block</li>
-<li><code>monadic[Future, Option]</code> declares that you manipulate a stack <code>Future[List[Option]]</code> (and no other)</li>
+<li><code>monadic[Future, Option]</code> declares that you manipulate a stack <code>Future[Option]</code> (and no other)</li>
 <li><code>snoopX</code> means that you want to snoop the monad value at X-th level (1, 2, 3, 4 and no more for now)</li>
 <li>the macro checks for implicit instances of monads (here <code>List</code>, <code>Option</code>, <code>Future</code>) and monad transformers (here <code>OptionT</code> &amp; <code>ListT</code>) for this stack</li>
 <li>the macro translates this code into crazy embedded <code>Monad.bind/point/lift/run</code>&#8230;</li>
@@ -278,7 +278,7 @@ That&#8217;s enough for you need in your everyday life, right?</p>
 <ul>
 <li>you have to use a type alias to Scalaz \/ to one parametric type.</li>
 <li>you have to help a bit the compiler about type alias S or it will infer \/[A, B] which is not what we want for the monad. This might seem tedious but I&#8217;ll study if I can go around this.</li>
-<li>look at the result: you have a 2 elements list and at the end, you have a 8 elements list: WHAT???? No it&#8217;s normal, this is the result <code>flatmap</code> between first and second and third list. 2<sup>2<sup>2</sup></sup> = 8&#8230; nothing strange but it can be surprising at first glance ;)</li>
+<li>look at the result: you have a 2 elements list and at the end, you have a 8 elements list: WHAT???? No it&#8217;s normal, this is the result <code>flatmap</code> between first and second and third list. 2<sup>22</sup> = 8&#8230; nothing strange but it can be surprising at first glance ;)</li>
 </ul>
 
 
