@@ -4,7 +4,7 @@
   <title><![CDATA[Mandubian Blog]]></title>
   <link href="http://www.mandubian.com/atom.xml" rel="self"/>
   <link href="http://www.mandubian.com/"/>
-  <updated>2014-06-12T13:50:28+02:00</updated>
+  <updated>2014-06-16T14:31:37+02:00</updated>
   <id>http://www.mandubian.com/</id>
   <author>
     <name><![CDATA[Pascal Voitot]]></name>
@@ -278,7 +278,7 @@ That&#8217;s enough for you need in your everyday life, right?</p>
 <ul>
 <li>you have to use a type alias to Scalaz \/ to one parametric type.</li>
 <li>you have to help a bit the compiler about type alias S or it will infer \/[A, B] which is not what we want for the monad. This might seem tedious but I&#8217;ll study if I can go around this.</li>
-<li>look at the result: you have a 2 elements list and at the end, you have a 8 elements list: WHAT???? No it&#8217;s normal, this is the result <code>flatmap</code> between first and second and third list. 2<sup>22</sup> = 8&#8230; nothing strange but it can be surprising at first glance ;)</li>
+<li>look at the result: you have a 2 elements list and at the end, you have a 8 elements list: WHAT???? No it&#8217;s normal, this is the result <code>flatmap</code> between first and second and third list. 2*2*2 = 8&#8230; nothing strange but it can be surprising at first glance ;)</li>
 </ul>
 
 
