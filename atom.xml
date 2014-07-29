@@ -4,7 +4,7 @@
   <title><![CDATA[Mandubian Blog]]></title>
   <link href="http://www.mandubian.com/atom.xml" rel="self"/>
   <link href="http://www.mandubian.com/"/>
-  <updated>2014-06-16T14:31:37+02:00</updated>
+  <updated>2014-07-29T23:41:09+02:00</updated>
   <id>http://www.mandubian.com/</id>
   <author>
     <name><![CDATA[Pascal Voitot]]></name>
@@ -12,6 +12,99 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Shapeless HMonoid for Heterogenous Structures (& others)]]></title>
+    <link href="http://www.mandubian.com/2014/07/29/hmonoid/"/>
+    <updated>2014-07-29T23:23:00+02:00</updated>
+    <id>http://www.mandubian.com/2014/07/29/hmonoid</id>
+    <content type="html"><![CDATA[<blockquote><p>Not an article, just some reflections on this idea&#8230;</p></blockquote>
+
+<p>You know what is a monoid?</p>
+
+<ul>
+<li>a binary operation taking 2 elements and giving another element <code>e x e -&gt; e</code> (aka a <strong>SemiGroup</strong>)</li>
+<li>a Identity <code>id</code> element <code>id . e = e . id = e</code> (also called <strong>zero element</strong>)</li>
+</ul>
+
+
+<p>(and some associativity)</p>
+
+<p>In scalaz, here is the definition:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">trait</span> <span class="nc">Monoid</span><span class="o">[</span><span class="kt">F</span><span class="o">]</span> <span class="nc">extends</span> <span class="nc">Semigroup</span><span class="o">[</span><span class="kt">F</span><span class="o">]</span> <span class="o">{</span> <span class="n">self</span> <span class="k">=&gt;</span>
+</span><span class='line'>  <span class="c1">////</span>
+</span><span class='line'>  <span class="cm">/** The identity element for `append`. */</span>
+</span><span class='line'>  <span class="k">def</span> <span class="n">zero</span><span class="k">:</span> <span class="kt">F</span>
+</span><span class='line'>  <span class="k">def</span> <span class="n">append</span><span class="o">(</span><span class="n">f1</span><span class="k">:</span> <span class="kt">F</span><span class="o">,</span> <span class="n">f2</span><span class="k">:</span> <span class="o">=&gt;</span> <span class="n">F</span><span class="o">)</span><span class="k">:</span> <span class="kt">F</span>
+</span><span class='line'>  <span class="o">...</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>You can see the <code>zero</code> &amp; the <code>SemiGroup.append</code> operations, right?</p>
+
+<p>So you can write a <code>Monoid[Int]</code> or <code>Monoid[List[A]]</code> as those structures are monoids.</p>
+
+<p>Now let&#8217;s consider <code>HList</code> the heterogenous List provided by Miles Sabin&#8217;s fantastic <a href="https://github.com/milessabin/shapeless/wiki/Feature-overview:-shapeless-2.0.0#heterogenous-lists">Shapeless</a>. <code>HList</code> looks like a nice monoid.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="o">(</span><span class="mi">1</span> <span class="o">::</span> <span class="s">&quot;toto&quot;</span> <span class="o">::</span> <span class="nc">HNil</span><span class="o">)</span> <span class="o">++</span> <span class="o">(</span><span class="kc">true</span> <span class="o">::</span> <span class="nc">HNil</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="o">(</span><span class="mi">1</span> <span class="o">::</span> <span class="s">&quot;toto&quot;</span> <span class="o">::</span> <span class="kc">true</span> <span class="o">::</span> <span class="nc">HNil</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>What about writing a monoid for <code>HList</code>?</p>
+
+<p>Scalaz monoid isn&#8217;t very helpful because our monoid operations would look like:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">def</span> <span class="n">zero</span><span class="k">:</span> <span class="kt">HNil.type</span>
+</span><span class='line'>  <span class="k">def</span> <span class="n">append</span><span class="o">(</span><span class="n">f1</span><span class="k">:</span> <span class="kt">H1</span> <span class="k">&lt;:</span> <span class="kt">HList</span><span class="o">,</span> <span class="n">f2</span><span class="k">:</span> <span class="o">=&gt;</span> <span class="n">H2</span> <span class="k">&lt;:</span> <span class="nc">HList</span><span class="o">)</span><span class="k">:</span> <span class="kt">H3</span> <span class="k">&lt;:</span> <span class="kt">HList</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>So, to be able to write a <code>Monoid of HList</code>, we need something else based on multiple different types&#8230;</p>
+
+<p>I spent a few hours having fun on this idea with Shapeless and tried to implement a Monoid for heterogenous structures like <code>HList,</code>Nat<code>,</code>Sized` and even not heterogenous structures.</p>
+
+<p><strong>Here are the working <a href="https://github.com/mandubian/injective/blob/shapeless-ext/src/test/scala/ShapelessSpec.scala#L23">samples</a>.</strong></p>
+
+<p><strong> Here is the <a href="https://github.com/mandubian/injective/blob/shapeless-ext/src/main/scala/ShapelessExt.scala#L35">code</a> based on <em>pseudo-dependent</em> types as shapeless.</strong></p>
+
+<p>The signature of the <code>HMonoid</code> show the <code>zero</code> and the <code>Semigroup</code> as expected:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">trait</span> <span class="nc">HMonoid</span><span class="o">[</span><span class="kt">A</span>, <span class="kt">B</span><span class="o">]</span> <span class="nc">extends</span> <span class="nc">HZero</span> <span class="k">with</span> <span class="nc">HSemiGroup</span><span class="o">[</span><span class="kt">A</span>, <span class="kt">B</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This is just a sandbox to open discussion on this idea so I won&#8217;t explain more and let the curious ones think about it&#8230;</p>
+
+<p>Have Monoids of Fun!</p>
+
+<br/>
+
+
+<br/>
+
+
+<br/>
+
+
+<br/>
+
+
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Summon Daemonad to macro-snoop into monad stacks]]></title>
@@ -9937,172 +10030,6 @@ Suggestions are welcome too</p>
 <p>Meanwhile, be aware and take care ;)</p>
 
 <p>Have <code>Promise[NonFatal]</code>!</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Playing with Play2 SCALA JSON API Stand-alone]]></title>
-    <link href="http://www.mandubian.com/2013/02/21/play-json-stand-alone/"/>
-    <updated>2013-02-21T14:14:00+01:00</updated>
-    <id>http://www.mandubian.com/2013/02/21/play-json-stand-alone</id>
-    <content type="html"><![CDATA[<blockquote><p>Now <em>play-json stand-alone</em> is officially a stand-alone module in Play2.2. So you don&#8217;t have to use the dependency given in this article anymore but use Typesafe one like <em>com.typesafe.play:play-json:2.2</em></p></blockquote>
-
-<br/>
-
-
-<p>In a very recent <a href="https://github.com/playframework/Play20/pull/754">Pull Request</a>, `play-json has been made a stand-alone module in <a href="https://github.com/playframework/Play20">Play2.2-SNAPSHOT master</a> as play-iteratees.</p>
-
-<p>It means:</p>
-
-<ul>
-<li>You can take Play2 Scala Json API as a stand-alone library and keep using Json philosophy promoted by <a href="http://www.playframework.org">Play Framework</a> anywhere.</li>
-<li><code>play-json</code> module is stand-alone in terms of dependencies but is a part &amp; parcel of Play2.2 so it will evolve and follow Play2.x releases (and following versions) always ensuring full compatibility with play ecosystem.</li>
-<li><code>play-json</code> module has 3 ultra lightweight dependencies:
-
-<ul>
-<li> <code>play-functional</code></li>
-<li> <code>play-datacommons</code></li>
-<li> <code>play-iteratees</code></li>
-</ul>
-</li>
-</ul>
-
-
-<p>These are pure Scala generic pieces of code from Play framework so no Netty or whatever dependencies in it.<br/>
-You can then import <code>play-json</code> in your project without any fear of bringing unwanted deps.</p>
-
-<p><code>play-json</code> will be released with future Play2.2 certainly so meanwhile, I provide:</p>
-
-<ul>
-<li>a build published in my <a href="https://github.com/mandubian/mandubian-mvn/">Maven Github repository</a></li>
-<li>a sample project called <a href="https://github.com/mandubian/play-json-alone">play-json-alone</a></li>
-</ul>
-
-
-<br/>
-
-
-<blockquote><p>Even if the version is <em>2.2-SNAPSHOT</em>, be aware that this is the same code as the one released in Play 2.1.0. This API has reached a good stability level. Enhancements and bug corrections will be brought to it but it&#8217;s production-ready right now.</p></blockquote>
-
-<h2>Adding play-json 2.2-SNAPSHOT in your dependencies</h2>
-
-<p>In your <code>Build.scala</code>, add:</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">sbt._</span>
-</span><span class='line'><span class="k">import</span> <span class="nn">Keys._</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">object</span> <span class="nc">ApplicationBuild</span> <span class="k">extends</span> <span class="nc">Build</span> <span class="o">{</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">val</span> <span class="n">mandubianRepo</span> <span class="k">=</span> <span class="nc">Seq</span><span class="o">(</span>
-</span><span class='line'>    <span class="s">&quot;Mandubian repository snapshots&quot;</span> <span class="n">at</span> <span class="s">&quot;https://github.com/mandubian/mandubian-mvn/raw/master/snapshots/&quot;</span><span class="o">,</span>
-</span><span class='line'>    <span class="s">&quot;Mandubian repository releases&quot;</span> <span class="n">at</span> <span class="s">&quot;https://github.com/mandubian/mandubian-mvn/raw/master/releases/&quot;</span>
-</span><span class='line'>  <span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">lazy</span> <span class="k">val</span> <span class="n">playJsonAlone</span> <span class="k">=</span> <span class="nc">Project</span><span class="o">(</span>
-</span><span class='line'>    <span class="nc">BuildSettings</span><span class="o">.</span><span class="n">buildName</span><span class="o">,</span> <span class="n">file</span><span class="o">(</span><span class="s">&quot;.&quot;</span><span class="o">),</span>
-</span><span class='line'>    <span class="n">settings</span> <span class="k">=</span> <span class="nc">BuildSettings</span><span class="o">.</span><span class="n">buildSettings</span> <span class="o">++</span> <span class="nc">Seq</span><span class="o">(</span>
-</span><span class='line'>      <span class="n">resolvers</span> <span class="o">++=</span> <span class="n">mandubianRepo</span><span class="o">,</span>
-</span><span class='line'>      <span class="n">libraryDependencies</span> <span class="o">++=</span> <span class="nc">Seq</span><span class="o">(</span>
-</span><span class='line'>        <span class="s">&quot;play&quot;</span>        <span class="o">%%</span> <span class="s">&quot;play-json&quot;</span> <span class="o">%</span> <span class="s">&quot;2.2-SNAPSHOT&quot;</span><span class="o">,</span>
-</span><span class='line'>        <span class="s">&quot;org.specs2&quot;</span>  <span class="o">%%</span> <span class="s">&quot;specs2&quot;</span> <span class="o">%</span> <span class="s">&quot;1.13&quot;</span> <span class="o">%</span> <span class="s">&quot;test&quot;</span><span class="o">,</span>
-</span><span class='line'>        <span class="s">&quot;junit&quot;</span>        <span class="o">%</span> <span class="s">&quot;junit&quot;</span> <span class="o">%</span> <span class="s">&quot;4.8&quot;</span> <span class="o">%</span> <span class="s">&quot;test&quot;</span>
-</span><span class='line'>      <span class="o">)</span>
-</span><span class='line'>    <span class="o">)</span>
-</span><span class='line'>  <span class="o">)</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>Using play-json 2.2-SNAPSHOT in your code:</h2>
-
-<p>Just import the following and get everything from Play2.1 Json API:</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json._</span>
-</span><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.functional._</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">EucalyptusTree</span><span class="o">(</span><span class="n">col</span><span class="k">:</span><span class="kt">Int</span><span class="o">,</span> <span class="n">row</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">object</span> <span class="nc">EucalyptusTree</span><span class="o">{</span>
-</span><span class='line'>  <span class="k">implicit</span> <span class="k">val</span> <span class="n">fmt</span> <span class="k">=</span> <span class="nc">Json</span><span class="o">.</span><span class="n">format</span><span class="o">[</span><span class="kt">EucalyptusTree</span><span class="o">]</span>
-</span><span class='line'><span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">Koala</span><span class="o">(</span><span class="n">name</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">home</span><span class="k">:</span> <span class="kt">EucalyptusTree</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">object</span> <span class="nc">Koala</span><span class="o">{</span>
-</span><span class='line'>  <span class="k">implicit</span> <span class="k">val</span> <span class="n">fmt</span> <span class="k">=</span> <span class="nc">Json</span><span class="o">.</span><span class="n">format</span><span class="o">[</span><span class="kt">Koala</span><span class="o">]</span>
-</span><span class='line'><span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">val</span> <span class="n">kaylee</span> <span class="k">=</span> <span class="nc">Koala</span><span class="o">(</span><span class="s">&quot;kaylee&quot;</span><span class="o">,</span> <span class="nc">EucalyptusTree</span><span class="o">(</span><span class="mi">10</span><span class="o">,</span> <span class="mi">23</span><span class="o">))</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">println</span><span class="o">(</span><span class="nc">Json</span><span class="o">.</span><span class="n">prettyPrint</span><span class="o">(</span><span class="nc">Json</span><span class="o">.</span><span class="n">toJson</span><span class="o">(</span><span class="n">kaylee</span><span class="o">)))</span>
-</span><span class='line'>
-</span><span class='line'><span class="nc">Json</span><span class="o">.</span><span class="n">fromJson</span><span class="o">[</span><span class="kt">Koala</span><span class="o">](</span>
-</span><span class='line'>  <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span>
-</span><span class='line'>    <span class="s">&quot;name&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;kaylee&quot;</span><span class="o">,</span>
-</span><span class='line'>    <span class="s">&quot;home&quot;</span> <span class="o">-&gt;</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span>
-</span><span class='line'>      <span class="s">&quot;col&quot;</span> <span class="o">-&gt;</span> <span class="mi">10</span><span class="o">,</span>
-</span><span class='line'>      <span class="s">&quot;row&quot;</span> <span class="o">-&gt;</span> <span class="mi">23</span>
-</span><span class='line'>    <span class="o">)</span>
-</span><span class='line'><span class="o">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<blockquote><p>Using <code>play-json</code>, you can get some bits of <a href="http://www.playframework.org">Play Framework</a> pure Web philosophy.<br/>
-Naturally, to unleash its full power, don&#8217;t hesitate to dive into <a href="http://www.playframework.org">Play Framework</a> and discover 100% full Web Reactive Stack ;)</p></blockquote>
-
-<p>Thanks a lot to Play Framework team for promoting play-json as stand-alone module!<br/>
-Lots of interesting features incoming soon ;)</p>
-
-<p>Have fun!</p>
 ]]></content>
   </entry>
   

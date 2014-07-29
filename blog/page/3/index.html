@@ -9,7 +9,23 @@
   <meta name="author" content="Pascal Voitot">
 
   
-  <meta name="description" content="Datomisca Delicatessen - the Scala Reactive Cherry on the Datomic Cake of Facts &hellip;">
+  <meta name="description" content="Playing With Play2 SCALA JSON API Stand-alone
+    
+    
+      
+        
+
+
+
+
+
+
+
+
+  
+
+
+Feb 21st, 2013 &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -110,6 +126,201 @@
     <div class="row-fluid">
       <div class="span9">
   
+  
+  
+    <article>
+      
+  <header class="page-header">
+    
+      <h1 class="entry-title"><a href="/2013/02/21/play-json-stand-alone/">Playing With Play2 SCALA JSON API Stand-alone</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-02-21T14:14:00+01:00" pubdate data-updated="true">Feb 21<span>st</span>, 2013</time>
+        
+         | <a href="/2013/02/21/play-json-stand-alone/#disqus_thread">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><blockquote><p>Now <em>play-json stand-alone</em> is officially a stand-alone module in Play2.2. So you don&#8217;t have to use the dependency given in this article anymore but use Typesafe one like <em>com.typesafe.play:play-json:2.2</em></p></blockquote>
+
+<br/>
+
+
+<p>In a very recent <a href="https://github.com/playframework/Play20/pull/754">Pull Request</a>, `play-json has been made a stand-alone module in <a href="https://github.com/playframework/Play20">Play2.2-SNAPSHOT master</a> as play-iteratees.</p>
+
+<p>It means:</p>
+
+<ul>
+<li>You can take Play2 Scala Json API as a stand-alone library and keep using Json philosophy promoted by <a href="http://www.playframework.org">Play Framework</a> anywhere.</li>
+<li><code>play-json</code> module is stand-alone in terms of dependencies but is a part &amp; parcel of Play2.2 so it will evolve and follow Play2.x releases (and following versions) always ensuring full compatibility with play ecosystem.</li>
+<li><code>play-json</code> module has 3 ultra lightweight dependencies:
+
+<ul>
+<li> <code>play-functional</code></li>
+<li> <code>play-datacommons</code></li>
+<li> <code>play-iteratees</code></li>
+</ul>
+</li>
+</ul>
+
+
+<p>These are pure Scala generic pieces of code from Play framework so no Netty or whatever dependencies in it.<br/>
+You can then import <code>play-json</code> in your project without any fear of bringing unwanted deps.</p>
+
+<p><code>play-json</code> will be released with future Play2.2 certainly so meanwhile, I provide:</p>
+
+<ul>
+<li>a build published in my <a href="https://github.com/mandubian/mandubian-mvn/">Maven Github repository</a></li>
+<li>a sample project called <a href="https://github.com/mandubian/play-json-alone">play-json-alone</a></li>
+</ul>
+
+
+<br/>
+
+
+<blockquote><p>Even if the version is <em>2.2-SNAPSHOT</em>, be aware that this is the same code as the one released in Play 2.1.0. This API has reached a good stability level. Enhancements and bug corrections will be brought to it but it&#8217;s production-ready right now.</p></blockquote>
+
+<h2>Adding play-json 2.2-SNAPSHOT in your dependencies</h2>
+
+<p>In your <code>Build.scala</code>, add:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">sbt._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">Keys._</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">object</span> <span class="nc">ApplicationBuild</span> <span class="k">extends</span> <span class="nc">Build</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">val</span> <span class="n">mandubianRepo</span> <span class="k">=</span> <span class="nc">Seq</span><span class="o">(</span>
+</span><span class='line'>    <span class="s">&quot;Mandubian repository snapshots&quot;</span> <span class="n">at</span> <span class="s">&quot;https://github.com/mandubian/mandubian-mvn/raw/master/snapshots/&quot;</span><span class="o">,</span>
+</span><span class='line'>    <span class="s">&quot;Mandubian repository releases&quot;</span> <span class="n">at</span> <span class="s">&quot;https://github.com/mandubian/mandubian-mvn/raw/master/releases/&quot;</span>
+</span><span class='line'>  <span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">lazy</span> <span class="k">val</span> <span class="n">playJsonAlone</span> <span class="k">=</span> <span class="nc">Project</span><span class="o">(</span>
+</span><span class='line'>    <span class="nc">BuildSettings</span><span class="o">.</span><span class="n">buildName</span><span class="o">,</span> <span class="n">file</span><span class="o">(</span><span class="s">&quot;.&quot;</span><span class="o">),</span>
+</span><span class='line'>    <span class="n">settings</span> <span class="k">=</span> <span class="nc">BuildSettings</span><span class="o">.</span><span class="n">buildSettings</span> <span class="o">++</span> <span class="nc">Seq</span><span class="o">(</span>
+</span><span class='line'>      <span class="n">resolvers</span> <span class="o">++=</span> <span class="n">mandubianRepo</span><span class="o">,</span>
+</span><span class='line'>      <span class="n">libraryDependencies</span> <span class="o">++=</span> <span class="nc">Seq</span><span class="o">(</span>
+</span><span class='line'>        <span class="s">&quot;play&quot;</span>        <span class="o">%%</span> <span class="s">&quot;play-json&quot;</span> <span class="o">%</span> <span class="s">&quot;2.2-SNAPSHOT&quot;</span><span class="o">,</span>
+</span><span class='line'>        <span class="s">&quot;org.specs2&quot;</span>  <span class="o">%%</span> <span class="s">&quot;specs2&quot;</span> <span class="o">%</span> <span class="s">&quot;1.13&quot;</span> <span class="o">%</span> <span class="s">&quot;test&quot;</span><span class="o">,</span>
+</span><span class='line'>        <span class="s">&quot;junit&quot;</span>        <span class="o">%</span> <span class="s">&quot;junit&quot;</span> <span class="o">%</span> <span class="s">&quot;4.8&quot;</span> <span class="o">%</span> <span class="s">&quot;test&quot;</span>
+</span><span class='line'>      <span class="o">)</span>
+</span><span class='line'>    <span class="o">)</span>
+</span><span class='line'>  <span class="o">)</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>Using play-json 2.2-SNAPSHOT in your code:</h2>
+
+<p>Just import the following and get everything from Play2.1 Json API:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.functional._</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">EucalyptusTree</span><span class="o">(</span><span class="n">col</span><span class="k">:</span><span class="kt">Int</span><span class="o">,</span> <span class="n">row</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">object</span> <span class="nc">EucalyptusTree</span><span class="o">{</span>
+</span><span class='line'>  <span class="k">implicit</span> <span class="k">val</span> <span class="n">fmt</span> <span class="k">=</span> <span class="nc">Json</span><span class="o">.</span><span class="n">format</span><span class="o">[</span><span class="kt">EucalyptusTree</span><span class="o">]</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">Koala</span><span class="o">(</span><span class="n">name</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">home</span><span class="k">:</span> <span class="kt">EucalyptusTree</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">object</span> <span class="nc">Koala</span><span class="o">{</span>
+</span><span class='line'>  <span class="k">implicit</span> <span class="k">val</span> <span class="n">fmt</span> <span class="k">=</span> <span class="nc">Json</span><span class="o">.</span><span class="n">format</span><span class="o">[</span><span class="kt">Koala</span><span class="o">]</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">kaylee</span> <span class="k">=</span> <span class="nc">Koala</span><span class="o">(</span><span class="s">&quot;kaylee&quot;</span><span class="o">,</span> <span class="nc">EucalyptusTree</span><span class="o">(</span><span class="mi">10</span><span class="o">,</span> <span class="mi">23</span><span class="o">))</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">println</span><span class="o">(</span><span class="nc">Json</span><span class="o">.</span><span class="n">prettyPrint</span><span class="o">(</span><span class="nc">Json</span><span class="o">.</span><span class="n">toJson</span><span class="o">(</span><span class="n">kaylee</span><span class="o">)))</span>
+</span><span class='line'>
+</span><span class='line'><span class="nc">Json</span><span class="o">.</span><span class="n">fromJson</span><span class="o">[</span><span class="kt">Koala</span><span class="o">](</span>
+</span><span class='line'>  <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span>
+</span><span class='line'>    <span class="s">&quot;name&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;kaylee&quot;</span><span class="o">,</span>
+</span><span class='line'>    <span class="s">&quot;home&quot;</span> <span class="o">-&gt;</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span>
+</span><span class='line'>      <span class="s">&quot;col&quot;</span> <span class="o">-&gt;</span> <span class="mi">10</span><span class="o">,</span>
+</span><span class='line'>      <span class="s">&quot;row&quot;</span> <span class="o">-&gt;</span> <span class="mi">23</span>
+</span><span class='line'>    <span class="o">)</span>
+</span><span class='line'><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>Using <code>play-json</code>, you can get some bits of <a href="http://www.playframework.org">Play Framework</a> pure Web philosophy.<br/>
+Naturally, to unleash its full power, don&#8217;t hesitate to dive into <a href="http://www.playframework.org">Play Framework</a> and discover 100% full Web Reactive Stack ;)</p></blockquote>
+
+<p>Thanks a lot to Play Framework team for promoting play-json as stand-alone module!<br/>
+Lots of interesting features incoming soon ;)</p>
+
+<p>Have fun!</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -7722,281 +7933,9 @@ I&#8217;ll try to write an article about those operators to demystify them. With
 
     </article>
   
-  
-    <article>
-      
-  <header class="page-header">
-    
-      <h1 class="entry-title"><a href="/2012/07/14/xmlsoap-ersatz/">Xmlsoap-ersatz</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2012-07-14T00:59:00+02:00" pubdate data-updated="true">Jul 14<span>th</span>, 2012</time>
-        
-         | <a href="/2012/07/14/xmlsoap-ersatz/#disqus_thread">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><h1>XML/SOAP to/from scala structures with <em>xmlsoap-ersatz</em></h1>
-
-<blockquote><p><a href="https://github.com/mandubian/scala-xmlsoap-ersatz">xmlsoap-ersatz</a> is a toolset to help people serialize/deserialize XML/SOAP with Scala. It doesn&#8217;t try to respect any standard but it allows to interprete and generate any XML format with any standard you require.</p></blockquote>
-
-<p>It was developed to be used with <a href="http://www.playframework.org">Play2/Scala</a> but it can work standalone as it doesn&#8217;t depend on any other library.</p>
-
-<p>xmlsoap-ersatz uses the same design as Play2 Json serialization/deserialization based on <strong>implicit typeclasses</strong>. This mechanism is very clean, robust and generic. Please note that implicits are NOT used as implicit CONVERSIONS which are often tricky and sometimes dangerous!</p>
-
-<p><em>xmlsoap-ersatz is still draft library so if you discover anything wrong, don&#8217;t hesitate to tell it</em></p>
-
-<blockquote><p>xmlsoap-ersatz is an <a href="https://github.com/mandubian/scala-xmlsoap-ersatz">opensource public github</a> so don&#8217;t hesitate to contribute and give ideas :)</p>
-
-<p>Full doc is in <a href="https://github.com/mandubian/scala-xmlsoap-ersatz/wiki">Github Wiki</a></p></blockquote>
-
-<br/>
-
-
-<h1>XML Scala serialization/deserialization</h1>
-
-<h3>Imagine you want to map this XML to a case class</h3>
-
-<pre><code>val fooXml = &lt;foo&gt;
-    &lt;id&gt;1234&lt;/id&gt;
-    &lt;name&gt;brutus&lt;/name&gt;
-    &lt;age&gt;23&lt;/age&gt;
-&lt;/foo&gt;
-</code></pre>
-
-<br/>
-
-
-<h3>You want to map it to:</h3>
-
-<pre><code>case class Foo(id: Long, name: String, age: Option[Int])
-Foo(id=1234L, name="brutus", age=Some(23))
-</code></pre>
-
-<ul>
-<li>case class is a sample but the mechanism also works with any structure in Scala such as tuples</li>
-<li><code>age</code> field is <code>Option[Int]</code> meaning it might not appear in the XML (<code>None</code> in this case)</li>
-</ul>
-
-
-<br/>
-
-
-<h3>So how would you write that with <em>xmlsoap ersatz</em>?</h3>
-
-<pre><code>import play2.tools.xml._
-import play2.tools.xml.DefaultImplicits._
-[...]
-val foo = EXML.fromXML[Foo](fooXml)
-assert(foo == Foo(1234L, "brutus", Some(23)))
-
-val fooXml2 = EXML.toXML(foo)
-assert(fooXml2 == fooXml)
-</code></pre>
-
-<p>As you may imagine, this is not so simple as <code>fromXML</code>/<code>toXML</code> signatures are the following:</p>
-
-<pre><code>object EXML {
-    def toXML[T](t: T, base: xml.NodeSeq = xml.NodeSeq.Empty)(implicit w: XMLWriter[T]): xml.NodeSeq
-    def fromXML[T](x: xml.NodeSeq)(implicit r: XMLReader[T]): Option[T] 
-}
-</code></pre>
-
-<p>You can see the <strong>implicit typeclasses <code>XMLReader</code>/<code>XMLWriter</code></strong> which define the mapper to/from XML to your case class.
-So in order <code>EXML.fromXML</code>/<code>EXML.toXML</code> to work properly, you should define an implicit XML reader/writer for your specific structure in your scope.
-It can be done at once by extending <code>XMLFormatter[T]</code>:</p>
-
-<pre><code>trait XMLFormatter[T] extends XMLReader[T] with XMLWriter[T] {
-    def read(x: xml.NodeSeq): Option[T]
-    def write(f: T, base: xml.NodeSeq): xml.NodeSeq
-}
-</code></pre>
-
-<br/>
-
-
-<h3>Defining the implicit  for your case class</h3>
-
-<pre><code>implicit object FooXMLF extends XMLFormatter[Foo] {
-  def read(x: xml.NodeSeq): Option[Foo] = {
-    for( 
-      id &lt;- EXML.fromXML[Long](x \ "id");
-      name &lt;- EXML.fromXML[String](x \ "name");
-      age &lt;- EXML.fromXML[Option[Int]](x \ "age")
-    ) yield(Foo(id, name, age))
-  }
-
-  def write(f: Foo, base: xml.NodeSeq): xml.NodeSeq = {
-    &lt;foo&gt;
-      &lt;id&gt;{ f.id }&lt;/id&gt;
-      &lt;name&gt;{ f.name }&lt;/name&gt;
-      { EXML.toXML(f.age, &lt;age/&gt;) }
-    &lt;/foo&gt;
-  }
-}
-</code></pre>
-
-<p>You may think this is a bit tedious to write but this is quite easy after a few tries and the most important:</p>
-
-<blockquote><p>This mechanism provides a very precise and simple control on what you want to do.</p></blockquote>
-
-<p>Please note:</p>
-
-<ul>
-<li>the <code>write</code> function uses Scala XML literals simply.</li>
-<li>the <code>implicit</code> is important: you can declare it once in your scope and that&#8217;s all.</li>
-<li><p>the <code>age</code> field in <code>write</code> requires a special syntax:</p>
-
-<p>  <code>{ EXML.toXML(f.age, &lt;age/&gt;) }</code> means: <code>&lt;age/&gt;</code> is used as the base node and will generate following XML:</p>
-
-<ul>
-<li>if age is <code>Some(23)</code>: <code>&lt;age&gt;23&lt;/age&gt;</code></li>
-<li>if age is <code>None</code>: <code>&lt;age xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:nil="true" /&gt;</code> (<em>standards defines this but you can redefine it as you want</em>)</li>
-</ul>
-</li>
-<li><p>the <code>base</code> field in <code>write</code> function can be used to pass a parent context node to the writer. It is helpful in case you need to add attributes to parent node for ex as in the case of <code>age: Option[Int]</code> field.</p>
-
-<blockquote><p>But don&#8217;t forget that Scala XML nodes are immutable and that you can just copy the nodes you pass to a function.</p></blockquote></li>
-<li><p>the <em>for-comprehension</em> is just a shortcut but you could write it using flatMap/map also:</p></li>
-</ul>
-
-
-<p>For ex:</p>
-
-<pre><code>def read(x: xml.NodeSeq): Option[Foo] = {
-  EXML.fromXML[Long](x \ "id").flatMap{ id =&gt;
-    EXML.fromXML[String](x \ "name").flatMap { name =&gt;
-      EXML.fromXML[Int](x \ "age").map{ age =&gt;
-        Foo(id, name, age)
-      }
-    }
-  }
-}
-</code></pre>
-
-<br/>
-
-
-<h3>The complete code</h3>
-
-<pre><code>import play2.tools.xml._
-import play2.tools.xml.DefaultImplicits._
-
-implicit object FooXMLF extends XMLFormatter[Foo] {
-  def read(x: xml.NodeSeq): Option[Foo] = {
-    for( 
-      id &lt;- EXML.fromXML[Long](x \ "id");
-      name &lt;- EXML.fromXML[String](x \ "name");
-      age &lt;- EXML.fromXML[Option[Int]](x \ "age");
-    ) yield(Foo(id, name, age))
-  }
-
-  def write(f: Foo, base: xml.NodeSeq): xml.NodeSeq = {
-    &lt;foo&gt;
-      &lt;id&gt;{ f.id }&lt;/id&gt;
-      &lt;name&gt;{ f.name }&lt;/name&gt;
-      { EXML.toXML(f.age, &lt;age/&gt;) }
-    &lt;/foo&gt;
-  }
-}
-
-val foo = EXML.fromXML[Foo](fooXml)
-assert(foo == Foo(1234L, "albert", 23)
-
-val fooXml = EXML.toXML(foo)
-assert(fooXml == fooXml)
-</code></pre>
-
-<h1>Integrate with Play2/Scala</h1>
-
-<h2>Add xmlsoap-ersatz to your configuration (ersatz is deployed as a maven repo on github)</h2>
-
-<pre><code>object ApplicationBuild extends Build {
-
-  val appName         = "play2-xmlsoap"
-  val appVersion      = "1.0-SNAPSHOT"
-
-  val appDependencies = Seq(
-    "play2.tools.xml" %% "xmlsoap-ersatz" % "0.1-SNAPSHOT"
-  )  
-
-  val main = PlayProject(appName, appVersion, appDependencies, mainLang = SCALA).settings(
-    resolvers += ("mandubian-mvn snapshots" at "https://github.com/mandubian/mandubian-mvn/raw/master/snapshots")
-  )
-}
-</code></pre>
-
-<h2>Use xmlsoap-ersatz in your controller</h2>
-
-<pre><code>package controllers
-
-import play.api._
-import play.api.mvc._
-import play2.tools.xml._
-import play2.tools.xml.DefaultImplicits._
-
-object Application extends Controller {
-   case class Foo(id: Long, name: String, age: Option[Int])
-
-   implicit object FooXMLF extends XMLFormatter[Foo] {
-      def read(x: xml.NodeSeq): Option[Foo] = {
-      for( 
-          id &lt;- EXML.fromXML[Long](x \ "id");
-          name &lt;- EXML.fromXML[String](x \ "name");
-          age &lt;- EXML.fromXML[Option[Int]](x \ "age")
-        ) yield(Foo(id, name, age))
-      }
-
-      def write(f: Foo, base: xml.NodeSeq): xml.NodeSeq = {
-        &lt;foo&gt;
-          &lt;id&gt;{ f.id }&lt;/id&gt;
-          &lt;name&gt;{ f.name }&lt;/name&gt;
-          { EXML.toXML(f.age, &lt;age/&gt;) }
-        &lt;/foo&gt;
-     }
-  }  
-
-  def foo = Action(parse.xml) { request =&gt;
-    EXML.fromXML[Foo](request.body).map { foo =&gt;
-      Ok(EXML.toXML(foo))
-    }.getOrElse{
-      BadRequest("Expecting Foo XML data")
-    }
-  }
-
-}
-</code></pre>
-
-<h2>Finally the route in <code>conf/routes</code></h2>
-
-<pre><code>POST    /foo    controllers.Application.foo
-</code></pre>
-
-<p>Have fun and don&#8217;t hesitate to contribute</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <ul class="pager">
+    
+    <li class="previous"><a href="/blog/page/4/">&larr; Older</a></li>
     
     <li><a href="/blog/archives">Blog Archives</a></li>
     
@@ -8009,6 +7948,10 @@ object Application extends Controller {
     <section class="well">
   <ul id="recent_posts" class="nav nav-list">
     <li class="nav-header">Recent Posts</li>
+    
+      <li class="post">
+        <a href="/2014/07/29/hmonoid/">Shapeless HMonoid for Heterogenous Structures (& others)</a>
+      </li>
     
       <li class="post">
         <a href="/2014/06/11/daemonad/">Summon Daemonad to macro-snoop into monad stacks</a>
@@ -8024,10 +7967,6 @@ object Application extends Controller {
     
       <li class="post">
         <a href="/2014/03/08/zpark-ml-nio-1/">ZPark-Ztream II (Part 1/3): Fancy Spark Streamed Machine-Learning & new Scalaz-Stream NIO API</a>
-      </li>
-    
-      <li class="post">
-        <a href="/2014/02/13/zpark/">ZPark-Ztream: Driving Spark distributed stream with Scalaz-Stream</a>
       </li>
     
   </ul>

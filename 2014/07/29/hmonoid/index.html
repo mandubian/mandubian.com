@@ -1,0 +1,427 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Shapeless HMonoid for Heterogenous Structures (& others) - Mandubian Blog</title>
+  <meta name="author" content="Pascal Voitot">
+
+  
+  <meta name="description" content="Shapeless HMonoid for Heterogenous Structures (& Others)
+    
+    
+      
+        
+
+
+
+
+
+
+
+
+  
+
+
+Jul 29th, 2014 &hellip;">
+  <meta name="keywords" content="scala,shapeless,monoid">
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://www.mandubian.com/2014/07/29/hmonoid">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/bootstrap/bootstrap.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/stylesheets/bootstrap/responsive.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/stylesheets/syntax/syntax.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/stylesheets/d3d.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <style type="text/css">
+    body {
+      padding-bottom: 40px;
+    }
+    h1 {
+      margin-bottom: 15px;
+    }
+    img {
+      max-width: 100%;
+    }
+    .sharing, .meta, .pager {
+      margin: 20px 0px 20px 0px;
+    }
+    .page-footer p {
+      text-align: center;
+    }
+
+    article {
+      margin-bottom: 50px;
+      border-top: #DDD solid 20px;
+    }
+ 
+  </style>
+  <script src="/javascripts/libs/jquery.js"></script>
+  <script src="/javascripts/libs/modernizr-2.0.js"></script>
+  <script src="/javascripts/libs/bootstrap.js"></script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <link href="/atom.xml" rel="alternate" title="Mandubian Blog" type="application/atom+xml">
+  
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-10417377-11']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   >
+  <nav role="navigation"><div class="navbar">
+  <div class="navbar-inner">
+    <div class="container">
+      <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </a>
+
+      <a class="brand" href="/">Mandubian Blog</a>
+
+      <div class="nav-collapse">
+        <ul class="nav">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+
+        <ul class="nav pull-right" data-subscription="rss">
+          <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+          
+        </ul>
+
+        
+          <form class="pull-right navbar-search" action="http://google.com/search" method="get">
+            <fieldset role="search">
+              <input type="hidden" name="q" value="site:www.mandubian.com" />
+              <input class="search-query" type="text" name="q" results="0" placeholder="Search"/>
+            </fieldset>
+          </form>
+        
+      </div>
+    </div>
+  </div>
+</div>
+</nav>
+  <div class="container">
+    <div class="row-fluid">
+      
+<article class="hentry span9" role="article">
+
+  
+  <header class="page-header">
+    
+      <h1 class="entry-title">Shapeless HMonoid for Heterogenous Structures (& Others)</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-07-29T23:23:00+02:00" pubdate data-updated="true">Jul 29<span>th</span>, 2014</time>
+        
+         | <a href="#disqus_thread">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><blockquote><p>Not an article, just some reflections on this idea&#8230;</p></blockquote>
+
+<p>You know what is a monoid?</p>
+
+<ul>
+<li>a binary operation taking 2 elements and giving another element <code>e x e -&gt; e</code> (aka a <strong>SemiGroup</strong>)</li>
+<li>a Identity <code>id</code> element <code>id . e = e . id = e</code> (also called <strong>zero element</strong>)</li>
+</ul>
+
+
+<p>(and some associativity)</p>
+
+<p>In scalaz, here is the definition:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">trait</span> <span class="nc">Monoid</span><span class="o">[</span><span class="kt">F</span><span class="o">]</span> <span class="nc">extends</span> <span class="nc">Semigroup</span><span class="o">[</span><span class="kt">F</span><span class="o">]</span> <span class="o">{</span> <span class="n">self</span> <span class="k">=&gt;</span>
+</span><span class='line'>  <span class="c1">////</span>
+</span><span class='line'>  <span class="cm">/** The identity element for `append`. */</span>
+</span><span class='line'>  <span class="k">def</span> <span class="n">zero</span><span class="k">:</span> <span class="kt">F</span>
+</span><span class='line'>  <span class="k">def</span> <span class="n">append</span><span class="o">(</span><span class="n">f1</span><span class="k">:</span> <span class="kt">F</span><span class="o">,</span> <span class="n">f2</span><span class="k">:</span> <span class="o">=&gt;</span> <span class="n">F</span><span class="o">)</span><span class="k">:</span> <span class="kt">F</span>
+</span><span class='line'>  <span class="o">...</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>You can see the <code>zero</code> &amp; the <code>SemiGroup.append</code> operations, right?</p>
+
+<p>So you can write a <code>Monoid[Int]</code> or <code>Monoid[List[A]]</code> as those structures are monoids.</p>
+
+<p>Now let&#8217;s consider <code>HList</code> the heterogenous List provided by Miles Sabin&#8217;s fantastic <a href="https://github.com/milessabin/shapeless/wiki/Feature-overview:-shapeless-2.0.0#heterogenous-lists">Shapeless</a>. <code>HList</code> looks like a nice monoid.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="o">(</span><span class="mi">1</span> <span class="o">::</span> <span class="s">&quot;toto&quot;</span> <span class="o">::</span> <span class="nc">HNil</span><span class="o">)</span> <span class="o">++</span> <span class="o">(</span><span class="kc">true</span> <span class="o">::</span> <span class="nc">HNil</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="o">(</span><span class="mi">1</span> <span class="o">::</span> <span class="s">&quot;toto&quot;</span> <span class="o">::</span> <span class="kc">true</span> <span class="o">::</span> <span class="nc">HNil</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>What about writing a monoid for <code>HList</code>?</p>
+
+<p>Scalaz monoid isn&#8217;t very helpful because our monoid operations would look like:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">def</span> <span class="n">zero</span><span class="k">:</span> <span class="kt">HNil.type</span>
+</span><span class='line'>  <span class="k">def</span> <span class="n">append</span><span class="o">(</span><span class="n">f1</span><span class="k">:</span> <span class="kt">H1</span> <span class="k">&lt;:</span> <span class="kt">HList</span><span class="o">,</span> <span class="n">f2</span><span class="k">:</span> <span class="o">=&gt;</span> <span class="n">H2</span> <span class="k">&lt;:</span> <span class="nc">HList</span><span class="o">)</span><span class="k">:</span> <span class="kt">H3</span> <span class="k">&lt;:</span> <span class="kt">HList</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>So, to be able to write a <code>Monoid of HList</code>, we need something else based on multiple different types&#8230;</p>
+
+<p>I spent a few hours having fun on this idea with Shapeless and tried to implement a Monoid for heterogenous structures like <code>HList,</code>Nat<code>,</code>Sized` and even not heterogenous structures.</p>
+
+<p><strong>Here are the working <a href="https://github.com/mandubian/injective/blob/shapeless-ext/src/test/scala/ShapelessSpec.scala#L23">samples</a>.</strong></p>
+
+<p><strong> Here is the <a href="https://github.com/mandubian/injective/blob/shapeless-ext/src/main/scala/ShapelessExt.scala#L35">code</a> based on <em>pseudo-dependent</em> types as shapeless.</strong></p>
+
+<p>The signature of the <code>HMonoid</code> show the <code>zero</code> and the <code>Semigroup</code> as expected:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">trait</span> <span class="nc">HMonoid</span><span class="o">[</span><span class="kt">A</span>, <span class="kt">B</span><span class="o">]</span> <span class="nc">extends</span> <span class="nc">HZero</span> <span class="k">with</span> <span class="nc">HSemiGroup</span><span class="o">[</span><span class="kt">A</span>, <span class="kt">B</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This is just a sandbox to open discussion on this idea so I won&#8217;t explain more and let the curious ones think about it&#8230;</p>
+
+<p>Have Monoids of Fun!</p>
+
+<br/>
+
+
+<br/>
+
+
+<br/>
+
+
+<br/>
+
+
+
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Pascal Voitot</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-07-29T23:23:00+02:00" pubdate data-updated="true">Jul 29<span>th</span>, 2014</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/monoid/'>monoid</a>, <a class='category' href='/blog/categories/scala/'>scala</a>, <a class='category' href='/blog/categories/shapeless/'>shapeless</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://www.mandubian.com/2014/07/29/hmonoid/" data-via="mandubian" data-counturl="http://www.mandubian.com/2014/07/29/hmonoid/" >Tweet</a>
+  
+  
+  <div class="g-plusone" data-size="medium"></div>
+  
+  
+</div>
+
+    
+    
+    <section>
+      <h1>Comments</h1>
+      <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+    </section>
+    
+    <ul class="pager">
+      
+      <li class="previous"><a class="basic-alignment left"
+        href="/2014/06/11/daemonad/" title="Previous Post:
+        Summon Daemonad to macro-snoop into monad stacks">&laquo; Summon Daemonad to macro-snoop into monad stacks</a></li>
+      
+      <li><a href="/blog/archives">Blog Archives</a></li>
+      
+    </ul>
+  </footer>
+</article>
+
+<aside class="sidebar-nav span3">
+  
+    <section class="well">
+  <ul id="recent_posts" class="nav nav-list">
+    <li class="nav-header">Recent Posts</li>
+    
+      <li class="post">
+        <a href="/2014/07/29/hmonoid/">Shapeless HMonoid for Heterogenous Structures (& others)</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014/06/11/daemonad/">Summon Daemonad to macro-snoop into monad stacks</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014/03/10/zpark-ml-nio-3/">ZPark-Ztream II (Part 3/3): Fancy Spark Streamed Machine-Learning & new Scalaz-Stream NIO API</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014/03/09/zpark-ml-nio-2/">ZPark-Ztream II (Part 2/3): Fancy Spark Streamed Machine-Learning & new Scalaz-Stream NIO API</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014/03/08/zpark-ml-nio-1/">ZPark-Ztream II (Part 1/3): Fancy Spark Streamed Machine-Learning & new Scalaz-Stream NIO API</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+<section class="well">
+  <ul id="gh_repos" data-user="mandubian" data-count="5" data-skip="true" class="nav">
+	<li class="nav-header">On GitHub</li>
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+  <a class="github-follow" href="https://github.com/mandubian">Follow @mandubian</a>
+  
+</section>
+
+
+
+<section class="well">
+  <ul id="tweets" class="nav" data-user="mandubian" data-count="4" data-replies="false">
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+    <a href="http://twitter.com/mandubian" class="twitter-follow-button" data-show-count="false">Follow @mandubian</a>
+  
+</section>
+
+
+
+
+
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo" class="page-footer"><hr>
+<p>
+  Copyright &copy; 2014 - Pascal Voitot -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'mandubian';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://www.mandubian.com/2014/07/29/hmonoid/';
+        var disqus_url = 'http://www.mandubian.com/2014/07/29/hmonoid/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+  <script type="text/javascript">
+    (function() {
+      var script = document.createElement('script'); script.type = 'text/javascript'; script.async = true;
+      script.src = 'https://apis.google.com/js/plusone.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(script, s);
+    })();
+  </script>
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = 'http://platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>
