@@ -1,0 +1,94 @@
+---
+layout: post
+title: "Shapeless HFunctor for Heterogenous Structures (& others)"
+date: 2014-07-30 08:08
+comments: true
+external-url:
+categories: [scala,shapeless,functor]
+keywords: scala,shapeless,functor
+---
+
+> Not an article, just some reflections on this idea...
+
+You know what is a functor?
+
+- 2 categories `C` & `D`, simplifying a category as:
+    * a set of objects with some arrows/morphisms/functions between objects: `f: x -> y`
+    * those morphisms are associative `h . (g . f) = (h . g) .f` where `.` is the composition `(g . f)(x) = g(f(x))`)
+    * for each object there is an identity morphism `id(x) = x -> x`
+
+- a functor `F` associates :
+    * each object `x` of `C` with an object of `F(x)` of `D`.
+    * each morphism `f: x -> y` of `C` with an element `F(f): F(x) -> F(y)` of `D` such that:
+        - `F(id(x)) = id(F(x))`
+        - `F(g . f) = F(g) . F(f)`
+
+> A Functor is a mapping (an homomorphism) between categories that conserves the _structure_ of the category (the morphisms, the relation between objects) whatever the kind of objects those categories contain.
+
+In scalaz, here is the definition of a Functor:
+
+{% codeblock lang:scala %}
+
+trait Functor[F[_]] {
+  ////
+
+  /** Lift `f` into `F` and apply to `F[A]`. */
+  def map[A, B](fa: F[A])(f: A => B): F[B]
+  ...
+}
+{% endcodeblock %}
+
+You can see the famous `map` function that you can find in many structures in Scala : `List[_]`, `Option[_]`, `Map[_, _]`, `Future[_]`, etc...
+
+Why? Because all these structures are `Functors` between the categories of Scala types... 
+
+> Math is everywhere in programming & programming is Math so don't try to avoid it ;)
+
+So you can write a `Functor[List]` or `Functor[Option]` as those structures are monoids.
+
+Now let's consider `HList` the heterogenous List provided by Miles Sabin's fantastic [Shapeless](https://github.com/milessabin/shapeless/wiki/Feature-overview:-shapeless-2.0.0#heterogenous-lists). `HList` looks like a nice Functor.
+
+{% codeblock lang:scala %}
+(1 :: true :: HNil) map (
+   (i:Int)     => i.toString ,
+   (b:Boolean) => b.toString)
+) => ("1" :: "true" :: HNil)
+{% endcodeblock %}
+
+Ok, it's a bit more complex as this functor requires not one function but several for each element type constituting the `HList`, a kind of polymorphic function. Hopefully, Shapeless provides exactly a structure to represent this: [Poly](https://github.com/milessabin/shapeless/wiki/Feature-overview:-shapeless-2.0.0#polymorphic-function-values)
+
+What about writing a functor for `HList`?
+
+Scalaz Functor isn't very helpful (ok I just copy the HMonoid text & tweak it ;)):
+
+To be able to write a `Functor of HList`, we need something else based on multiple different types...
+
+I spent a few hours having fun on this idea with Shapeless and tried to implement a Functor for heterogenous structures like `HList`, `Sized` and even not heterogenous structures.
+
+**Here are the working [samples](https://github.com/mandubian/injective/blob/shapeless-ext/src/test/scala/ShapelessSpec.scala#L101).**
+
+** Here is the [code](https://github.com/mandubian/injective/blob/shapeless-ext/src/main/scala/ShapelessExt.scala#L21) based on _pseudo-dependent_ types as shapeless.**
+
+The signature of the `HFunctor` as a `map` function as expected:
+
+{% codeblock lang:scala %}
+  trait HFunctor[HA, F <: Poly] {
+    type Real
+
+    trait HMapper[P <: Poly, In] extends DepFn1[In] { type Out }
+
+    val hmapper: HMapper[F, HA]
+
+    def map(ha: HA)(f: F): hmapper.Out = hmapper(ha)
+  }
+{% endcodeblock %}
+
+This is just a sandbox to open discussion on this idea so I won't explain more and let the curious ones think about it...
+
+Have F(un)!
+
+<br/>
+<br/>
+<br/>
+<br/>
+

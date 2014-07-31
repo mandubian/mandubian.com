@@ -1,0 +1,74 @@
+---
+layout: post
+title: "Shapeless HMonoid for Heterogenous Structures (& others)"
+date: 2014-07-29 23:23
+comments: true
+external-url:
+categories: [scala,shapeless,monoid]
+keywords: scala,shapeless,monoid
+---
+
+> Not an article, just some reflections on this idea...
+
+You know what is a monoid?
+
+- a binary operation taking 2 elements and giving another element `e x e -> e` (aka a **SemiGroup**)
+- a Identity `id` element `id . e = e . id = e` (also called **zero element**)
+
+(and some associativity)
+
+In scalaz, here is the definition:
+
+{% codeblock lang:scala %}
+
+trait Monoid[F] extends Semigroup[F] { self =>
+  ////
+  /** The identity element for `append`. */
+  def zero: F
+  def append(f1: F, f2: => F): F
+  ...
+}
+{% endcodeblock %}
+
+You can see the `zero` & the `SemiGroup.append` operations, right?
+
+So you can write a `Monoid[Int]` or `Monoid[List[A]]` as those structures are monoids.
+
+Now let's consider `HList` the heterogenous List provided by Miles Sabin's fantastic [Shapeless](https://github.com/milessabin/shapeless/wiki/Feature-overview:-shapeless-2.0.0#heterogenous-lists). `HList` looks like a nice monoid.
+
+{% codeblock lang:scala %}
+(1 :: "toto" :: HNil) ++ (true :: HNil) => (1 :: "toto" :: true :: HNil)
+{% endcodeblock %}
+
+What about writing a monoid for `HList`?
+
+Scalaz monoid isn't very helpful because our monoid operations would look like:
+
+{% codeblock lang:scala %}
+  def zero: HNil.type
+  def append(f1: H1 <: HList, f2: => H2 <: HList): H3 <: HList
+{% endcodeblock %}
+
+So, to be able to write a `Monoid of HList`, we need something else based on multiple different types...
+
+I spent a few hours having fun on this idea with Shapeless and tried to implement a Monoid for heterogenous structures like `HList`, `Nat`, `Sized` and even not heterogenous structures.
+
+**Here are the working [samples](https://github.com/mandubian/injective/blob/shapeless-ext/src/test/scala/ShapelessSpec.scala#L23).**
+
+** Here is the [code](https://github.com/mandubian/injective/blob/shapeless-ext/src/main/scala/ShapelessExt.scala#L35) based on _pseudo-dependent_ types as shapeless.**
+
+The signature of the `HMonoid` shows the `zero` and the `Semigroup` as expected:
+
+{% codeblock lang:scala %}
+  trait HMonoid[A, B] extends HZero with HSemiGroup[A, B]
+{% endcodeblock %}
+
+This is just a sandbox to open discussion on this idea so I won't explain more and let the curious ones think about it...
+
+Have Monoids of Fun!
+
+<br/>
+<br/>
+<br/>
+<br/>
+
