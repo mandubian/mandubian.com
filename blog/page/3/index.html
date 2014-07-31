@@ -9,7 +9,7 @@
   <meta name="author" content="Pascal Voitot">
 
   
-  <meta name="description" content="Playing With Play2 SCALA JSON API Stand-alone
+  <meta name="description" content="Being Aware Scala 2.10.0 Futures Conceal Fatal Exceptions
     
     
       
@@ -25,7 +25,7 @@
   
 
 
-Feb 21st, 2013 &hellip;">
+Feb 22nd, 2013 &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -126,6 +126,284 @@ Feb 21st, 2013 &hellip;">
     <div class="row-fluid">
       <div class="span9">
   
+  
+  
+    <article>
+      
+  <header class="page-header">
+    
+      <h1 class="entry-title"><a href="/2013/02/22/scala-future-fatal-exception/">Being Aware Scala 2.10.0 Futures Conceal Fatal Exceptions</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-02-22T14:14:00+01:00" pubdate data-updated="true">Feb 22<span>nd</span>, 2013</time>
+        
+         | <a href="/2013/02/22/scala-future-fatal-exception/#disqus_thread">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>A short article to talk about <strong>an interesting issue concerning Scala 2.10.0 Future that might interest you</strong>.</p>
+
+<div class="well">
+<h3>Summary</h3><br/>
+<p>When a <code>Fatal</code> exception is thrown in your <code>Future</code> callback, it&#8217;s not caught by the <code>Future</code> and is thrown to the provided <code>ExecutionContext</code>.</p>
+<p><i>But the current default Scala global <code>ExecutionContext</code> doesn&#8217;t register an <code>UncaughtExceptionHandler</code> for these fatal exceptions and your <code>Future</code> just hangs forever without notifying anything to anybody.</i></p>
+</div>
+
+
+<blockquote><p>This issue is well <a href="https://issues.scala-lang.org/browse/SI-7029">known</a> and a solution to the problem has already been <a href="https://github.com/scala/scala/pull/2044">merged</a> into branch 2.10.x. But this issue is present in Scala 2.10.0 so it&#8217;s interesting to keep this issue in mind IMHO. Let&#8217;s explain clearly about it.</p></blockquote>
+
+<h2>Exceptions can be contained by Future</h2>
+
+<p>Let&#8217;s write some stupid code with Futures.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">import</span> <span class="nn">scala.concurrent._</span>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">import</span> <span class="nn">scala.concurrent.duration._</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Take default Scala global ExecutionContext which is a ForkJoin Thread Pool</span>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">ec</span> <span class="k">=</span> <span class="n">scala</span><span class="o">.</span><span class="n">concurrent</span><span class="o">.</span><span class="nc">ExecutionContext</span><span class="o">.</span><span class="n">global</span>
+</span><span class='line'><span class="n">ec</span><span class="k">:</span> <span class="kt">scala.concurrent.ExecutionContextExecutor</span> <span class="o">=</span> <span class="n">scala</span><span class="o">.</span><span class="n">concurrent</span><span class="o">.</span><span class="n">impl</span><span class="o">.</span><span class="nc">ExecutionContextImpl</span><span class="k">@</span><span class="mi">15</span><span class="n">f445b7</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Create an immediately redeemed Future with a simple RuntimeException</span>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">f</span> <span class="k">=</span> <span class="n">future</span><span class="o">(</span> <span class="k">throw</span> <span class="k">new</span> <span class="nc">RuntimeException</span><span class="o">(</span><span class="s">&quot;foo&quot;</span><span class="o">)</span> <span class="o">)(</span><span class="n">ec</span><span class="o">)</span>
+</span><span class='line'><span class="n">f</span><span class="k">:</span> <span class="kt">scala.concurrent.Future</span><span class="o">[</span><span class="kt">Nothing</span><span class="o">]</span> <span class="k">=</span> <span class="n">scala</span><span class="o">.</span><span class="n">concurrent</span><span class="o">.</span><span class="n">impl</span><span class="o">.</span><span class="nc">Promise$DefaultPromise</span><span class="k">@</span><span class="mi">27380357</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Access brutally the value to show that the Future contains my RuntimeException</span>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="n">f</span><span class="o">.</span><span class="n">value</span>
+</span><span class='line'><span class="n">res22</span><span class="k">:</span> <span class="kt">Option</span><span class="o">[</span><span class="kt">scala.util.Try</span><span class="o">[</span><span class="kt">Nothing</span><span class="o">]]</span> <span class="k">=</span> <span class="nc">Some</span><span class="o">(</span><span class="nc">Failure</span><span class="o">(</span><span class="n">java</span><span class="o">.</span><span class="n">lang</span><span class="o">.</span><span class="nc">RuntimeException</span><span class="k">:</span> <span class="kt">foo</span><span class="o">))</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Use blocking await to get Future result</span>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="nc">Await</span><span class="o">.</span><span class="n">result</span><span class="o">(</span><span class="n">f</span><span class="o">,</span> <span class="mi">2</span> <span class="n">seconds</span><span class="o">)</span>
+</span><span class='line'><span class="n">warning</span><span class="k">:</span> <span class="kt">there</span> <span class="kt">were</span> <span class="err">1</span> <span class="kt">feature</span> <span class="kt">warnings</span><span class="o">;</span> <span class="n">re</span><span class="o">-</span><span class="n">run</span> <span class="k">with</span> <span class="o">-</span><span class="n">feature</span> <span class="k">for</span> <span class="n">details</span>
+</span><span class='line'><span class="n">java</span><span class="o">.</span><span class="n">lang</span><span class="o">.</span><span class="nc">RuntimeException</span><span class="k">:</span> <span class="kt">foo</span>
+</span><span class='line'>  <span class="n">at</span> <span class="nc">$anonfun$1</span><span class="o">.</span><span class="n">apply</span><span class="o">(&lt;</span><span class="n">console</span><span class="k">&gt;:</span><span class="mi">14</span><span class="o">)</span>
+</span><span class='line'>  <span class="n">at</span> <span class="nc">$anonfun$1</span><span class="o">.</span><span class="n">apply</span><span class="o">(&lt;</span><span class="n">console</span><span class="k">&gt;:</span><span class="mi">14</span><span class="o">)</span>
+</span><span class='line'>  <span class="o">...</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>You can see that a <code>Future</code> can contain an <code>Exception</code> (or more generally <code>Throwable</code>).</p></blockquote>
+
+<br/>
+
+
+<h2>Fatal Exceptions can&#8217;t be contained by Future</h2>
+
+<p>If you look in <a href="https://github.com/scala/scala/blob/v2.10.0/src/library/scala/concurrent/Future.scala#L53">Scala 2.10.0 Future.scala</a>, in the scaladoc, you can find:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='plain'><span class='line'>* The following throwable objects are not contained in the future:
+</span><span class='line'>* - `Error` - errors are not contained within futures
+</span><span class='line'>* - `InterruptedException` - not contained within futures
+</span><span class='line'>* - all `scala.util.control.ControlThrowable` except `NonLocalReturnControl` - not contained within futures</span></code></pre></td></tr></table></div></figure>
+
+
+<p>and in the code, in several places, in <code>map</code> or <code>flatMap</code> for example, you can read:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">try</span> <span class="o">{</span>
+</span><span class='line'><span class="o">...</span>
+</span><span class='line'><span class="o">}</span> <span class="k">catch</span> <span class="o">{</span>
+</span><span class='line'>  <span class="k">case</span> <span class="nc">NonFatal</span><span class="o">(</span><span class="n">t</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="n">p</span> <span class="n">failure</span> <span class="n">t</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>This means that every <code>Throwable</code> that is Fatal can&#8217;t be contained in the <code>Future.Failure</code>.</p></blockquote>
+
+<br/>
+
+
+<h2>What&#8217;s a <em>Fatal</em> Throwable?</h2>
+
+<p>To define what&#8217;s fatal, let&#8217;s see what&#8217;s declared as non-fatal in <a href="http://www.scala-lang.org/archives/downloads/distrib/files/nightly/docs/library/index.html#scala.util.control.NonFatal$">NonFatal ScalaDoc</a>.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='plain'><span class='line'>* Extractor of non-fatal Throwables.  
+</span><span class='line'>* Will not match fatal errors like VirtualMachineError  
+</span><span class='line'>* (for example, OutOfMemoryError, a subclass of VirtualMachineError),  
+</span><span class='line'>* ThreadDeath, LinkageError, InterruptedException, ControlThrowable, or NotImplementedError. 
+</span><span class='line'>*
+</span><span class='line'>* Note that [[scala.util.control.ControlThrowable]], an internal Throwable, is not matched by
+</span><span class='line'>* `NonFatal` (and would therefore be thrown).</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>Let&#8217;s consider Fatal exceptions are just critical errors that can&#8217;t be recovered in general.</p></blockquote>
+
+<h2>So what&#8217;s the problem?</h2>
+
+<p>It seems right not to catch fatal errors in the `Future, isn&#8217;t it?</p>
+
+<p>But, look at following code:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// Let&#39;s throw a simple Fatal exception</span>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">f</span> <span class="k">=</span> <span class="n">future</span><span class="o">(</span> <span class="k">throw</span> <span class="k">new</span> <span class="nc">NotImplementedError</span><span class="o">()</span> <span class="o">)(</span><span class="n">ec</span><span class="o">)</span>
+</span><span class='line'><span class="n">f</span><span class="k">:</span> <span class="kt">scala.concurrent.Future</span><span class="o">[</span><span class="kt">Nothing</span><span class="o">]</span> <span class="k">=</span> <span class="n">scala</span><span class="o">.</span><span class="n">concurrent</span><span class="o">.</span><span class="n">impl</span><span class="o">.</span><span class="nc">Promise$DefaultPromise</span><span class="k">@</span><span class="mi">59747</span><span class="n">b17</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="n">f</span><span class="o">.</span><span class="n">value</span>
+</span><span class='line'><span class="n">res0</span><span class="k">:</span> <span class="kt">Option</span><span class="o">[</span><span class="kt">scala.util.Try</span><span class="o">[</span><span class="kt">Nothing</span><span class="o">]]</span> <span class="k">=</span> <span class="nc">None</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Ok, the <code>Future</code> doesn&#8217;t contain the Fatal Exception as expected.</p>
+
+<p><strong>But where is my Fatal Exception if it&#8217;s not caught??? No crash, notification or whatever?</strong></p>
+
+<p>There should be an `UncaughtExceptionHandler at least notifying it!</p>
+
+<br/>
+
+
+<h2>The problem is in the default Scala <code>ExecutionContext</code>.</h2>
+
+<p>As explained in this <a href="https://issues.scala-lang.org/browse/SI-7029">issue</a>, the exception is lost due to the implementation of the default global <code>ExecutionContext</code> provided in Scala.</p>
+
+<p>This is a simple ForkJoin pool of threads but it has no <code>UncaughtExceptionHandler</code>. Have a look at code in <a href="https://github.com/scala/scala/blob/v2.10.0/src/library/scala/concurrent/impl/ExecutionContextImpl.scala#L72">Scala 2.10.0 ExecutionContextImpl.scala</a></p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">try</span> <span class="o">{</span>
+</span><span class='line'>      <span class="k">new</span> <span class="nc">ForkJoinPool</span><span class="o">(</span>
+</span><span class='line'>        <span class="n">desiredParallelism</span><span class="o">,</span>
+</span><span class='line'>        <span class="n">threadFactory</span><span class="o">,</span>
+</span><span class='line'>        <span class="kc">null</span><span class="o">,</span> <span class="c1">//FIXME we should have an UncaughtExceptionHandler, see what Akka does</span>
+</span><span class='line'>        <span class="kc">true</span><span class="o">)</span> <span class="c1">// Async all the way baby</span>
+</span><span class='line'>    <span class="o">}</span> <span class="k">catch</span> <span class="o">{</span>
+</span><span class='line'>      <span class="k">case</span> <span class="nc">NonFatal</span><span class="o">(</span><span class="n">t</span><span class="o">)</span> <span class="k">=&gt;</span>
+</span><span class='line'>        <span class="o">...</span>
+</span><span class='line'>    <span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>Here it&#8217;s quite clear: there is no registered `UncaughtExceptionHandler.</p>
+
+<p>What&#8217;s the consequence?</p></blockquote>
+
+<h2>Your Future hangs forever</h2>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="nc">Await</span><span class="o">.</span><span class="n">result</span><span class="o">(</span><span class="n">f</span><span class="o">,</span> <span class="mi">30</span> <span class="n">seconds</span><span class="o">)</span>
+</span><span class='line'><span class="n">warning</span><span class="k">:</span> <span class="kt">there</span> <span class="kt">were</span> <span class="err">1</span> <span class="kt">feature</span> <span class="kt">warnings</span><span class="o">;</span> <span class="n">re</span><span class="o">-</span><span class="n">run</span> <span class="k">with</span> <span class="o">-</span><span class="n">feature</span> <span class="k">for</span> <span class="n">details</span>
+</span><span class='line'><span class="n">java</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">concurrent</span><span class="o">.</span><span class="nc">TimeoutException</span><span class="k">:</span> <span class="kt">Futures</span> <span class="kt">timed</span> <span class="kt">out</span> <span class="kt">after</span> <span class="o">[</span><span class="err">30</span> <span class="kt">seconds</span><span class="o">]</span>
+</span><span class='line'>  <span class="n">at</span> <span class="n">scala</span><span class="o">.</span><span class="n">concurrent</span><span class="o">.</span><span class="n">impl</span><span class="o">.</span><span class="nc">Promise$DefaultPromise</span><span class="o">.</span><span class="n">ready</span><span class="o">(</span><span class="nc">Promise</span><span class="o">.</span><span class="n">scala</span><span class="k">:</span><span class="err">96</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>As you can see, you can wait as long as you want, the Future is never redeemed properly, it just hangs forever and you don&#8217;t even know that a Fatal Exception has been thrown.</p>
+
+<p>As explained in the issue, please note, if you use a custom <code>ExecutionContext</code> based on <code>SingleThreadExecutor</code>, this issue doesn&#8217;t appear!</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">es</span> <span class="k">=</span> <span class="n">java</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">concurrent</span><span class="o">.</span><span class="nc">Executors</span><span class="o">.</span><span class="n">newSingleThreadExecutor</span>
+</span><span class='line'><span class="n">es</span><span class="k">:</span> <span class="kt">java.util.concurrent.ExecutorService</span> <span class="o">=</span> <span class="n">java</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">concurrent</span><span class="o">.</span><span class="nc">Executors$FinalizableDelegatedExecutorService</span><span class="k">@</span><span class="mi">1</span><span class="n">e336f59</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">ec</span> <span class="k">=</span> <span class="nc">ExecutionContext</span><span class="o">.</span><span class="n">fromExecutorService</span><span class="o">(</span><span class="n">es</span><span class="o">)</span>
+</span><span class='line'><span class="n">ec</span><span class="k">:</span> <span class="kt">scala.concurrent.ExecutionContextExecutorService</span> <span class="o">=</span> <span class="n">scala</span><span class="o">.</span><span class="n">concurrent</span><span class="o">.</span><span class="n">impl</span><span class="o">.</span><span class="nc">ExecutionContextImpl$$anon$1</span><span class="k">@</span><span class="mi">34</span><span class="n">f43dac</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span>  <span class="k">val</span> <span class="n">f</span> <span class="k">=</span> <span class="nc">Future</span><span class="o">[</span><span class="kt">Unit</span><span class="o">](</span><span class="k">throw</span> <span class="k">new</span> <span class="nc">NotImplementedError</span><span class="o">())(</span><span class="n">ec</span><span class="o">)</span>
+</span><span class='line'><span class="nc">Exception</span> <span class="n">in</span> <span class="n">thread</span> <span class="s">&quot;pool-1-thread-1&quot;</span> <span class="n">f</span><span class="k">:</span> <span class="kt">scala.concurrent.Future</span><span class="o">[</span><span class="kt">Unit</span><span class="o">]</span> <span class="k">=</span> <span class="n">scala</span><span class="o">.</span><span class="n">concurrent</span><span class="o">.</span><span class="n">impl</span><span class="o">.</span><span class="nc">Promise$DefaultPromise</span><span class="k">@</span><span class="mi">7</span><span class="n">d01f935</span>
+</span><span class='line'><span class="n">scala</span><span class="o">.</span><span class="nc">NotImplementedError</span><span class="k">:</span> <span class="kt">an</span> <span class="kt">implementation</span> <span class="kt">is</span> <span class="kt">missing</span>
+</span><span class='line'>  <span class="n">at</span> <span class="nc">$line41</span><span class="o">.</span><span class="nc">$read$$iw$$iw$$iw$$iw$$iw$$iw$$anonfun$1</span><span class="o">.</span><span class="n">apply</span><span class="o">(&lt;</span><span class="n">console</span><span class="k">&gt;:</span><span class="mi">15</span><span class="o">)</span>
+</span><span class='line'>  <span class="n">at</span> <span class="nc">$line41</span><span class="o">.</span><span class="nc">$read$$iw$$iw$$iw$$iw$$iw$$iw$$anonfun$1</span><span class="o">.</span><span class="n">apply</span><span class="o">(&lt;</span><span class="n">console</span><span class="k">&gt;:</span><span class="mi">15</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>Conclusion</h2>
+
+<p><strong>In Scala 2.10.0, if you have a Fatal Exception in a Future callback, your Future just trashes the Fatal Exception and hangs forever without notifying anything.</strong></p>
+
+<p>Hopefully, due to this <a href="https://github.com/scala/scala/pull/2044">already merged PR</a>, in a future delivery of Scala 2.10.x, this problem should be corrected.</p>
+
+<p>To finish, in the same old good <a href="https://issues.scala-lang.org/browse/SI-7029">issue</a>, Viktor Klang also raised the question of what should be considered as fatal or not:</p>
+
+<blockquote><p>there&#8217;s a bigger topic at hand here, the one whether NotImplementedError, InterruptedException and ControlThrowable are to be considered fatal or not.</p></blockquote>
+
+<p>Meanwhile, be aware and take care ;)</p>
+
+<p>Have <code>Promise[NonFatal]</code>!</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -6903,1036 +7181,6 @@ But there are so many other features to explain and demonstrate and there will o
 
     </article>
   
-  
-    <article>
-      
-  <header class="page-header">
-    
-      <h1 class="entry-title"><a href="/2012/08/27/understanding-play2-iteratees-for-normal-humans/">Understanding Play2 Iteratees for Normal Humans</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2012-08-27T11:17:00+02:00" pubdate data-updated="true">Aug 27<span>th</span>, 2012</time>
-        
-         | <a href="/2012/08/27/understanding-play2-iteratees-for-normal-humans/#disqus_thread">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><blockquote><p>Thanks to <a href="http://www.twitter.com/loic_d">@loic_d</a>, we have a French translation of this article <a href="https://gist.github.com/3727850#file_iteratees_humains.md">there</a></p></blockquote>
-
-<h4>You may have remarked that <a href="http://www.playframework.org">Play2</a> provides an intriguing feature called <em><code>Iteratee</code></em> (and its counterparts <em><code>Enumerator</code></em> and <em><code>Enumeratee</code></em>).</h4>
-
-<h4>The main aim of this article is <strong><em>(to try)</em> to make the <code>Iteratee</code> concept understandable for most of us</strong> with reasonably simple arguments and without functional/math theory.</h4>
-
-<br/>
-
-
-<blockquote><p>This article is not meant to explain everything about <code>Iteratee</code> / <code>Enumerator</code> / <code>Enumeratee</code> but just the ideas behind it.<br/>
-I&#8217;ll try to write another article to show practical samples of coding with Iteratee/Enumerator/Enumeratee.</p></blockquote>
-
-<h1><a name="intro">Introduction</a></h1>
-
-<blockquote><p><strong>In <a href="http://www.playframework.org/documentation/2.0.2/Iteratees">Play2 doc</a>, <code>Iteratees</code> are presented as a great tool to handle data streams reactively in a non-blocking, generic &amp; composable way for modern web programming in distributed environments.</strong></p>
-
-<p><em>Seems great, isn&#8217;t it?<br/>
-But what is an <code>Iteratee</code> exactly?<br/>
-What is the difference between the <code>Iteratee</code> and the classic <code>Iterator</code> you certainly know?<br/>
-Why use it? In which cases?<br/>
-A bit obscure and complex, isn&#8217;t it?</em></p></blockquote>
-
-<div class = "well">
-<h3>If you are lazy and want to know just a few things</h3>
-<ul>
-  <li><code>Iteratee</code> is an <b>abstraction of iteration over chunks of data in a non-blocking and asynchronous way</b></li>
-  <li><code>Iteratee</code> is able to <b>consume chunks of data of a given type from a producer</b> generating data chunks of the same type called <code>Enumerator</code>
-  <li><code>Iteratee</code> can <b>compute a progressive result from data chunks over steps of iteration</b> (an incremented total for ex)
-  <li><code>Iteratee</code> is a <b>thread-safe and immutable object that can be re-used over several `Enumerators`</b></li>
-</ul>
-</div>
-
-
-<h3>1st advice: DO NOT SEARCH ABOUT ITERATEES ON GOOGLE</h3>
-
-<p>When you search on Google for <code>Iteratee</code>, you find very obscure explanations based on pure functional approach or even mathematical theories. Even the documentation on Play Framework (<a href="http://www.playframework.org/documentation/2.0.2/Iteratees">there</a>) explains <code>Iteratee</code> with a fairly <em>low-level</em> approach which might be hard for beginners&#8230;</p>
-
-<p>As a beginner in Play2, it might seem a bit tough to handle <code>Iteratee</code> concept presented in a really abstract way of manipulating data chunks.<br/>
-It might seem so complicated that you will occult it and won&#8217;t use it.<br/>
-It would be a shame because Iteratees are so powerful and provide a really interesting and new way to manipulate your data flows in a web app.</p>
-
-<p>So, let&#8217;s try to explain things in a simple way. I don&#8217;t pretend to be a theoretical expert on those functional concepts and I may even say wrong things but I want to write an article that reflects what <code>Iteratee</code> means for me. Hope this could be useful to somebody&#8230;</p>
-
-<blockquote><p>This article uses <strong>Scala</strong> for code samples but the code should be understandable by anyone having a few notions of coding and I promise not to use any weird operator (<em>but in last paragraph</em>) <strong>>&lt;> >&lt;> >&lt;> >&lt;></strong></p>
-
-<p>The code samples are based on incoming <strong>Play2.1 master</strong> code which greatly simplifies and rationalizes the code of <code>Iteratee</code>. So don&#8217;t be surprised if API doesn&#8217;t look like Play2.0.x sometimes</p></blockquote>
-
-<h1><a name="reminders">Reminders about iteration</a></h1>
-
-<p>Before diving into deep <code>Iteratee</code> sea, I want to clarify what I call <strong>iteration</strong> and to try to go progressively from the concept of <code>Iterator</code> to <code>Iteratee</code>.</p>
-
-<h4>You may know the <code>Iterator</code> concept you can find in Java. An <code>Iterator</code> allows to run over a collection of elements and then do something at each step of iteration. Let&#8217;s begin with a very simple iteration in <em>Java classic</em> way that sums all the integers of a <code>List[Int]</code></h4>
-
-<br/>
-
-
-<h3><a name="reminders-1">The first very naive implementation with <em>Java-like</em> <code>Iterator</code></a></h3>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">l</span> <span class="k">=</span> <span class="nc">List</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span> <span class="mi">234</span><span class="o">,</span> <span class="mi">455</span><span class="o">,</span> <span class="mi">987</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">var</span> <span class="n">total</span> <span class="k">=</span> <span class="mi">0</span> <span class="c1">// will contain the final total</span>
-</span><span class='line'><span class="k">var</span> <span class="n">it</span> <span class="k">=</span> <span class="n">l</span><span class="o">.</span><span class="n">iterator</span>
-</span><span class='line'><span class="k">while</span><span class="o">(</span> <span class="n">it</span><span class="o">.</span><span class="n">hasNext</span> <span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>  <span class="n">total</span> <span class="o">+=</span> <span class="n">it</span><span class="o">.</span><span class="n">next</span>
-</span><span class='line'><span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">total</span>
-</span><span class='line'><span class="k">=&gt;</span> <span class="n">resXXX</span> <span class="k">:</span> <span class="kt">Int</span> <span class="o">=</span> <span class="mi">1677</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Without any surprise, <em>iterating over a collection</em> means :</p>
-
-<ul>
-<li>Get an iterator from the collection,</li>
-<li>Get an element from the iterator (if there are any),</li>
-<li>Do something : <em>here add the element value to the total</em>,</li>
-<li>If there are other elements, go to the next element,</li>
-<li>Do it again,</li>
-<li>Etc&#8230; till there are no more element to consume in the iterator</li>
-</ul>
-
-
-<div class="well">
-While iterating over a collection, we manipulate:
-<ul>
-  <li><strong>A state of iteration</strong> (is iteration finished ? This is naturally linked to the fact that there are more elements or not in the iterator?)</li>
-  <li><strong>A context</strong> updated from one step to the next (the total)</li>
-  <li><strong>An action</strong> updating the context</li>
-</ul>
-</div>
-
-
-<h3><a name="reminders-2">Rewrite that using Scala <em>for-comprehension</em></a></h3>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">for</span><span class="o">(</span> <span class="n">item</span> <span class="k">&lt;-</span> <span class="n">l</span> <span class="o">)</span> <span class="o">{</span> <span class="n">total</span> <span class="o">+=</span> <span class="n">item</span> <span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>It&#8217;s a bit better because you don&#8217;t have to use the iterator.</p>
-
-<h3><a name="reminders-3">Rewrite it in a more functional way</a></h3>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">l</span><span class="o">.</span><span class="n">foreach</span><span class="o">{</span> <span class="n">item</span> <span class="k">=&gt;</span> <span class="n">total</span> <span class="o">+=</span> <span class="n">item</span> <span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Here we introduce <code>List.foreach</code> function accepting an anonymous function <code>(Int =&gt; Unit)</code> as a parameter and iterating over the list: for each element in the list, it calls the function which can update the context (<em>here the total</em>).</p>
-
-<p>The anonymous function contains the action executed at each loop while iterating over the collection.</p>
-
-<h3><a name="reminders-3">Rewrite in a more generic way</a></h3>
-
-<p>The anonymous function could be stored in a variable so that it can be reused in different places.</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">l</span> <span class="k">=</span> <span class="nc">List</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span> <span class="mi">234</span><span class="o">,</span> <span class="mi">455</span><span class="o">,</span> <span class="mi">987</span><span class="o">)</span>
-</span><span class='line'><span class="k">val</span> <span class="n">l2</span> <span class="k">=</span> <span class="nc">List</span><span class="o">(</span><span class="mi">134</span><span class="o">,</span> <span class="mi">664</span><span class="o">,</span> <span class="mi">987</span><span class="o">,</span> <span class="mi">456</span><span class="o">)</span>
-</span><span class='line'><span class="k">var</span> <span class="n">total</span> <span class="k">=</span> <span class="mi">0</span>
-</span><span class='line'><span class="k">def</span> <span class="n">step</span><span class="o">(</span><span class="n">item</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)</span> <span class="k">=</span> <span class="n">total</span> <span class="o">+=</span> <span class="n">item</span>
-</span><span class='line'><span class="n">l</span> <span class="n">foreach</span> <span class="n">step</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">total</span> <span class="k">=</span> <span class="mi">0</span>
-</span><span class='line'><span class="n">l2</span> <span class="n">foreach</span> <span class="n">step</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<blockquote><p>You should then say to me: <em>&#8220;This is ugly design, your function has side-effects and uses a variable which is not a nice design at all and you even have to reset total to 0 at second call!&#8221;</em></p></blockquote>
-
-<p>That&#8217;s completely true:</p>
-
-<blockquote><p><strong>Side-effect functions are quite dangerous</strong> because they change the state of something that is external to the function. This state is not exclusive to the function and can be changed by other entities, potentially in other threads. Function with side-effects are not recommended to have clean and robust designs and functional languages such as Scala tend to reduce side-effects functions to the strict necessary (IO operations for ex).</p>
-
-<p><strong>Mutable variables are also risky</strong> because if your code is run over several threads, if 2 threads try to change the value of the variable, who wins? In this case, you need synchronization which means blocking threads while writing the variable which means breaking one of the reason of being of Play2 (non-blocking web apps)&#8230;</p></blockquote>
-
-<h3><a name="reminders-4">Rewrite the code in an immutable way without side-effects</a></h3>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">def</span> <span class="n">foreach</span><span class="o">(</span><span class="n">l</span><span class="k">:</span> <span class="kt">List</span><span class="o">[</span><span class="kt">Int</span><span class="o">])</span> <span class="k">=</span> <span class="o">{</span>
-</span><span class='line'>  <span class="k">def</span> <span class="n">step</span><span class="o">(</span><span class="n">l</span><span class="k">:</span> <span class="kt">List</span><span class="o">[</span><span class="kt">Int</span><span class="o">],</span> <span class="n">total</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)</span><span class="k">:</span> <span class="kt">Int</span> <span class="o">=</span> <span class="o">{</span>
-</span><span class='line'>    <span class="n">l</span> <span class="k">match</span> <span class="o">{</span>
-</span><span class='line'>      <span class="k">case</span> <span class="nc">List</span><span class="o">()</span> <span class="k">=&gt;</span> <span class="n">total</span>
-</span><span class='line'>      <span class="k">case</span> <span class="nc">List</span><span class="o">(</span><span class="n">elt</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="n">total</span> <span class="o">+</span> <span class="n">elt</span>
-</span><span class='line'>      <span class="k">case</span> <span class="n">head</span> <span class="o">::</span> <span class="n">tail</span> <span class="k">=&gt;</span> <span class="n">step</span><span class="o">(</span><span class="n">tail</span><span class="o">,</span> <span class="n">total</span> <span class="o">+</span> <span class="n">head</span><span class="o">)</span>
-</span><span class='line'>    <span class="o">}</span>
-</span><span class='line'>  <span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="n">step</span><span class="o">(</span><span class="n">l</span><span class="o">,</span> <span class="mi">0</span><span class="o">)</span>
-</span><span class='line'><span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">foreach</span><span class="o">(</span><span class="n">l</span><span class="o">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h4>A bit more code, isn&#8217;t it ?</h4>
-
-<h4>But please notice at least:</h4>
-
-<ul>
-<li><code>var total</code> disappeared.</li>
-<li><code>step</code> function is the action executed at each step of iteration but it does something more than before: <code>step</code> also manages the state of the iteration. It executes as following:
-
-<ul>
-<li>If the list is empty, return current <code>total</code></li>
-<li>If the list has 1 element, return <code>total + elt</code></li>
-<li>If the list has more than 1 element, calls <code>step</code> with the tail elements and the new total <code>total + head</code></li>
-</ul>
-</li>
-</ul>
-
-
-<p>So at each step of iteration, depending on the result of previous iteration, <code>step</code> can choose between 2 states:</p>
-
-<ul>
-<li>Continue iteration because it has more elements</li>
-<li>Stop iteration because it reached end of list or no element at all</li>
-</ul>
-
-
-<h4>Notice also that :</h4>
-
-<ul>
-<li><strong><code>step</code> is a <em>tail-recursive</em> function</strong> (doesn&#8217;t unfold the full call stack at the end of recursion and returns immediately) preventing from stack overflow and behaving almost like the previous code with <code>Iterator</code></li>
-<li><strong><code>step</code> transmits the remaining elements of the list &amp; the new total</strong> to the next step</li>
-<li><strong><code>step</code> returns the total without any side-effects</strong> at all</li>
-</ul>
-
-
-<blockquote><p>So, yes, this code consumes a bit more memory because it re-copies some parts of the list at each step (only the references to the elements) but it has no side-effect and uses only immutable data structures.
-This makes it very robust and distributable without any problem.</p></blockquote>
-
-<p>Notice you can write the code in a very shorter way using the wonderful functions provided by Scala collections:</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">l</span><span class="o">.</span><span class="n">foldLeft</span><span class="o">(</span><span class="mi">0</span><span class="o">){</span> <span class="o">(</span><span class="n">total</span><span class="o">,</span> <span class="n">elt</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="n">total</span> <span class="o">+</span> <span class="n">elt</span> <span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-
-
-<div class="well">
-<h3><a name="reminders-milestone">Milestone</a></h3>
-<br/>
-In this article, I consider iteration based on immutable structures propagated over steps.
-From this point of view, iterating involves:
-<ul>
-<li>receiving information from the previous step: context & state</li>
-<li>getting current/remaining element(s)</li>
-<li>computing a new state & context from remaining elements</li>
-<li>propagating the new state & context to next step</li>
-</ul>
-
-</div>
-
-
-<hr />
-
-<h1><a name="step-by-step">Step by Step to <em>Iterator</em> &amp; <em>Iteratees</em></a></h1>
-
-<p>Now that we are clear about iteration, let&#8217;s go back to our <code>Iteratee</code>!!!</p>
-
-<h4>Imagine you want to generalize the previous iteration mechanism and be able to write something like:</h4>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">def</span> <span class="n">sumElements</span><span class="o">(...)</span> <span class="k">=</span> <span class="o">...</span>
-</span><span class='line'><span class="k">def</span> <span class="n">prodElements</span><span class="o">(...)</span> <span class="k">=</span> <span class="o">...</span>
-</span><span class='line'><span class="k">def</span> <span class="n">printElements</span><span class="o">(...)</span> <span class="k">=</span> <span class="o">...</span>
-</span><span class='line'><span class="n">l</span><span class="o">.</span><span class="n">iterate</span><span class="o">(</span><span class="n">sumElements</span><span class="o">)</span>
-</span><span class='line'><span class="n">l</span><span class="o">.</span><span class="n">iterate</span><span class="o">(</span><span class="n">prodElements</span><span class="o">)</span>
-</span><span class='line'><span class="n">l</span><span class="o">.</span><span class="n">iterate</span><span class="o">(</span><span class="n">printElements</span><span class="o">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<blockquote><p>Yes I know, with Scala collection APIs, you can do many things :)</p></blockquote>
-
-<h4>Imagine you want to compose a first iteration with another one:</h4>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">def</span> <span class="n">groupElements</span><span class="o">(...)</span> <span class="k">=</span> <span class="o">...</span>
-</span><span class='line'><span class="k">def</span> <span class="n">printElements</span><span class="o">(...)</span> <span class="k">=</span> <span class="o">...</span>
-</span><span class='line'><span class="n">l</span><span class="o">.</span><span class="n">iterate</span><span class="o">(</span><span class="n">groupElements</span><span class="o">).</span><span class="n">iterate</span><span class="o">(</span><span class="n">printElements</span><span class="o">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h4>Imagine you want to apply this iteration on something else than a collection:</h4>
-
-<ul>
-<li>a stream of data produced progressively by a file, a network connection, a database connection,</li>
-<li>a data flow generated by an algorithm,</li>
-<li>a data flow from an asynchronous data producer such as a scheduler or an actor.</li>
-</ul>
-
-
-<p><strong>Iteratees are exactly meant for this&#8230;</strong></p>
-
-<p>Just to tease, here is how you would write the previous sum iteration with an <code>Iteratee</code>.</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">enumerator</span> <span class="k">=</span> <span class="nc">Enumerator</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span> <span class="mi">234</span><span class="o">,</span> <span class="mi">455</span><span class="o">,</span> <span class="mi">987</span><span class="o">)</span>
-</span><span class='line'><span class="n">enumerator</span><span class="o">.</span><span class="n">run</span><span class="o">(</span><span class="nc">Iteratee</span><span class="o">.</span><span class="n">fold</span><span class="o">(</span><span class="mi">0</span><span class="o">){</span> <span class="o">(</span><span class="n">total</span><span class="o">,</span> <span class="n">elt</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="n">total</span> <span class="o">+</span> <span class="n">elt</span> <span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Ok, it looks like the previous code and doesn&#8217;t seem to do much more&#8230;<br/>
-Not false but trust me, it can do much more.<br/>
-At least, it doesn&#8217;t seem so complicated?</p>
-
-<p>But, as you can see, <code>Iteratee</code> is used with <code>Enumerator</code> and both concepts are tightly related.</p>
-
-<p><strong>Now let&#8217;s dive into those concepts on a step by step approach.</strong></p>
-
-<br/>
-
-
-<h2><a name="step-by-step-enumerator">>&lt;> About Enumerator >&lt;></a></h2>
-
-<h3><code>Enumerator</code> is a more generic concept than collections or arrays</h3>
-
-<p>Till now, we have used collections in our iterations. But as explained before, we could iterate over something more generic, simply being able to produce simple chunks of data available immediately or asynchronously in the future.</p>
-
-<p><code>Enumerator</code> is designed for this purpose.</p>
-
-<p>A few examples of simple Enumerators:</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// an enumerator of Strings</span>
-</span><span class='line'><span class="k">val</span> <span class="n">stringEnumerator</span><span class="k">:</span> <span class="kt">Enumerator</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="k">=</span> <span class="nc">Enumerate</span><span class="o">(</span><span class="s">&quot;alpha&quot;</span><span class="o">,</span> <span class="s">&quot;beta&quot;</span><span class="o">,</span> <span class="s">&quot;gamma&quot;</span><span class="o">)</span>
-</span><span class='line'><span class="c1">// an enumerator of Integers</span>
-</span><span class='line'><span class="k">val</span> <span class="n">integerEnumerator</span><span class="k">:</span> <span class="kt">Enumerator</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="k">=</span> <span class="nc">Enumerate</span><span class="o">(</span><span class="mi">123</span><span class="o">,</span> <span class="mi">456</span><span class="o">,</span> <span class="mi">789</span><span class="o">)</span>
-</span><span class='line'><span class="c1">// an enumerator of Doubles</span>
-</span><span class='line'><span class="k">val</span> <span class="n">doubleEnumerator</span><span class="k">:</span> <span class="kt">Enumerator</span><span class="o">[</span><span class="kt">Double</span><span class="o">]</span> <span class="k">=</span> <span class="nc">Enumerate</span><span class="o">(</span><span class="mf">123.345</span><span class="o">,</span> <span class="mf">456.543</span><span class="o">,</span> <span class="mf">789.123</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'><span class="c1">// an Enumerator from a file</span>
-</span><span class='line'><span class="k">val</span> <span class="n">fileEnumerator</span><span class="k">:</span> <span class="kt">Enumerator</span><span class="o">[</span><span class="kt">Array</span><span class="o">[</span><span class="kt">Byte</span><span class="o">]]</span> <span class="k">=</span> <span class="nc">Enumerator</span><span class="o">.</span><span class="n">fromFile</span><span class="o">(</span><span class="s">&quot;myfile.txt&quot;</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'><span class="c1">// an Enumerator generated by a callback</span>
-</span><span class='line'><span class="c1">// it generates a string containing current time every 500 milliseconds</span>
-</span><span class='line'><span class="c1">// notice (and forget for the time being) the Promise.timeout which allows non-blocking mechanism</span>
-</span><span class='line'><span class="k">val</span> <span class="n">dateGenerator</span><span class="k">:</span> <span class="kt">Enumerator</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="k">=</span> <span class="nc">Enumerator</span><span class="o">.</span><span class="n">generateM</span><span class="o">(</span>
-</span><span class='line'>  <span class="n">play</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">libs</span><span class="o">.</span><span class="n">concurrent</span><span class="o">.</span><span class="nc">Promise</span><span class="o">.</span><span class="n">timeout</span><span class="o">(</span>
-</span><span class='line'>    <span class="nc">Some</span><span class="o">(</span><span class="s">&quot;current time %s&quot;</span><span class="o">.</span><span class="n">format</span><span class="o">((</span><span class="k">new</span> <span class="n">java</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="nc">Date</span><span class="o">()))),</span>
-</span><span class='line'>    <span class="mi">500</span>
-</span><span class='line'>  <span class="o">)</span>
-</span><span class='line'><span class="o">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h3><code>Enumerator</code> is a <em>PRODUCER</em> of statically typed chunks of data.</h3>
-
-<p><code>Enumerator[E]</code> produces chunks of data of type <code>E</code> and can be of the 3 following kinds:</p>
-
-<ul>
-<li><code>Input[E]</code> is a chunk of data of type E : <em>for ex, Input[Pizza] is a chunk of Pizza</em>.</li>
-<li><code>Input.Empty</code> means the enumerator is empty : <em>for ex, an Enumerator streaming an empty file</em>.</li>
-<li><code>Input.EOF</code> means the enumerator has reached its end : <em>for ex, Enumerator streaming a file and reaching the end of file</em>.</li>
-</ul>
-
-
-<p><em>You can draw a parallel between the kinds of chunks and the states presented above (has more/no/no more elements).</em></p>
-
-<p>Actually, <code>Enumerator[E]</code> contains <code>Input[E]</code> so you can put an <code>Input[E]</code> in it:</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// create an enumerator containing one chunk of pizza</span>
-</span><span class='line'><span class="k">val</span> <span class="n">pizza</span> <span class="k">=</span> <span class="nc">Pizza</span><span class="o">(</span><span class="s">&quot;napolitana&quot;</span><span class="o">)</span>
-</span><span class='line'><span class="k">val</span> <span class="n">enumerator</span><span class="k">:</span> <span class="kt">Enumerator</span><span class="o">[</span><span class="kt">Pizza</span><span class="o">]</span> <span class="k">=</span> <span class="nc">Enumerator</span><span class="o">.</span><span class="n">enumInput</span><span class="o">(</span><span class="nc">Input</span><span class="o">.</span><span class="n">el</span><span class="o">(</span><span class="n">pizza</span><span class="o">))</span>
-</span><span class='line'>
-</span><span class='line'><span class="c1">// create an enumerator containing no pizza</span>
-</span><span class='line'><span class="k">val</span> <span class="n">enumerator</span><span class="k">:</span> <span class="kt">Enumerator</span><span class="o">[</span><span class="kt">Pizza</span><span class="o">]</span> <span class="k">=</span> <span class="nc">Enumerator</span><span class="o">.</span><span class="n">enumInput</span><span class="o">(</span><span class="nc">Input</span><span class="o">.</span><span class="nc">Empty</span><span class="o">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h3><code>Enumerator</code> is a non-blocking producer</h3>
-
-<p>The idea behind Play2 is, as you may know, to be fully non-blocking and asynchronous. Thus, <code>Enumerator</code>/<code>Iteratee</code> reflects this philosophy.
-The <code>Enumerator</code> produces chunks in a completely asynchronous and non-blocking way. This means the concept of <code>Enumerator</code> is not by default related to an active process or a background task generating chunks of data.</p>
-
-<p>Remember the code snippet above with <code>dateGenerator</code> which reflects exactly the asynchronous and non-blocking nature of <code>Enumerator</code>/<code>Iteratee</code>?</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// an Enumerator generated by a callback</span>
-</span><span class='line'><span class="c1">// it generates a string containing current time every 500 milliseconds</span>
-</span><span class='line'><span class="c1">// notice the Promise.timeout which provide a non-blocking mechanism</span>
-</span><span class='line'><span class="k">val</span> <span class="n">dateGenerator</span><span class="k">:</span> <span class="kt">Enumerator</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="k">=</span> <span class="nc">Enumerator</span><span class="o">.</span><span class="n">generateM</span><span class="o">(</span>
-</span><span class='line'>  <span class="n">play</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">libs</span><span class="o">.</span><span class="n">concurrent</span><span class="o">.</span><span class="nc">Promise</span><span class="o">.</span><span class="n">timeout</span><span class="o">(</span>
-</span><span class='line'>    <span class="nc">Some</span><span class="o">(</span><span class="s">&quot;current time %s&quot;</span><span class="o">.</span><span class="n">format</span><span class="o">((</span><span class="k">new</span> <span class="n">java</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="nc">Date</span><span class="o">()))),</span>
-</span><span class='line'>    <span class="mi">500</span>
-</span><span class='line'>  <span class="o">)</span>
-</span><span class='line'><span class="o">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<blockquote><p><strong>What&#8217;s a Promise?</strong></p>
-
-<p>It would require a whole article but let&#8217;s say the name corresponds exactly to what it does.<br/>
-A <code>Promise[String]</code> means : &#8221;<em>It will provide a String in the future (or an error)</em>&#8221;, that&#8217;s all. Meanwhile, it doesn&#8217;t block current thread and just releases it.</p></blockquote>
-
-<h3><code>Enumerator</code> requires a consumer to produce</h3>
-
-<p>Due to its non-blocking nature, if nobody consumes those chunks, the <code>Enumerator</code> doesn&#8217;t block anything and doesn&#8217;t consume any hidden runtime resources.<br/>
-So, <strong><code>Enumerator</code> <em>MAY</em> produce chunks of data only if there is someone to consume them</strong>.</p>
-
-<br/>
-
-
-
-
-<div class="well">
-So what consumes the chunks of data produced by <code>Enumerator</code>?<br/>
-You have deduced it yourself: the <code>Iteratee</code>
-</div>
-
-
-<p></p>
-
-<br/>
-
-
-<br/>
-
-
-<h2><a name="step-by-step-iteratee">>&lt;> About Iteratee >&lt;></a></h2>
-
-<h3><code>Iteratee</code> is a generic <em>&#8220;stuff&#8221;</em> that can iterate over an <code>Enumerator</code></h3>
-
-<p>Let&#8217;s be windy for one sentence:</p>
-
-<blockquote><p><code>Iteratee</code> is the generic translation of the concept of iteration in pure functional programming.<br/>
-While <code>Iterator</code> is built from the collection over which it will iterate, <code>Iteratee</code> is a generic entity that waits for an <code>Enumerator</code> to be iterated over.</p></blockquote>
-
-<p>Do you see the difference between <code>Iterator</code> and <code>Iteratee</code>? No? Not a problem… Just remember that:</p>
-
-<ul>
-<li>an <code>Iteratee</code> is a generic entity that can <em>iterate</em> over the chunks of data produced by an <code>Enumerator</code> (or something else)</li>
-<li>an <code>Iteratee</code> is created independently of the <code>Enumerator</code> over which it will iterate and the <code>Enumerator</code> is provided to it</li>
-<li>an <code>Iteratee</code> is immutable, stateless and fully reusable for different enumerators</li>
-</ul>
-
-
-<p>That&#8217;s why we say:</p>
-
-<blockquote><p>An <code>Iteratee</code> is applied on an <code>Enumerator</code> or run over an <code>Enumerator</code>.</p></blockquote>
-
-<p>Do you remember the example above computing the total of all elements of an Enumerator[Int] ?<br/>
-Here is the same code showing that an <code>Iteratee</code> can be created once and reused several times on different Enumerators.</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">iterator</span> <span class="k">=</span> <span class="nc">Iteratee</span><span class="o">.</span><span class="n">fold</span><span class="o">(</span><span class="mi">0</span><span class="o">){</span> <span class="o">(</span><span class="n">total</span><span class="o">,</span> <span class="n">elt</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="n">total</span> <span class="o">+</span> <span class="n">elt</span> <span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">val</span> <span class="n">e1</span> <span class="k">=</span> <span class="nc">Enumerator</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span> <span class="mi">234</span><span class="o">,</span> <span class="mi">455</span><span class="o">,</span> <span class="mi">987</span><span class="o">)</span>
-</span><span class='line'><span class="k">val</span> <span class="n">e2</span> <span class="k">=</span> <span class="nc">Enumerator</span><span class="o">(</span><span class="mi">345</span><span class="o">,</span> <span class="mi">123</span><span class="o">,</span> <span class="mi">476</span><span class="o">,</span> <span class="mi">187687</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'><span class="c1">// we apply the iterator on the enumerator</span>
-</span><span class='line'><span class="n">e1</span><span class="o">(</span><span class="n">iterator</span><span class="o">)</span>      <span class="c1">// or e1.apply(iterator)</span>
-</span><span class='line'><span class="n">e2</span><span class="o">(</span><span class="n">iterator</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'><span class="c1">// we run the iterator over the enumerator to get a result</span>
-</span><span class='line'><span class="k">val</span> <span class="n">result1</span> <span class="k">=</span> <span class="n">e1</span><span class="o">.</span><span class="n">run</span><span class="o">(</span><span class="n">iterator</span><span class="o">)</span> <span class="c1">// or e1 run iterator</span>
-</span><span class='line'><span class="k">val</span> <span class="n">result2</span> <span class="k">=</span> <span class="n">e2</span><span class="o">.</span><span class="n">run</span><span class="o">(</span><span class="n">iterator</span><span class="o">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<blockquote><p><em><code>Enumerator.apply</code> and <code>Enumerator.run</code> are slightly different functions and we will explain that later.</em></p></blockquote>
-
-<h3><code>Iteratee</code> is an active consumer of chunks of data</h3>
-
-<p>By default, the <code>Iteratee</code> awaits a first chunk of data and immediately after, it launches the iteration mechanism.
-The <code>Iteratee</code> goes on consuming data until it considers it has finished its computation.<br/>
-Once initiated, the <code>Iteratee</code> is fully responsible for the full iteration process and decides when it stops.</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// creates the iteratee</span>
-</span><span class='line'><span class="k">val</span> <span class="n">iterator</span> <span class="k">=</span> <span class="nc">Iteratee</span><span class="o">.</span><span class="n">fold</span><span class="o">(</span><span class="mi">0</span><span class="o">){</span> <span class="o">(</span><span class="n">total</span><span class="o">,</span> <span class="n">elt</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="n">total</span> <span class="o">+</span> <span class="n">elt</span> <span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'><span class="c1">// creates an enumerator</span>
-</span><span class='line'><span class="k">val</span> <span class="n">e</span> <span class="k">=</span> <span class="nc">Enumerator</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span> <span class="mi">234</span><span class="o">,</span> <span class="mi">455</span><span class="o">,</span> <span class="mi">987</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'><span class="c1">// this injects the enumerator into the iteratee </span>
-</span><span class='line'><span class="c1">// = pushes the first chunk of data into the iteratee</span>
-</span><span class='line'><span class="n">enumerator</span><span class="o">(</span><span class="n">iterator</span><span class="o">)</span>
-</span><span class='line'><span class="c1">// the iteratee then consumes as many chunks as it requires</span>
-</span><span class='line'><span class="c1">// don&#39;t bother about the result of this, we will explain later</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>As explained above, the <code>Enumerator</code> is a producer of chunks of data and it expects a consumer to consume those chunks of data.<br/>
-To be consumed/iterated, the <code>Enumerator</code> has to be injected/plugged into an <code>Iteratee</code> or more precisely the first chunk of data has to be
-injected/pushed into the <code>Iteratee</code>.<br/>
-Naturally the <code>Iteratee</code> is dependent on speed of production of <code>Enumerator</code>: if it&#8217;s slow, the <code>Iteratee</code> is also slow.</p>
-
-<blockquote><p>Notice the relation Iteratee/Enumerator can be considered with respect to inversion of control and dependency injection pattern.</p></blockquote>
-
-<h3><code>Iteratee</code> is a &#8221;<em>1-chunk-loop</em>&#8221; function</h3>
-
-<p>The <code>Iteratee</code> consumes chunks one by one until it considers it has ended iteration.<br/>
-Actually, the real scope of an <code>Iteratee</code> is limited to the treatment of one chunk.
-That&#8217;s why it can be defined as a function being able to consume one chunk of data.</p>
-
-<h3><code>Iteratee</code> accepts static typed chunks and computes a static typed result</h3>
-
-<p>Whereas an <code>Iterator</code> iterates over chunks of data coming from the collection that created it, an <code>Iteratee</code> is a bit more ambitious : it can
-compute something meanwhile it consumes chunks of data.</p>
-
-<p>That&#8217;s why the signature of Iteratee is :</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">trait</span> <span class="nc">Iteratee</span><span class="o">[</span><span class="kt">E</span>, <span class="kt">+A</span><span class="o">]</span>
-</span><span class='line'><span class="c1">// E is the type of data contained in chunks. So it can only be applied on a Enumerator[E]</span>
-</span><span class='line'><span class="c1">// A is the result of the iteration</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Let&#8217;s go back to our first sample : compute the total of all integers produced by an <code>Enumerator[Int]</code>:</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// creates the iteratee</span>
-</span><span class='line'><span class="k">val</span> <span class="n">iterator</span> <span class="k">=</span> <span class="nc">Iteratee</span><span class="o">.</span><span class="n">fold</span><span class="o">(</span><span class="mi">0</span><span class="o">){</span> <span class="o">(</span><span class="n">total</span><span class="o">,</span> <span class="n">elt</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="n">total</span> <span class="o">+</span> <span class="n">elt</span> <span class="o">}</span>
-</span><span class='line'><span class="k">val</span> <span class="n">e</span> <span class="k">=</span> <span class="nc">Enumerator</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span> <span class="mi">234</span><span class="o">,</span> <span class="mi">455</span><span class="o">,</span> <span class="mi">987</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'><span class="c1">// runs the iteratee over the enumerator and retrieve the result</span>
-</span><span class='line'><span class="k">val</span> <span class="n">total</span><span class="k">:</span> <span class="kt">Promise</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="k">=</span> <span class="n">enumerator</span> <span class="n">run</span> <span class="n">iterator</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<blockquote><p>Notice the usage of <code>run</code>: You can see that the result is not the total itself but a <code>Promise[Int]</code> of the total because we are in an asynchronous world.<br/>
-To retrieve the real total, you could use scala concurrent blocking <code>Await._</code> functions. But this is NOT good because it&#8217;s a blocking API. As Play2 is fully async/non-blocking, the best practice is to
-propagate the promise using <code>Promise.map/flatMap</code>.</p></blockquote>
-
-<p>But a result is not mandatory. For ex, let&#8217;s just println all consumed chunks:</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// creates the iteratee</span>
-</span><span class='line'><span class="k">val</span> <span class="n">e</span> <span class="k">=</span> <span class="nc">Enumerator</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span> <span class="mi">234</span><span class="o">,</span> <span class="mi">455</span><span class="o">,</span> <span class="mi">987</span><span class="o">)</span>
-</span><span class='line'><span class="n">e</span><span class="o">(</span><span class="nc">Iteratee</span><span class="o">.</span><span class="n">foreach</span><span class="o">(</span> <span class="n">println</span> <span class="k">_</span> <span class="o">))</span>
-</span><span class='line'><span class="c1">// or</span>
-</span><span class='line'><span class="n">e</span><span class="o">.</span><span class="n">apply</span><span class="o">(</span><span class="nc">Iteratee</span><span class="o">.</span><span class="n">foreach</span><span class="o">(</span> <span class="n">println</span> <span class="k">_</span> <span class="o">))</span>
-</span><span class='line'><span class="c1">// yes here the usage of _ is so trivial that you shall use it</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>The result is not necessarily a primitive type, it can just be the concatenation of all chunks into a List for ex:</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">enumerator</span> <span class="k">=</span> <span class="nc">Enumerator</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span> <span class="mi">234</span><span class="o">,</span> <span class="mi">455</span><span class="o">,</span> <span class="mi">987</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">val</span> <span class="n">list</span><span class="k">:</span> <span class="kt">Promise</span><span class="o">[</span><span class="kt">List</span><span class="o">[</span><span class="kt">Int</span><span class="o">]]</span> <span class="k">=</span> <span class="n">enumerator</span> <span class="n">run</span> <span class="nc">Iteratee</span><span class="o">.</span><span class="n">getChunks</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h3><code>Iteratee</code> can propagate the immutable context &amp; state over iterations</h3>
-
-<p>To be able to compute final total, the <code>Iteratee</code> needs to propagate the partial totals along iteration steps.<br/>
-This means the <code>Iteratee</code> is able to receive a context (<em>the previous total for ex</em>) from the previous step, then compute the new context with current chunk of data
-(<em>new total = previous total + current element</em>) and can finally propagate this context to the next step (if there need to be a next step).</p>
-
-<h3><code>Iteratee</code> is simply a state machine</h3>
-
-<p>Ok this is cool but how does the <code>Iteratee</code> know it has to stop iterating?<br/>
-What happens if there were an error/ EOF or it has reached the end of <code>Enumerator</code>?<br/>
-Therefore, in addition to the context, the <code>Iteratee</code> should also receive previous state, decides what to do and potentially computes the new state to be sent to next step.</p>
-
-<p>Now, remember the classic iteration states described above. For <code>Iteratee</code>, there are almost the same 2 possible states of iteration:</p>
-
-<ul>
-<li>State <code>Cont</code> : the iteration can continue with next chunk and potentially compute new context</li>
-<li>State <code>Done</code> : it signals it has reached the end of its process and can return the resulting context value</li>
-</ul>
-
-
-<p>and a 3rd one which seems quite logical:</p>
-
-<ul>
-<li>State <code>Error</code> : it signals there was an Error during current step and stops iterating</li>
-</ul>
-
-
-<blockquote><p><strong>From this point of view, we can consider the <code>Iteratee</code> is just a state machine in charge of looping over state <code>Cont</code> until it detects conditions to switch to terminal states <code>Done</code> or <code>Error</code>.</strong></p></blockquote>
-
-<h3><code>Iteratee</code> states <code>Done/Error/Cont</code> are also <code>Iteratee</code></h3>
-
-<p>Remember, the <code>Iteratee</code> is defined as a 1-chunk-loop function and it&#8217;s main purpose is to change from one state to another one.
-Let&#8217;s consider those states are also <code>Iteratee</code>.</p>
-
-<p>We have 3 &#8221;<em>State</em>&#8221; Iteratees:</p>
-
-<p><code>Done[E, A](a: A, remaining: Input[E])</code></p>
-
-<ul>
-<li><code>a:A</code> the context received from previous step</li>
-<li><code>remaining: Input[E]</code> representing the next chunk</li>
-</ul>
-
-
-<br/>
-
-
-<p><code>Error[E](msg: String, input: Input[E])</code></p>
-
-<p>Very simple to understand also: an error message and the input on which it failed.</p>
-
-<br/>
-
-
-<p><code>Cont[E, A](k: Input[E] =&gt; Iteratee[E, A])</code></p>
-
-<p>This is the most complicated State as it&#8217;s built from a function taking an <code>Input[E]</code> and returning another <code>Iteratee[E,A]</code>.
-Without going too deep in the theory, you can easily understand that <code>Input[E] =&gt; Iteratee[E, A]</code> is simply a good way to consume one input and return a new state/iteratee
-which can consume another input and return another state/iteratee etc… till reaching state Done or Error.<br/>
-This construction ensures feeding the iteration mechanism (in a typical functional way).</p>
-
-<p>Ok lots of information, isn&#8217;t it?
-You certainly wonder why I explain of all of that?
-This is just because if you understand that, you will understand how to create an custom <code>Iteratee</code>.</p>
-
-<p>Let&#8217;s write an <code>Iteratee</code> computing the total of the 2 first elements in an <code>Enumerator[Int]</code> to show an example.</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// Defines the Iteratee[Int, Int]</span>
-</span><span class='line'><span class="k">def</span> <span class="n">total2Chunks</span><span class="k">:</span> <span class="kt">Iteratee</span><span class="o">[</span><span class="kt">Int</span>, <span class="kt">Int</span><span class="o">]</span> <span class="k">=</span> <span class="o">{</span>
-</span><span class='line'>  <span class="c1">// `step` function is the consuming function receiving previous context (idx, total) and current chunk</span>
-</span><span class='line'>  <span class="c1">// context : (idx, total) idx is the index to count loops</span>
-</span><span class='line'>  <span class="k">def</span> <span class="n">step</span><span class="o">(</span><span class="n">idx</span><span class="k">:</span> <span class="kt">Int</span><span class="o">,</span> <span class="n">total</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)(</span><span class="n">i</span><span class="k">:</span> <span class="kt">Input</span><span class="o">[</span><span class="kt">Int</span><span class="o">])</span><span class="k">:</span> <span class="kt">Iteratee</span><span class="o">[</span><span class="kt">Int</span>, <span class="kt">Int</span><span class="o">]</span> <span class="k">=</span> <span class="n">i</span> <span class="k">match</span> <span class="o">{</span>
-</span><span class='line'>    <span class="c1">// chunk is EOF or Empty =&gt; simply stops iteration by triggering state Done with current total</span>
-</span><span class='line'>    <span class="k">case</span> <span class="nc">Input</span><span class="o">.</span><span class="nc">EOF</span> <span class="o">|</span> <span class="nc">Input</span><span class="o">.</span><span class="nc">Empty</span> <span class="k">=&gt;</span> <span class="nc">Done</span><span class="o">(</span><span class="n">total</span><span class="o">,</span> <span class="nc">Input</span><span class="o">.</span><span class="nc">EOF</span><span class="o">)</span>
-</span><span class='line'>    <span class="c1">// found one chunk </span>
-</span><span class='line'>    <span class="k">case</span> <span class="nc">Input</span><span class="o">.</span><span class="nc">El</span><span class="o">(</span><span class="n">e</span><span class="o">)</span> <span class="k">=&gt;</span>
-</span><span class='line'>      <span class="c1">// if first or 2nd chunk, call `step` again by incrementing idx and computing new total</span>
-</span><span class='line'>      <span class="k">if</span><span class="o">(</span><span class="n">idx</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="o">)</span> <span class="nc">Cont</span><span class="o">[</span><span class="kt">Int</span>, <span class="kt">Int</span><span class="o">](</span><span class="n">i</span> <span class="k">=&gt;</span> <span class="n">step</span><span class="o">(</span><span class="n">idx</span><span class="o">+</span><span class="mi">1</span><span class="o">,</span> <span class="n">total</span> <span class="o">+</span> <span class="n">e</span><span class="o">)(</span><span class="n">i</span><span class="o">))</span>
-</span><span class='line'>      <span class="c1">// if reached 2nd chunk, stop iterating</span>
-</span><span class='line'>      <span class="k">else</span> <span class="nc">Done</span><span class="o">(</span><span class="n">total</span><span class="o">,</span> <span class="nc">Input</span><span class="o">.</span><span class="nc">EOF</span><span class="o">)</span>
-</span><span class='line'>  <span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="c1">// initiates iteration by initialize context and first state (Cont) and launching iteration</span>
-</span><span class='line'>  <span class="o">(</span><span class="nc">Cont</span><span class="o">[</span><span class="kt">Int</span>, <span class="kt">Int</span><span class="o">](</span><span class="n">i</span> <span class="k">=&gt;</span> <span class="n">step</span><span class="o">(</span><span class="mi">0</span><span class="o">,</span> <span class="mi">0</span><span class="o">)(</span><span class="n">i</span><span class="o">)))</span>
-</span><span class='line'><span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'><span class="c1">// Using it</span>
-</span><span class='line'><span class="k">val</span> <span class="n">promiseTotal</span> <span class="k">=</span> <span class="nc">Enumerator</span><span class="o">(</span><span class="mi">10</span><span class="o">,</span> <span class="mi">20</span><span class="o">,</span> <span class="mi">5</span><span class="o">)</span> <span class="n">run</span> <span class="n">total2Chunks</span>
-</span><span class='line'><span class="n">promiseTotal</span><span class="o">.</span><span class="n">map</span><span class="o">(</span><span class="n">println</span> <span class="k">_</span><span class="o">)</span>
-</span><span class='line'><span class="k">=&gt;</span> <span class="n">prints</span> <span class="mi">30</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<blockquote><p><strong>With this example, you can understand that writing an Iteratee is not much different than choosing what to do at each step depending on the type of Chunk you received
- and returning the new <code>State/Iteratee</code>.</strong></p></blockquote>
-
-<br/>
-
-
-<br/>
-
-
-<h2><a name="candies">A few candy for those who did not drown yet</a></h2>
-
-<h3><code>Enumerator</code> is just a helper to deal with <code>Iteratee</code></h3>
-
-<p>As you could see, in <code>Iteratee</code> API, there is nowhere any mention about <code>Enumerator</code>.<br/>
-This is just because <code>Enumerator</code> is just a helper to interact with <code>Iteratee</code>: it can plug itself to <code>Iteratee</code> and injects the first chunk of data into it.<br/>
-But you don&#8217;t need <code>Enumerator</code> to use <code>Iteratee</code> even if this is really easier and well integrated everywhere in Play2.</p>
-
-<br/>
-
-
-<h3>Difference between <code>Enumerator.apply(Iteratee)</code> and <code>Enumerator.run(Iteratee)</code></h3>
-
-<p>Let&#8217;s go back to this point evoked earlier.
-Have a look at the signature of main APIs in <code>Enumerator</code>:</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">trait</span> <span class="nc">Enumerator</span><span class="o">[</span><span class="kt">E</span><span class="o">]</span> <span class="o">{</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">def</span> <span class="n">apply</span><span class="o">[</span><span class="kt">A</span><span class="o">](</span><span class="n">i</span><span class="k">:</span> <span class="kt">Iteratee</span><span class="o">[</span><span class="kt">E</span>, <span class="kt">A</span><span class="o">])</span><span class="k">:</span> <span class="kt">Promise</span><span class="o">[</span><span class="kt">Iteratee</span><span class="o">[</span><span class="kt">E</span>, <span class="kt">A</span><span class="o">]]</span>
-</span><span class='line'>  <span class="o">...</span>
-</span><span class='line'>  <span class="k">def</span> <span class="n">run</span><span class="o">[</span><span class="kt">A</span><span class="o">](</span><span class="n">i</span><span class="k">:</span> <span class="kt">Iteratee</span><span class="o">[</span><span class="kt">E</span>, <span class="kt">A</span><span class="o">])</span><span class="k">:</span> <span class="kt">Promise</span><span class="o">[</span><span class="kt">A</span><span class="o">]</span> <span class="k">=</span> <span class="o">|&gt;&gt;&gt;(</span><span class="n">i</span><span class="o">)</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h4><code>apply</code> returns last Iteratee/State</h4>
-
-<p>The <code>apply</code> function injects the <code>Enumerator</code> into the <code>Iteratee</code> which consumes the chunks, does its job and returns a Promise of <code>Iteratee</code>.
-From previous explanation, you may deduce by yourself that the returned <code>Iteratee</code> might simply be the last state after it has finished consuming the chunks it required from <code>Enumerator</code>.</p>
-
-<h4><code>run</code> returns a Promise[Result]</h4>
-
-<p><code>run</code> has 3 steps:</p>
-
-<ol>
-<li>Call previous <code>apply</code> function</li>
-<li>Inject <code>Input.EOF</code> into <code>Iteratee</code> to be sure it has ended</li>
-<li>Get the last context from <code>Iteratee</code> as a promise.</li>
-</ol>
-
-
-<p>Here is an example:</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// creates the iteratee</span>
-</span><span class='line'><span class="k">val</span> <span class="n">iterator</span> <span class="k">=</span> <span class="nc">Iteratee</span><span class="o">.</span><span class="n">fold</span><span class="o">(</span><span class="mi">0</span><span class="o">){</span> <span class="o">(</span><span class="n">total</span><span class="o">,</span> <span class="n">elt</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="n">total</span> <span class="o">+</span> <span class="n">elt</span> <span class="o">}</span>
-</span><span class='line'><span class="k">val</span> <span class="n">e</span> <span class="k">=</span> <span class="nc">Enumerator</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span> <span class="mi">234</span><span class="o">,</span> <span class="mi">455</span><span class="o">,</span> <span class="mi">987</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'><span class="c1">// just lets the iterator consume all chunks but doesn&#39;t require result right now</span>
-</span><span class='line'><span class="k">val</span> <span class="n">totalIteratee</span><span class="k">:</span> <span class="kt">Promise</span><span class="o">[</span><span class="kt">Iteratee</span><span class="o">[</span><span class="kt">Int</span>, <span class="kt">Int</span><span class="o">]]</span> <span class="k">=</span> <span class="n">enumerator</span> <span class="n">apply</span> <span class="n">iterator</span>
-</span><span class='line'>
-</span><span class='line'><span class="c1">// runs the iteratee over the enumerator and retrieves the result as a promise</span>
-</span><span class='line'><span class="k">val</span> <span class="n">total</span><span class="k">:</span> <span class="kt">Promise</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="k">=</span> <span class="n">enumerator</span> <span class="n">run</span> <span class="n">iterator</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-
-
-<div class="well">
-<h3>To Remember</h3>
-<h4>When you need the result of <code>Iteratee</code>, you shall use <code>run</code></h4>
-<h4>When you need to apply an <code>Iteratee</code> over an <code>Enumerator</code> without retrieving the result, you shall use <code>apply</code></h4>
-</div>
-
-
-
-
-<br/>
-
-
-<h3><code>Iteratee</code> is a Promise[Iteratee] (<em>IMPORTANT TO KNOW</em>)</h3>
-
-<p>One more thing to know about an Iteratee is that <strong>Iteratee is a Promise[Iteratee]</strong> by definition.</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// converts a Promise[Iteratee] to Iteratee</span>
-</span><span class='line'><span class="k">val</span> <span class="n">p</span><span class="k">:</span> <span class="kt">Promise</span><span class="o">[</span><span class="kt">Iteratee</span><span class="o">[</span><span class="kt">E</span>, <span class="kt">A</span><span class="o">]]</span> <span class="k">=</span> <span class="o">...</span>
-</span><span class='line'><span class="k">val</span> <span class="n">it</span><span class="k">:</span> <span class="kt">Iteratee</span><span class="o">[</span><span class="kt">E</span>, <span class="kt">A</span><span class="o">]</span> <span class="k">=</span> <span class="nc">Iteratee</span><span class="o">.</span><span class="n">flatten</span><span class="o">(</span><span class="n">p</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'><span class="c1">// converts an Iteratee to a Promise[Iteratee]</span>
-</span><span class='line'><span class="c1">// pure promise</span>
-</span><span class='line'><span class="k">val</span> <span class="n">p1</span><span class="k">:</span> <span class="kt">Promise</span><span class="o">[</span><span class="kt">Iteratee</span><span class="o">[</span><span class="kt">E</span>, <span class="kt">A</span><span class="o">]]</span> <span class="k">=</span> <span class="nc">Promise</span><span class="o">.</span><span class="n">pure</span><span class="o">(</span><span class="n">it</span><span class="o">)</span>
-</span><span class='line'><span class="c1">// using unflatten</span>
-</span><span class='line'><span class="k">val</span> <span class="n">p2</span><span class="k">:</span> <span class="kt">Promise</span><span class="o">[</span><span class="kt">Iteratee</span><span class="o">[</span><span class="kt">E</span>, <span class="kt">A</span><span class="o">]]</span> <span class="k">=</span> <span class="n">it</span><span class="o">.</span><span class="n">unflatten</span><span class="o">.</span><span class="n">map</span><span class="o">(</span> <span class="k">_</span><span class="o">.</span><span class="n">it</span> <span class="o">)</span>
-</span><span class='line'><span class="c1">// unflatten returns a technical structure called Step wrapping the Iteratee in _.it</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-
-
-<div class="well">
-<h3><code>Iteratee</code> <=> <code>Promise[Iteratee]</code></h3>
-<h4>This means that you can build your code around Iteratee in a very lazy way : with Iteratee, you can switch to Promise and back as you want.</h4>
-</div>
-
-
-
-
-<br/>
-
-
-<hr />
-
-<h2><a name="enumeratee">Final words about <em>Enumeratee</em></a></h2>
-
-<blockquote><p>You discovered <code>Iteratee</code>, then <code>Enumerator</code>…<br/>
-And now you come across this…  <code>Enumeratee</code>???<br/>
-What is that new stuff in <code>XXXtee</code> ?????</p></blockquote>
-
-<h3>2nd advice : DON&#8217;T PANIC NOW… <code>Enumeratee</code> concept is really simple to understand</h3>
-
-<div class="well">
-<h3><code>Enumeratee</code> is just a <i>pipe adapter</i> between <code>Enumerator</code> and <code>Iteratee</code></h3>
-</div>
-
-
-<br/>
-
-
-<p>Imagine you have an <code>Enumerator[Int]</code> and an <code>Iteratee[String, Lis[String]]</code>.<br/>
-You can transform an <code>Int</code> into a <code>String</code>, isn&#8217;t it?<br/>
-So you should be able to transform the chunks of <code>Int</code> into chunks of <code>String</code> and then inject them into the Iteratee.</p>
-
-<p>Enumeratee is there to save you.</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">enumerator</span> <span class="k">=</span> <span class="nc">Enumerator</span><span class="o">(</span><span class="mi">123</span><span class="o">,</span> <span class="mi">345</span><span class="o">,</span> <span class="mi">456</span><span class="o">)</span>
-</span><span class='line'><span class="k">val</span> <span class="n">iteratee</span><span class="k">:</span> <span class="kt">Iteratee</span><span class="o">[</span><span class="kt">String</span>, <span class="kt">List</span><span class="o">[</span><span class="kt">String</span><span class="o">]]</span> <span class="k">=</span> <span class="err">…</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">val</span> <span class="n">list</span><span class="k">:</span> <span class="kt">List</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="k">=</span> <span class="n">enumerator</span> <span class="n">through</span> <span class="nc">Enumeratee</span><span class="o">.</span><span class="n">map</span><span class="o">(</span> <span class="k">_</span><span class="o">.</span><span class="n">toString</span> <span class="o">)</span> <span class="n">run</span> <span class="n">iteratee</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>What happened there?</p>
-
-<p><strong>You just piped <code>Enumerator[Int]</code> through and <code>Enumeratee[Int, String]</code> into <code>Iteratee[String, List[String]]</code></strong></p>
-
-<p>In 2 steps:</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">stringEnumerator</span><span class="k">:</span> <span class="kt">Enumerator</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="k">=</span> <span class="n">enumerator</span> <span class="n">through</span> <span class="nc">Enumeratee</span><span class="o">.</span><span class="n">map</span><span class="o">(</span> <span class="k">_</span><span class="o">.</span><span class="n">toString</span> <span class="o">)</span>
-</span><span class='line'><span class="k">val</span> <span class="n">list</span><span class="k">:</span> <span class="kt">List</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="k">=</span> <span class="n">stringEnumerator</span> <span class="n">run</span> <span class="n">iteratee</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>So, you may understand that <code>Enumeratee</code> is a very useful tool to convert your custom <code>Enumerator</code> to be used with generic <code>Iteratee</code> provided by Play2 API.<br/>
-You&#8217;ll see that this is certainly the tool you will use the most while coding with <code>Enumerator</code> / <code>Iteratee</code>.</p>
-
-<h3><code>Enumeratee</code> can be applied to an <code>Enumerator</code> without <code>Iteratee</code></h3>
-
-<p>This is a very useful feature of <code>Enumeratee</code>.
-You can transform Enumerate[From] into Enumerator[To] with an Enumeratee[From, To]</p>
-
-<p>Signature of <code>Enumeratee</code> is quite explicit:</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="nc">Enumeratee</span><span class="o">[</span><span class="kt">From</span>, <span class="kt">To</span><span class="o">]</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>So you can use it as following:</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">stringEnumerator</span><span class="k">:</span> <span class="kt">Enumerator</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="k">=</span> <span class="n">enumerator</span> <span class="n">through</span> <span class="nc">Enumeratee</span><span class="o">.</span><span class="n">map</span><span class="o">(</span> <span class="k">_</span><span class="o">.</span><span class="n">toString</span> <span class="o">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h3><code>Enumeratee</code> can transform an <code>Iteratee</code></h3>
-
-<p>This is a bit stranger feature because you can transform an <code>Iteratee[To, A]</code> to an <code>Iteratee[From, A]</code> with <code>Enumeratee[From, To]</code></p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">stringIteratee</span><span class="k">:</span> <span class="kt">Iteratee</span><span class="o">[</span><span class="kt">String</span>, <span class="kt">List</span><span class="o">[</span><span class="kt">String</span><span class="o">]]</span> <span class="k">=</span> <span class="err">…</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">val</span> <span class="n">intIteratee</span><span class="k">:</span> <span class="kt">Iteratee</span><span class="o">[</span><span class="kt">Int</span>, <span class="kt">List</span><span class="o">[</span><span class="kt">String</span><span class="o">]]</span> <span class="k">=</span> <span class="nc">Enumeratee</span><span class="o">.</span><span class="n">map</span><span class="o">[</span><span class="kt">Int</span>, <span class="kt">String</span><span class="o">](</span> <span class="k">_</span><span class="o">.</span><span class="n">toString</span> <span class="o">)</span> <span class="n">transform</span> <span class="n">stringIteratee</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h3><code>Enumeratee</code> can be composed with an <code>Enumeratee</code></h3>
-
-<p>Yes, this is the final very useful feature of <code>Enumeratee</code>.</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">enumeratee1</span><span class="k">:</span> <span class="kt">Enumeratee</span><span class="o">[</span><span class="kt">Type1</span>, <span class="kt">Type2</span><span class="o">]</span> <span class="k">=</span> <span class="err">…</span>
-</span><span class='line'><span class="k">val</span> <span class="n">enumeratee2</span><span class="k">:</span> <span class="kt">Enumeratee</span><span class="o">[</span><span class="kt">Type2</span>, <span class="kt">Type3</span><span class="o">]</span> <span class="k">=</span> <span class="err">…</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">val</span> <span class="n">enumeratee3</span><span class="k">:</span> <span class="kt">Enumeratee</span><span class="o">[</span><span class="kt">Type1</span>, <span class="kt">Type3</span><span class="o">]</span> <span class="k">=</span> <span class="n">enumeratee1</span> <span class="n">compose</span> <span class="n">enumeratee2</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>So once again, very easy to see that you can create your generic <code>Enumeratees</code> and then compose them into the custom <code>Enumeratee</code> you need for your custom <code>Enumerator</code> / <code>Iteratee</code>.</p>
-
-<hr />
-
-<h2>Conclusion</h2>
-
-<p>Now I hope you have a bit more information and are not lost anymore.<br/>
-Next step is to use <code>Iteratee</code> / <code>Enumerator</code> / <code>Enumeratee</code> all together.<br/>
-I&#8217;ll write other articles presenting more specific and practical ideas and concepts and samples…<br/>
-There are a lot of interesting features that are worth precise explanations.<br/>
-Understanding clearly what&#8217;s an <code>Iteratee</code> is important because it helps writing new <code>Iteratees</code> but you can also stay superficial and use the many helpers provided by Play2 Iteratee API.</p>
-
-<p><em>Ok, documentation is not yet as complete as it should but we are working on this!!!</em></p>
-
-<div class="well">
-<h3>Anyway, why should I use <code>Iteratee</code> / <code>Enumerator</code> / <code>Enumeratee</code> ?</h3>
-<p>I want to tell you that <code>Iteratee</code> / <code>Enumerator</code> / <code>Enumeratee</code> is not a funny tool for people found of functional constructions.  
-They are useful in many domains and once you will understand how they work, I can promise you that you will begin to use it more and more.</p>
-<p>Modern web applications are not only dynamically generated pages anymore. Now you manipulate flows of data coming from different sources, in different formats, with different availability timing.
-You may have to serve huge amount of data to huge number of clients and to work in distributed environments.</p>
-<p><code>Iteratee</code> are made for those cases because there are safe, immutable and very good to deal with data flows in realtime.
-Let&#8217;s tell the buzzword you can see more & more <i>&#8220;Realtime WebApp&#8221;</i> and <code>Iteratee</code> is associated to that ;)</p>
-</div>
-
-
-<blockquote><h4>Note on weird operators</h4>
-
-<p>You will certainly see lots of those operators in code based on <code>Iteratee</code> / <code>Enumerator</code> / <code>Enumeratee</code> such as <code>&amp;&gt;</code>, <code>|&gt;&gt;</code>, <code>|&gt;&gt;&gt;</code> and the famous fish operator <code>&gt;&lt;&gt;</code>.
-Don&#8217;t focus on those operators right now, there are just aliases of real explicit words such as <code>through</code>, <code>apply</code>, <code>applyOn</code> or <code>compose</code>.
-I&#8217;ll try to write an article about those operators to demystify them. With practice, some people will find the code with operators clearer and more compact, some people will prefer words.</p></blockquote>
-
-<p>Have fun</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <ul class="pager">
     
     <li class="previous"><a href="/blog/page/4/">&larr; Older</a></li>
@@ -7950,6 +7198,10 @@ I&#8217;ll try to write an article about those operators to demystify them. With
     <li class="nav-header">Recent Posts</li>
     
       <li class="post">
+        <a href="/2014/07/30/hfunctor/">Shapeless HFunctor for Heterogenous Structures (& others)</a>
+      </li>
+    
+      <li class="post">
         <a href="/2014/07/29/hmonoid/">Shapeless HMonoid for Heterogenous Structures (& others)</a>
       </li>
     
@@ -7963,10 +7215,6 @@ I&#8217;ll try to write an article about those operators to demystify them. With
     
       <li class="post">
         <a href="/2014/03/09/zpark-ml-nio-2/">ZPark-Ztream II (Part 2/3): Fancy Spark Streamed Machine-Learning & new Scalaz-Stream NIO API</a>
-      </li>
-    
-      <li class="post">
-        <a href="/2014/03/08/zpark-ml-nio-1/">ZPark-Ztream II (Part 1/3): Fancy Spark Streamed Machine-Learning & new Scalaz-Stream NIO API</a>
       </li>
     
   </ul>
