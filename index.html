@@ -9,7 +9,7 @@
   <meta name="author" content="Pascal Voitot">
 
   
-  <meta name="description" content="Shapeless HFunctor for Heterogenous Structures (& Others)
+  <meta name="description" content="Scaledn: Promote EDN as a Far Better Alternative to Json in Scala
     
     
       
@@ -25,7 +25,7 @@
   
 
 
-Jul 30th, 2014 &hellip;">
+Dec 21st &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -126,6 +126,820 @@ Jul 30th, 2014 &hellip;">
     <div class="row-fluid">
       <div class="span9">
   
+  
+  
+    <article>
+      
+  <header class="page-header">
+    
+      <h1 class="entry-title"><a href="/2014/12/21/scaledn/">Scaledn: Promote EDN as a Far Better Alternative to Json in Scala</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-12-21T23:23:00+01:00" pubdate data-updated="true">Dec 21<span>st</span>, 2014</time>
+        
+         | <a href="/2014/12/21/scaledn/#disqus_thread">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><h1>SCALEDN, <a href="https://github.com/edn-format/edn">EDN</a> Scala API</h1>
+
+<p><a href="https://github.com/mandubian/scaledn">Scaledn</a> is a Scala <a href="https://github.com/edn-format/edn">EDN</a> parser (runtime &amp; compile-time)/serializer/validator based on :</p>
+
+<ul>
+<li><a href="https://github.com/sirthias/parboiled2">Parboiled2</a>,</li>
+<li><a href="https://github.com/milessabin/shapeless">Shapeless</a>,</li>
+<li><a href="https://github.com/jto/validation">Generic Validation</a></li>
+<li>Scala Macros</li>
+</ul>
+
+
+<blockquote><p>It works only in Scala 2.11.x</p></blockquote>
+
+<p>The code &amp; sample apps can be found on <a href="https://github.com/mandubian/scaledn">Github</a></p>
+
+<br/>
+
+
+<h2>Why EDN?&#8230;</h2>
+
+<blockquote><p>Because Json is not so good &amp; quite limitating</p></blockquote>
+
+<p><strong>EDN is described as an <em>extensible data notation</em></strong> specified (not really standardized) <a href="https://github.com/edn-format/edn">there</a>. Clojure &amp; Datalog used in Datomic are supersets of EDN.</p>
+
+<p>EDN allows much more things than Json while <strong>keeping the same simplicity</strong>.</p>
+
+<p>Here are the main points making EDN great to represent &amp; exchange Data.</p>
+
+<br/>
+
+
+<h3>EDN manages number types far better than Json</h3>
+
+<p>For Json, all numbers (floating or integer, exponential or not) are all considered in the same way so numbers can only be mapped to the biggest number format: <code>BigDecimal</code>. It is really bad in terms of semantics and performance.</p>
+
+<p>In EDN, numbers can be :</p>
+
+<ul>
+<li>64bits integer aka <code>Long</code> in Scala: <code>12345</code></li>
+<li>64bits floating point numbers &amp; exponentials aka <code>Double</code> in Scala: <code>123.45e-9</code></li>
+<li>Natural Integers aka <code>BigInt</code> in Scala: <code>1234567891234N</code></li>
+<li>Exact Floating Number aka <code>BigDecimal</code> in Scala: <code>123.4578972345M</code></li>
+</ul>
+
+
+<br/>
+
+
+<h3>EDN knows much more about collections</h3>
+
+<p>Collections in Json are just:</p>
+
+<ul>
+<li>lists of heterogenous json values</li>
+<li>maps of key strings and json values.</li>
+</ul>
+
+
+<p>In EDN, you can have:</p>
+
+<ul>
+<li>heterogenous lists</li>
+</ul>
+
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="o">(</span><span class="mi">1</span> <span class="kc">true</span> <span class="err">&quot;</span><span class="n">toto</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<ul>
+<li>heterogenous vectors/arrays</li>
+</ul>
+
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="o">[</span><span class="err">1</span> <span class="kt">true</span> <span class="err">&quot;</span><span class="kt">toto</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<ul>
+<li>heterogenous sets</li>
+</ul>
+
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="o">#{</span><span class="mi">1</span> <span class="kc">true</span> <span class="err">&quot;</span><span class="n">toto</span><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<ul>
+<li>heterogenous maps with heterogenous keys &amp; values</li>
+</ul>
+
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="o">{</span><span class="mi">1</span> <span class="s">&quot;toto&quot;</span><span class="o">,</span> <span class="s">&quot;foo&quot;</span> <span class="mi">2</span><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<h3>EDN accepts characters &amp; unicode</h3>
+
+<p>Json doesn&#8217;t know about characters outside strings.</p>
+
+<p>EDN can manage chars:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// simple char</span>
+</span><span class='line'><span class="o">\</span><span class="n">c</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// special chars</span>
+</span><span class='line'><span class="o">\</span><span class="n">newline</span>
+</span><span class='line'><span class="o">\</span><span class="k">return</span>
+</span><span class='line'><span class="o">\</span><span class="n">space</span>
+</span><span class='line'><span class="o">\</span><span class="n">tag</span>
+</span><span class='line'><span class="o">\\</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// unicode</span>
+</span><span class='line'><span class="o">\</span><span class="n">u0308</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<h3>EDN accepts comments &amp; discarded values</h3>
+
+<p>There are special syntaxes:</p>
+
+<ul>
+<li>comments are lines starting with <code>;</code></li>
+</ul>
+
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="o">;</span> <span class="k">this</span> <span class="n">is</span> <span class="n">a</span> <span class="n">comment</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<ul>
+<li>values starting with <code>#_</code> are parsed but discarded</li>
+</ul>
+
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="s">&quot;toto&quot;</span> <span class="mi">3</span> <span class="k">#</span><span class="nc">_discarded</span> <span class="mf">1.234</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<h3>EDN knows about symbols &amp; keywords</h3>
+
+<p>These are notions that don&#8217;t exist in Json.</p>
+
+<p>Symbols can reference anything external or internal that you want to identify. A <code>Symbol</code> can have a namespace such as:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">foo</span><span class="o">.</span><span class="n">foo2</span><span class="o">/</span><span class="n">bar</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Keywords are unique identifiers or enumerated values that can be reused in your data structure. A <code>Keyword</code> is just a symbol preceded by a <code>:</code> such as</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">:</span><span class="kt">foo.foo2/bar</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<h3>EDN is extensible using tags</h3>
+
+<p>EDN is an extensible format using tags starting with <code>#</code> such as:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">#</span><span class="n">foo</span><span class="o">/</span><span class="n">bar</span> <span class="n">value</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>When parsing EDN format, the parser should provide tag handlers that can be applied when a tag is discovered. In this way, you can extend default format with your own formats.</p>
+
+<p>EDN specifies 2 tag handlers by default:</p>
+
+<ul>
+<li><code>#inst "1985-04-12T23:20:50.52Z"</code> for RFC-3339 instants</li>
+<li><code>#uuid "f81d4fae-7dec-11d0-a765-00a0c91e6bf6"</code> for UUID</li>
+</ul>
+
+
+<br/>
+
+
+<h3>EDN has no root node &amp; can be streamed</h3>
+
+<p>Json is defined to have a root <code>map</code> node: <code>{ key : value }</code> or <code>[ ... ]</code>.</p>
+
+<p>Json can&#8217;t accept single values outside of this. So Json isn&#8217;t really meant to be streamed as you need to find closing tags to finish parsing a value.</p>
+
+<p>EDN doesn&#8217;t require this and can consist in multiple heterogenous values:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="mi">1</span> <span class="mf">123.45</span> <span class="s">&quot;toto&quot;</span> <span class="kc">true</span> <span class="n">nil</span> <span class="o">(</span><span class="mi">1</span> <span class="mi">2</span> <span class="mi">3</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>As a consequence, EDN can be used to stream your data structures.</p>
+
+<br/>
+
+
+<h3>Conclusion: EDN should be preferred to Json</h3>
+
+<p>All of these points make EDN a far better &amp; stricter &amp; more evolutive notation to represent data structures than Json. It can be used in the same way as Json but could make a far better RPC string format than Json.</p>
+
+<p>I still wonder why Json has become the de-facto standard except for the reason that the <em>not so serious</em> Javascript language parses it natively and because people were so sick about XML that they would have accepted anything changing their daily life.</p>
+
+<p>But JS could also parse EDN without any problem and all more robust &amp; typed backend languages would earn a lot from using EDN instead of JSON for their interfaces.</p>
+
+<p>EDN could be used in REST API &amp; also for streaming API.
+That&#8217;s exactly why, I wanted to provide a complete Scala API for EDN to test this idea a bit further.</p>
+
+<br/>
+
+
+<br/>
+
+
+<h2>Scaledn insight</h2>
+
+<br/>
+
+
+<h3>Runtime Parsing</h3>
+
+<p>Scaledn can be used to parse the EDN string or arrays of chars received by your API.</p>
+
+<p>All types described in EDN format are isomorphic to Scala types so I&#8217;ve decided to skip the complete AST wrapping those types and directly parse to Scala types.</p>
+
+<ul>
+<li><code>"foobar"</code> is parsed to <code>String</code></li>
+<li><code>123</code> is parsed to <code>Long</code></li>
+<li><code>(1 2 3)</code> is parsed to <code>List[Long]</code></li>
+<li><code>(1 "toto" 3)</code> is parsed to <code>List[Any]</code></li>
+<li><code>{"toto" 1 "tata" 2}</code> is parsed to <code>Map[String, Long]</code></li>
+<li><code>{1 "toto" 2 "tata"}</code> is parsed to <code>Map[Long, String]</code></li>
+<li><code>{1 "toto" true 3}</code> is parsed to <code>Map[Any, Any]</code></li>
+<li>etc&#8230;</li>
+</ul>
+
+
+<p>The parser (based on <a href="https://github.com/sirthias/parboiled2">Parboiled2</a>) provides 2 main functions:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">scaledn._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">parser._</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// parses only the first EDN value discovered in the String input</span>
+</span><span class='line'><span class="k">def</span> <span class="n">parseEDN</span><span class="o">(</span><span class="n">in</span><span class="k">:</span> <span class="kt">ParserInput</span><span class="o">)</span><span class="k">:</span> <span class="kt">Try</span><span class="o">[</span><span class="kt">EDN</span><span class="o">]</span> <span class="k">=</span> <span class="o">...</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// parses all EDN values discovered in the String input</span>
+</span><span class='line'><span class="k">def</span> <span class="n">parseEDNs</span><span class="o">(</span><span class="n">in</span><span class="k">:</span> <span class="kt">ParserInput</span><span class="o">)</span><span class="k">:</span> <span class="kt">Try</span><span class="o">[</span><span class="kt">Seq</span><span class="o">[</span><span class="kt">EDN</span><span class="o">]]</span> <span class="k">=</span> <span class="o">...</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>If you look in common package, you&#8217;ll see that <code>EDN</code> is just an alias for <code>Any</code> ;)</p>
+
+<p>Here is how you can use it:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">scaledn._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">parser._</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Single Value</span>
+</span><span class='line'><span class="n">parseEDN</span><span class="o">(</span><span class="s">&quot;&quot;&quot;{1 &quot;foo&quot;, &quot;bar&quot; 1.234M, :foo/bar [1,2,3]} #_foo/bar :bar/foo&quot;&quot;&quot;</span><span class="o">)</span> <span class="k">match</span> <span class="o">{</span>
+</span><span class='line'>  <span class="k">case</span> <span class="nc">Success</span><span class="o">(</span><span class="n">t</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="o">\/-(</span><span class="n">t</span><span class="o">)</span>
+</span><span class='line'>  <span class="k">case</span> <span class="nc">Failure</span><span class="o">(</span><span class="n">f</span> <span class="k">:</span> <span class="kt">org.parboiled2.ParseError</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="o">-\/(</span><span class="n">parser</span><span class="o">.</span><span class="n">formatError</span><span class="o">(</span><span class="n">f</span><span class="o">))</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Multiple Value</span>
+</span><span class='line'><span class="n">parseEDNs</span><span class="o">(</span><span class="s">&quot;&quot;&quot;{1 &quot;foo&quot;, &quot;bar&quot; 1.234M, :foo/bar [1,2,3]} :bar/foo&quot;&quot;&quot;</span><span class="o">).</span><span class="n">success</span><span class="o">.</span><span class="n">value</span> <span class="n">should</span> <span class="n">be</span> <span class="o">(</span>
+</span><span class='line'>  <span class="nc">Vector</span><span class="o">(</span>
+</span><span class='line'>    <span class="nc">Map</span><span class="o">(</span>
+</span><span class='line'>      <span class="mi">1L</span> <span class="o">-&gt;</span> <span class="s">&quot;foo&quot;</span><span class="o">,</span>
+</span><span class='line'>      <span class="s">&quot;bar&quot;</span> <span class="o">-&gt;</span> <span class="nc">BigDecimal</span><span class="o">(</span><span class="s">&quot;1.234&quot;</span><span class="o">),</span>
+</span><span class='line'>      <span class="nc">EDNKeyword</span><span class="o">(</span><span class="nc">EDNSymbol</span><span class="o">(</span><span class="s">&quot;foo/bar&quot;</span><span class="o">,</span> <span class="nc">Some</span><span class="o">(</span><span class="s">&quot;foo&quot;</span><span class="o">)))</span> <span class="o">-&gt;</span> <span class="nc">Vector</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span> <span class="mi">2</span><span class="o">,</span> <span class="mi">3</span><span class="o">)</span>
+</span><span class='line'>    <span class="o">),</span>
+</span><span class='line'>    <span class="nc">EDNKeyword</span><span class="o">(</span><span class="nc">EDNSymbol</span><span class="o">(</span><span class="s">&quot;bar/foo&quot;</span><span class="o">,</span> <span class="nc">Some</span><span class="o">(</span><span class="s">&quot;bar&quot;</span><span class="o">)))</span>
+</span><span class='line'>  <span class="o">)</span>
+</span><span class='line'><span class="o">))</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>Some people will think <code>Any</code> is a bit too large and I agree but it&#8217;s quite practical to use. Moreover, using validation explained a bit later, you can parse your EDN and then map it to a stronger typed scala structure and then <code>Any</code> disappears.</p></blockquote>
+
+<br/>
+
+
+<h2>Compile-time parsing with Macros</h2>
+
+<p>When you use static EDN structures in your Scala code, you can write them in their string format and <em>scaledn</em> can parse them at compile-time using Scala macros and thus prevent a lot of errors you can encounter in dynamic languages.</p>
+
+<p>The macro mechanism is based on quasiquotes &amp; whitebox macro contexts which allow to infer types of your parsed EDN structures at compile-time. For example:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="o">&gt;</span> <span class="k">val</span> <span class="n">s</span><span class="k">:</span><span class="kt">Long</span> <span class="o">=</span> <span class="nc">EDN</span><span class="o">(</span><span class="s">&quot;\&quot;toto\&quot;&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">[</span><span class="kt">error</span><span class="o">]</span>  <span class="n">found</span>   <span class="k">:</span> <span class="kt">String</span><span class="o">(</span><span class="err">&quot;</span><span class="kt">toto</span><span class="err">&quot;</span><span class="o">)</span>
+</span><span class='line'><span class="err">[</span><span class="kt">error</span><span class="err">]</span>  <span class="kt">required:</span> <span class="kt">Long</span>
+</span><span class='line'><span class="o">[</span><span class="kt">error</span><span class="o">]</span>     <span class="k">val</span> <span class="n">e</span><span class="k">:</span> <span class="kt">Long</span> <span class="o">=</span> <span class="nc">EDN</span><span class="o">(</span><span class="s">&quot;\&quot;toto\&quot;&quot;</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Whooohooo magic :)</p>
+
+<br/>
+
+
+<h3>Classic Scala types</h3>
+
+<p>Here is how you can use it:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">scaledn._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">macros._</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// All types are just for info and can be omitted below, the macro infers them quite well</span>
+</span><span class='line'><span class="k">val</span> <span class="n">e</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=</span> <span class="nc">EDN</span><span class="o">(</span><span class="s">&quot;\&quot;toto\&quot;&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">bt</span><span class="k">:</span> <span class="kt">Boolean</span> <span class="o">=</span> <span class="nc">EDN</span><span class="o">(</span><span class="s">&quot;true&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">bf</span><span class="k">:</span> <span class="kt">Boolean</span> <span class="o">=</span> <span class="nc">EDN</span><span class="o">(</span><span class="s">&quot;false&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">l</span><span class="k">:</span> <span class="kt">Long</span> <span class="o">=</span> <span class="nc">EDN</span><span class="o">(</span><span class="s">&quot;123&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">d</span><span class="k">:</span> <span class="kt">Double</span> <span class="o">=</span> <span class="nc">EDN</span><span class="o">(</span><span class="s">&quot;123.456&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">bi</span><span class="k">:</span> <span class="kt">BigInt</span> <span class="o">=</span> <span class="nc">EDN</span><span class="o">(</span><span class="s">&quot;123M&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">bd</span><span class="k">:</span> <span class="kt">BigDecimal</span> <span class="o">=</span> <span class="nc">EDN</span><span class="o">(</span><span class="s">&quot;123.456N&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">s</span><span class="k">:</span> <span class="kt">EDNSymbol</span> <span class="o">=</span> <span class="nc">EDN</span><span class="o">(</span><span class="s">&quot;foo/bar&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">kw</span><span class="k">:</span> <span class="kt">EDNKeyword</span> <span class="o">=</span> <span class="nc">EDN</span><span class="o">(</span><span class="s">&quot;:foo/bar&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Homogenous collection inferred as Vecto[String]</span>
+</span><span class='line'><span class="k">val</span> <span class="n">vector</span><span class="k">:</span> <span class="kt">Vector</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="k">=</span> <span class="nc">EDN</span><span class="o">(</span><span class="s">&quot;&quot;&quot;[&quot;tata&quot; &quot;toto&quot; &quot;tutu&quot;]&quot;&quot;&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// multiple heterogenous values inferred as Seq[Any]</span>
+</span><span class='line'><span class="k">val</span> <span class="n">s</span> <span class="k">=</span> <span class="nc">EDNs</span><span class="o">(</span><span class="s">&quot;&quot;&quot;(1 2 3) &quot;toto&quot; [true false] :foo/bar&quot;&quot;&quot;</span><span class="o">)</span>
+</span><span class='line'><span class="c1">// note the small s at the end of EDN to inform the macro there are several values</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>Shapeless heterogenous collections</h3>
+
+<p>EDN allows to manipulate heterogenous collections. In Scala, when one thinks <em>heterogenous collection</em>, one thinks <a href="https://github.com/milessabin/shapeless">Shapeless</a>. Scaledn macros can parse &amp; map your EDN stringified structures to Scala strongly typed structures.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">scaledn._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">macros._</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">import</span> <span class="nn">shapeless.</span><span class="o">{</span><span class="nc">HNil</span><span class="o">,</span> <span class="o">::}</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">shapeless.record._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">shapeless.syntax.singleton._</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Heterogenous list</span>
+</span><span class='line'><span class="k">val</span> <span class="n">s</span> <span class="k">=</span> <span class="nc">EDNH</span><span class="o">(</span><span class="s">&quot;&quot;&quot;(1 &quot;toto&quot; true)&quot;&quot;&quot;</span><span class="o">)</span>
+</span><span class='line'><span class="n">s</span> <span class="n">should</span> <span class="n">equal</span> <span class="o">(</span><span class="mi">1L</span> <span class="o">::</span> <span class="s">&quot;toto&quot;</span> <span class="o">::</span> <span class="kc">true</span> <span class="o">::</span> <span class="nc">HNil</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Heterogenous Map/Record</span>
+</span><span class='line'><span class="k">val</span> <span class="n">s3</span> <span class="k">=</span> <span class="nc">EDNH</span><span class="o">(</span><span class="s">&quot;&quot;&quot;{1 &quot;toto&quot; true 1.234 &quot;foo&quot; (1 2 3)}&quot;&quot;&quot;</span><span class="o">)</span>
+</span><span class='line'><span class="n">s3</span> <span class="n">should</span> <span class="n">equal</span> <span class="o">(</span>
+</span><span class='line'>  <span class="mi">1L</span> <span class="o">-&gt;&gt;</span> <span class="s">&quot;toto&quot;</span> <span class="o">::</span>
+</span><span class='line'>  <span class="kc">true</span> <span class="o">-&gt;&gt;</span> <span class="mf">1.234</span> <span class="o">::</span>
+</span><span class='line'>  <span class="s">&quot;foo&quot;</span> <span class="o">-&gt;&gt;</span> <span class="nc">List</span><span class="o">(</span><span class="mi">1L</span><span class="o">,</span> <span class="mi">2L</span><span class="o">,</span> <span class="mi">3L</span><span class="o">)</span> <span class="o">::</span>
+</span><span class='line'>  <span class="nc">HNil</span>
+</span><span class='line'><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>please note the <code>H</code> in <code>EDNH</code> for heterogenous</p>
+
+<p>I must say using these macros, it might be even simpler to write Shapeless hlists or records than using scala API ;)</p></blockquote>
+
+<br/>
+
+
+<h3>Macro API</h3>
+
+<p>Scaledn provides different macros depending on the depth of introspection you require in your collection with respect to heterogeneity.</p>
+
+<p>Have a look directly at <a href="https://github.com/mandubian/scaledn/blob/master/macros/src/main/scala/macros.scala">Macro API</a></p>
+
+<br/>
+
+
+<h3>Mixing macro with Scala string interpolation</h3>
+
+<p>Following ideas implemented by Daniel James in <a href="http://pellucidanalytics.github.io/datomisca/">Datomisca</a>, scaledn proposes to use String interpolation mixed with parsing macro such as:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">scaledn._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">macros._</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">import</span> <span class="nn">shapeless.</span><span class="o">{</span><span class="nc">HNil</span><span class="o">,</span> <span class="o">::}</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">l</span> <span class="k">=</span> <span class="mi">123L</span>
+</span><span class='line'><span class="k">val</span> <span class="n">s</span> <span class="k">=</span> <span class="nc">List</span><span class="o">(</span><span class="s">&quot;foo&quot;</span><span class="o">,</span> <span class="s">&quot;bar&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">r</span><span class="k">:</span> <span class="kt">Long</span> <span class="o">=</span> <span class="nc">EDN</span><span class="o">(</span><span class="n">s</span><span class="s">&quot;$l&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">r1</span><span class="k">:</span> <span class="kt">Seq</span><span class="o">[</span><span class="kt">Any</span><span class="o">]</span> <span class="k">=</span> <span class="nc">EDN</span><span class="o">(</span><span class="n">s</span><span class="s">&quot;($l $s)&quot;</span><span class="o">)</span>
+</span><span class='line'><span class="k">val</span> <span class="n">r2</span><span class="k">:</span> <span class="kt">Long</span> <span class="kt">::</span> <span class="kt">List</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="o">::</span> <span class="nc">HNil</span> <span class="k">=</span> <span class="nc">EDNH</span><span class="o">(</span><span class="n">s</span><span class="s">&quot;($l $s)&quot;</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Nothing to add, macros are cool sometimes :)</p>
+
+<br/>
+
+
+<br/>
+
+
+<h2>Runtime validation of EDN to Scala</h2>
+
+<p>When writing REST or external API, the received data can never be trusted before being validated. So, you generally try to validate what is received and map it to a strong-typed structures. For example:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// parse the received string input</span>
+</span><span class='line'><span class="n">parseEDN</span><span class="o">(</span><span class="s">&quot;&quot;&quot;{ 1 &quot;toto&quot; 2 &quot;tata&quot; 3 &quot;tutu&quot; }&quot;&quot;&quot;</span><span class="o">)</span>
+</span><span class='line'><span class="c1">// then validate it to a Scala type</span>
+</span><span class='line'>  <span class="o">.</span><span class="n">map</span><span class="o">(</span><span class="n">validate</span><span class="o">[</span><span class="kt">Map</span><span class="o">[</span><span class="kt">Long</span>, <span class="kt">String</span><span class="o">]])</span>
+</span><span class='line'>  <span class="o">.</span><span class="n">success</span><span class="o">.</span><span class="n">value</span> <span class="n">should</span> <span class="n">be</span> <span class="o">(</span>
+</span><span class='line'>    <span class="n">play</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">mapping</span><span class="o">.</span><span class="nc">Success</span><span class="o">(</span><span class="nc">Map</span><span class="o">(</span>
+</span><span class='line'>      <span class="mi">1L</span> <span class="o">-&gt;</span> <span class="s">&quot;toto&quot;</span><span class="o">,</span>
+</span><span class='line'>      <span class="mi">2L</span> <span class="o">-&gt;</span> <span class="s">&quot;tata&quot;</span><span class="o">,</span>
+</span><span class='line'>      <span class="mi">3L</span> <span class="o">-&gt;</span> <span class="s">&quot;tutu&quot;</span>
+</span><span class='line'>    <span class="o">))</span>
+</span><span class='line'>  <span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The validation API is the following:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">scaledn._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">validate._</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">def</span> <span class="n">validate</span><span class="o">[</span><span class="kt">T</span><span class="o">](</span><span class="n">edn</span><span class="k">:</span> <span class="kt">EDN</span><span class="o">)(</span><span class="k">implicit</span> <span class="n">r</span><span class="k">:</span> <span class="kt">RuleLike</span><span class="o">[</span><span class="kt">EDN</span>, <span class="kt">T</span><span class="o">])</span><span class="k">:</span> <span class="kt">Validation</span><span class="o">[</span><span class="kt">EDN</span>, <span class="kt">T</span><span class="o">]</span> <span class="k">=</span> <span class="n">r</span><span class="o">.</span><span class="n">validate</span><span class="o">(</span><span class="n">edn</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Scaledn validation is based on <a href="https://github.com/jto/validation">Generic Validation API</a> developed by my <a href="http://www.mfglabs.com">MFGLabs</a>&#8217;s colleague &amp; friend <a href="https://github.com/jto">Julien Tournay</a>. This API was developed for Play Framework &amp; Typesafe last year to generalize Json validation API to all data formats. But it will never be integrated in Play as Typesafe considers it to be too pure Scala &amp; pure FP-oriented. Yet, we use this API in production at <a href="http://www.mfglabs.com">MFGLabs</a> and maintain/extend it ourselves.</p>
+
+<p>As explained before, Scaledn parser parses EDN values directly to Scala types as they are bijective so validation is often just a runtime cast and not very interesting in general.</p>
+
+<p>What&#8217;s much more interesting is to validate to Shapeless HList, Records and even more interesting to CaseClasses &amp; Tuples based on Shapeless fantastic auto-generated Generic macros.</p>
+
+<p>Let&#8217;s take a few examples to show the power of this feature:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">scaledn._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">validate._</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">import</span> <span class="nn">play.api.data.mapping._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">shapeless.</span><span class="o">{</span><span class="nc">HNil</span><span class="o">,</span> <span class="o">::}</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">CP</span><span class="o">(</span><span class="n">cp</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)</span>
+</span><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">Address</span><span class="o">(</span><span class="n">street</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">cp</span><span class="k">:</span> <span class="kt">CP</span><span class="o">)</span>
+</span><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">Person</span><span class="o">(</span><span class="n">name</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">age</span><span class="k">:</span> <span class="kt">Int</span><span class="o">,</span> <span class="n">addr</span><span class="k">:</span> <span class="kt">Address</span><span class="o">)</span>
+</span><span class='line'><span class="c1">// Remark that NO implicits must be declared on our case classes</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// HLISTS</span>
+</span><span class='line'><span class="n">parseEDN</span><span class="o">(</span><span class="s">&quot;&quot;&quot;(1 &quot;toto&quot; true nil)&quot;&quot;&quot;</span><span class="o">).</span><span class="n">map</span><span class="o">(</span>
+</span><span class='line'>  <span class="n">validate</span><span class="o">[</span><span class="kt">Long</span> <span class="kt">::</span> <span class="kt">String</span> <span class="kt">::</span> <span class="kt">Boolean</span> <span class="kt">::</span> <span class="kt">EDNNil.</span><span class="k">type</span> <span class="kt">::</span> <span class="kt">HNil</span><span class="o">]</span>
+</span><span class='line'><span class="o">).</span><span class="n">success</span><span class="o">.</span><span class="n">value</span> <span class="n">should</span> <span class="n">be</span> <span class="o">(</span>
+</span><span class='line'>  <span class="nc">Success</span><span class="o">(</span><span class="mi">1L</span> <span class="o">::</span> <span class="s">&quot;toto&quot;</span> <span class="o">::</span> <span class="kc">true</span> <span class="o">::</span> <span class="nc">EDNNil</span> <span class="o">::</span> <span class="nc">HNil</span><span class="o">)</span>
+</span><span class='line'><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// TUPLES</span>
+</span><span class='line'><span class="n">parseEDN</span><span class="o">(</span><span class="s">&quot;&quot;&quot;(&quot;toto&quot; 34 {&quot;street&quot; &quot;chboing&quot;, &quot;cp&quot; {&quot;cp&quot; 75009}})&quot;&quot;&quot;</span><span class="o">).</span><span class="n">map</span><span class="o">(</span>
+</span><span class='line'>  <span class="n">validate</span><span class="o">[</span><span class="kt">Tuple3</span><span class="o">[</span><span class="kt">String</span>, <span class="kt">Int</span>, <span class="kt">Address</span><span class="o">]]</span>
+</span><span class='line'><span class="o">).</span><span class="n">success</span><span class="o">.</span><span class="n">value</span> <span class="n">should</span> <span class="n">be</span> <span class="o">(</span>
+</span><span class='line'>  <span class="nc">Success</span><span class="o">((</span><span class="s">&quot;toto&quot;</span><span class="o">,</span> <span class="mi">34</span><span class="o">,</span> <span class="nc">Address</span><span class="o">(</span><span class="s">&quot;chboing&quot;</span><span class="o">,</span> <span class="nc">CP</span><span class="o">(</span><span class="mi">75009</span><span class="o">))))</span>
+</span><span class='line'><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// CASECLASSES</span>
+</span><span class='line'><span class="n">parseEDN</span><span class="o">(</span><span class="s">&quot;&quot;&quot;(&quot;toto&quot; 34 (&quot;chboing&quot; (75009)))&quot;&quot;&quot;</span><span class="o">).</span><span class="n">map</span><span class="o">(</span>
+</span><span class='line'>  <span class="n">validate</span><span class="o">[</span><span class="kt">Person</span><span class="o">]</span>
+</span><span class='line'><span class="o">).</span><span class="n">success</span><span class="o">.</span><span class="n">value</span> <span class="n">should</span> <span class="n">be</span> <span class="o">(</span>
+</span><span class='line'>  <span class="nc">Success</span><span class="o">(</span><span class="nc">Person</span><span class="o">(</span><span class="s">&quot;toto&quot;</span><span class="o">,</span> <span class="mi">34</span><span class="o">,</span> <span class="nc">Address</span><span class="o">(</span><span class="s">&quot;chboing&quot;</span><span class="o">,</span> <span class="nc">CP</span><span class="o">(</span><span class="mi">75009</span><span class="o">))))</span>
+</span><span class='line'><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">parseEDN</span><span class="o">(</span><span class="s">&quot;&quot;&quot;{&quot;name&quot; &quot;toto&quot;, &quot;age&quot; 34, &quot;addr&quot; {&quot;street&quot; &quot;chboing&quot;, &quot;cp&quot; {&quot;cp&quot; 75009}}}&quot;&quot;&quot;</span><span class="o">).</span><span class="n">map</span><span class="o">(</span>
+</span><span class='line'>  <span class="n">validate</span><span class="o">[</span><span class="kt">Person</span><span class="o">]</span>
+</span><span class='line'><span class="o">).</span><span class="n">success</span><span class="o">.</span><span class="n">value</span> <span class="n">should</span> <span class="n">be</span> <span class="o">(</span>
+</span><span class='line'>  <span class="nc">Success</span><span class="o">(</span><span class="nc">Person</span><span class="o">(</span><span class="s">&quot;toto&quot;</span><span class="o">,</span> <span class="mi">34</span><span class="o">,</span> <span class="nc">Address</span><span class="o">(</span><span class="s">&quot;chboing&quot;</span><span class="o">,</span> <span class="nc">CP</span><span class="o">(</span><span class="mi">75009</span><span class="o">))))</span>
+</span><span class='line'><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>I think here you can see the power of this validation feature without writing any boilerplate&#8230;</p></blockquote>
+
+<br/>
+
+
+<br/>
+
+
+<h2>Serializing Scala to EDN</h2>
+
+<p>Using <a href="https://github.com/jto/validation">Generic Validation API</a>, you can also write scala structures to any other data format.</p>
+
+<p>Scaledn provides serialization from scala structures to EDN Strings. For example:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">scaledn._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">write._</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">toEDNString</span><span class="o">(</span><span class="s">&quot;toto&quot;</span><span class="o">)</span> <span class="n">should</span> <span class="n">equal</span> <span class="o">(</span><span class="s">&quot;\&quot;toto\&quot;&quot;</span><span class="o">)</span>
+</span><span class='line'><span class="n">toEDNString</span><span class="o">(</span><span class="nc">List</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span> <span class="mi">2</span><span class="o">,</span> <span class="mi">3</span><span class="o">))</span> <span class="n">should</span> <span class="n">equal</span> <span class="o">(</span><span class="s">&quot;&quot;&quot;(1 2 3)&quot;&quot;&quot;</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The write API is the following:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">scaledn._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">write._</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">def</span> <span class="n">toEDNString</span><span class="o">[</span><span class="kt">I</span><span class="o">](</span><span class="n">i</span><span class="k">:</span> <span class="kt">I</span><span class="o">)(</span><span class="k">implicit</span> <span class="n">w</span><span class="k">:</span> <span class="kt">WriteLike</span><span class="o">[</span><span class="kt">I</span>, <span class="kt">String</span><span class="o">])</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=</span> <span class="n">w</span><span class="o">.</span><span class="n">writes</span><span class="o">(</span><span class="n">i</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Once again, what&#8217;s more interesting is using shapeless &amp; caseclasses &amp; tuples.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">scaledn._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">write._</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">import</span> <span class="nn">shapeless.</span><span class="o">{</span><span class="nc">HNil</span><span class="o">,</span> <span class="o">::}</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// HLIST</span>
+</span><span class='line'><span class="n">toEDNString</span><span class="o">(</span><span class="mi">1</span> <span class="o">::</span> <span class="kc">true</span> <span class="o">::</span> <span class="nc">List</span><span class="o">(</span><span class="mi">1L</span><span class="o">,</span> <span class="mi">2L</span><span class="o">,</span> <span class="mi">3L</span><span class="o">)</span> <span class="o">::</span> <span class="nc">HNil</span><span class="o">)</span> <span class="n">should</span> <span class="n">equal</span> <span class="o">(</span><span class="s">&quot;&quot;&quot;(1 true (1 2 3))&quot;&quot;&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// TUPLE</span>
+</span><span class='line'><span class="n">toEDNString</span><span class="o">((</span><span class="mi">23</span><span class="o">,</span> <span class="kc">true</span><span class="o">))</span> <span class="n">should</span> <span class="n">equal</span> <span class="o">(</span><span class="s">&quot;&quot;&quot;(23 true)&quot;&quot;&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// CASE CLASS</span>
+</span><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">Address</span><span class="o">(</span><span class="n">street</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">cp</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)</span>
+</span><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">Person</span><span class="o">(</span><span class="n">name</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">age</span><span class="k">:</span> <span class="kt">Int</span><span class="o">,</span> <span class="n">addr</span><span class="k">:</span> <span class="kt">Address</span><span class="o">)</span>
+</span><span class='line'><span class="c1">// Remark that NO implicits must be declared on our case classes</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">toEDNString</span><span class="o">(</span><span class="nc">Person</span><span class="o">(</span><span class="s">&quot;toto&quot;</span><span class="o">,</span> <span class="mi">34</span><span class="o">,</span> <span class="nc">Address</span><span class="o">(</span><span class="s">&quot;chboing&quot;</span><span class="o">,</span> <span class="mi">75009</span><span class="o">)))</span> <span class="n">should</span> <span class="n">equal</span> <span class="o">(</span>
+</span><span class='line'>  <span class="s">&quot;&quot;&quot;{&quot;name&quot; &quot;toto&quot;, &quot;age&quot; 34, &quot;addr&quot; {&quot;street&quot; &quot;chboing&quot;, &quot;cp&quot; 75009}}&quot;&quot;&quot;</span>
+</span><span class='line'><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>TODO</h2>
+
+<p>This project is a first draft so it requires a bit more work.</p>
+
+<p>Here are a few points to work on:</p>
+
+<ul>
+<li>patch remaining glitches/bugs</li>
+<li>write more tests for all cases</li>
+<li>study streamed parser asap</li>
+<li>write sample apps</li>
+</ul>
+
+
+<p>Don&#8217;t hesitate to test, find bugs, contribute, give remarks, ideas&#8230;</p>
+
+<p>Have fun in EDN world&#8230;</p>
+
+<br/>
+
+
+<br/>
+
+
+<br/>
+
+
+<br/>
+
+
+
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -5556,851 +6370,6 @@ Everything you can override and everything that I didn&#8217;t implement yet&#82
 
     </article>
   
-  
-    <article>
-      
-  <header class="page-header">
-    
-      <h1 class="entry-title"><a href="/2013/08/21/playztream/">Scalaz-Stream Plug&#8217;n&#8217;Play2 Iteratee/WS + Recursive Streaming</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-08-21T23:23:00+02:00" pubdate data-updated="true">Aug 21<span>st</span>, 2013</time>
-        
-         | <a href="/2013/08/21/playztream/#disqus_thread">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>The code for all autosources &amp; sample apps can be found on Github <a href="https://github.com/mandubian/playzstream">here</a></p>
-
-<blockquote><p>The aim of this article is to show how <a href="https://github.com/scalaz/scalaz-stream">scalaz-stream</a> could be plugged on existing Play Iteratee/Enumerator and used in your web projects. I also wanted to evaluate in depth the power of <a href="https://github.com/scalaz/scalaz-stream">scalaz-stream</a> <em>Processes</em> by trying to write a recursive streaming action: I mean a web endpoint streaming data and re-injecting its own streamed data in itself.</p></blockquote>
-
-<br/>
-
-
-<blockquote><p>If you want to see now how scalaz-stream is used with Play, go to <a href="#plug-n-play">this paragraph</a> directly.</p></blockquote>
-
-<br/>
-
-
-<h2>Why Scalaz-Stream when you have Play Iteratees?</h2>
-
-<br/>
-
-
-<h3>Play Iteratees are powerful &amp; cool but&#8230;</h3>
-
-<p>I&#8217;m a fan of everything dealing with data streaming and realtime management in backends. I&#8217;ve worked a lot on <a href="http://www.playframework.org">Play Framework</a> and naturally I&#8217;ve been using the cornerstone behind Play&#8217;s reactive nature: <em>Play Iteratees</em>.</p>
-
-<p><em>Iteratees</em> (with its counterparts, <em>Enumerators</em> and <em>Enumeratees</em>) are great to <strong>manipulate/transform linear streams of data chunks</strong> in a very <strong>reactive</strong> (non-blocking &amp; asynchronous) and purely <strong>functional</strong> way:</p>
-
-<ul>
-<li><strong>Enumerators</strong> identifies the <strong>data producer</strong> that can generate finite/infinite/procedural data streams.</li>
-<li><strong>Iteratee</strong> is simply a <strong>data folder built as a state machine</strong> based on 3 states (Continue, Done, Error) which consumes data from Enumerator to compute a final result.</li>
-<li><strong>Enumeratee</strong> is a kind of <strong>transducer</strong> able to adapt an Enumerator producing some type of data to an Iteratee that expects other type of data. Enumeratee can be used as both a pipe transformer and adapter.</li>
-</ul>
-
-
-<p>Iteratee is really powerful but I must say I&#8217;ve always found them quite picky to use, practically speaking. In Play, they are used in their best use-case and they were created for that exactly. <strong>I&#8217;ve been using Iteratees for more than one year now but I still don&#8217;t feel fluent with them</strong>. Each time I use them, I must spend some time to know how I could write what I need. It&#8217;s not because they are purely functional (piping an Enumerator into an Enumeratee into an Iteratee is quite trivial) but there is something that my brain doesn&#8217;t want to catch.</p>
-
-<blockquote><p>If you want more details about my experience with Iteratees, go to <a href="#iteratee-details">this paragraph</a></p></blockquote>
-
-<p>That&#8217;s why <strong>I wanted to work with other functional streaming tools to see if they suffer the same kind of usability toughness</strong> or can bring something more natural to me. There are lots of other competitors on the field such as <strong>pipes</strong>, <strong>conduits</strong> and <strong>machines</strong>. As I don&#8217;t have physical time to study all of them in depth, I&#8217;ve chosen the one that appealed me the most i.e. Machines.</p>
-
-<blockquote><p>I&#8217;m not yet a Haskell coder even if I can mumble it so I preferred to evaluate the concept with <a href="https://github.com/scalaz/scalaz-stream">scalaz-stream</a>, a Scala implementation trying to bring machines to <em>normal</em> coders focusing on the aspect of IO streaming.</p></blockquote>
-
-<br/>
-
-
-<br/>
-
-
-<h2>Scratching the concepts of Machine / Process ?</h2>
-
-<blockquote><p>I&#8217;m not going to judge if Machines are better or not than Iteratees, this is not my aim. I&#8217;m just experimenting the concept in an objective way.</p></blockquote>
-
-<p>I won&#8217;t explain the concept of Machines in depth because it&#8217;s huge and I don&#8217;t think I have the theoretical background to do it right now. So, let&#8217;s focus on very basic ideas at first:</p>
-
-<ul>
-<li><em>Machine</em> is a very generic concept that represents <strong>a data processing mechanism with potential multiple inputs, an output and monadic effects</strong> (typically Future input chunks, side-effects while transforming, delayed output&#8230;)</li>
-<li>To simplify, let say a machine is <strong>a bit like a mechano that you construct by plugging together other more generic machines</strong> (such as source, transducer, sink, tee, wye) as simply as pipes.</li>
-<li>Building a machine also means <strong>planning all the steps you will go through when managing streamed data but it doesn&#8217;t do anything until you run it</strong> (no side-effect, no resource consumption). You can re-run a machine as many times as you want.</li>
-<li>A machine is a <strong>state machine</strong> (Emit/Await/Halt) as Iteratee but it manages error in a more explicit way IMHO (fallback/error)</li>
-</ul>
-
-
-<p>In <a href="https://github.com/scalaz/scalaz-stream">scalaz-stream</a>, you don&#8217;t manipulate machines which are too abstract for real-life use-cases but you manipulate simpler concepts:</p>
-
-<ul>
-<li><code>Process[M, O]</code> is a restricted machine outputting a stream of <code>O</code>. It can be a source if the monadic effect gets input from I/O or generates procedural data, or a sink if you don&#8217;t care about the output. <em>Please note that it doesn&#8217;t infer the type of potential input at all</em>.</li>
-<li><code>Wye[L, R, O]</code> is a machine that takes 2 inputs (left <code>L</code> / right <code>R</code>) and outputs chunks of type <code>O</code> (you can read from left or right or wait for both before ouputting)</li>
-<li><code>Tee[L, R, O]</code> is a Wye that can only read alternatively from left or from right but not from both at the same time.</li>
-<li><code>Process1[I, O]</code> can be seen as a transducer which accepts inputs of type <code>I</code> and outputs chunks of type <code>O</code> (a bit like Enumeratee)</li>
-<li><code>Channel[M, I, O]</code> is an effectul channel that accepts input of type <code>I</code> and use it in a monadic effect <code>M</code> to produce potential <code>O</code></li>
-</ul>
-
-
-<br/>
-
-
-<h3>What I find attractive in Machines?</h3>
-
-<ul>
-<li>Machines is <strong>producer/consumer/transducer in the same place</strong> and Machines can consume/fold as Iteratee, transform as Enumeratee and emit as Enumerator at the same time and it opens lots of possibilities (even if 3 concepts in one could make it more complicated too).</li>
-<li>I feel like <strong>playing with legos as you plug machines on machines</strong> and this is quite funny actually.</li>
-<li>Machines manages <strong>monadic effects in its design</strong> and doesn&#8217;t infer the type of effect so you can use it with I/O, Future and whatever you can imagine that is monadic&#8230;</li>
-<li>Machines provide out-of-the-box <strong>Tee/Wye to compose streams</strong>, interleave, zip them as you want without writing crazy code.</li>
-<li>The early code samples I&#8217;ve seen were quite easy to read (even the implementation is not so complex). Have a look at the <code>StartHere</code> sample provided by scalaz-stream:</li>
-</ul>
-
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">property</span><span class="o">(</span><span class="s">&quot;simple file I/O&quot;</span><span class="o">)</span> <span class="k">=</span> <span class="n">secure</span> <span class="o">{</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="k">val</span> <span class="n">converter</span><span class="k">:</span> <span class="kt">Task</span><span class="o">[</span><span class="kt">Unit</span><span class="o">]</span> <span class="k">=</span>
-</span><span class='line'>      <span class="n">io</span><span class="o">.</span><span class="n">linesR</span><span class="o">(</span><span class="s">&quot;testdata/fahrenheit.txt&quot;</span><span class="o">)</span>
-</span><span class='line'>        <span class="o">.</span><span class="n">filter</span><span class="o">(</span><span class="n">s</span> <span class="k">=&gt;</span> <span class="o">!</span><span class="n">s</span><span class="o">.</span><span class="n">trim</span><span class="o">.</span><span class="n">isEmpty</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="n">s</span><span class="o">.</span><span class="n">startsWith</span><span class="o">(</span><span class="s">&quot;//&quot;</span><span class="o">))</span>
-</span><span class='line'>        <span class="o">.</span><span class="n">map</span><span class="o">(</span><span class="n">line</span> <span class="k">=&gt;</span> <span class="n">fahrenheitToCelsius</span><span class="o">(</span><span class="n">line</span><span class="o">.</span><span class="n">toDouble</span><span class="o">).</span><span class="n">toString</span><span class="o">)</span>
-</span><span class='line'>        <span class="o">.</span><span class="n">intersperse</span><span class="o">(</span><span class="s">&quot;\n&quot;</span><span class="o">)</span>
-</span><span class='line'>        <span class="o">.</span><span class="n">pipe</span><span class="o">(</span><span class="n">process1</span><span class="o">.</span><span class="n">utf8Encode</span><span class="o">)</span>
-</span><span class='line'>        <span class="o">.</span><span class="n">to</span><span class="o">(</span><span class="n">io</span><span class="o">.</span><span class="n">fileChunkW</span><span class="o">(</span><span class="s">&quot;testdata/celsius.txt&quot;</span><span class="o">))</span>
-</span><span class='line'>        <span class="o">.</span><span class="n">run</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="n">converter</span><span class="o">.</span><span class="n">run</span>
-</span><span class='line'>    <span class="kc">true</span>
-</span><span class='line'>  <span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<blockquote><p>But don&#8217;t think everything is so simple, machines is a complex concept with lots of theory behind it which is quite abstract. what I find very interesting is that <strong>it&#8217;s possible to vulgarize this very abstract concept with simpler concepts such as Process, Source, Sink, Tee, Wye&#8230; that you can catch quite easily</strong> as these are concepts you already manipulated when you were playing in your bathtub when you were child (or even now).</p></blockquote>
-
-<br/>
-
-
-<br/>
-
-
-<h2><a name="plug-n-play">Scalaz-stream Plug&#8217;n&#8217;Play  Iteratee/Enumerator</a></h2>
-
-<p>After these considerations, I wanted to experiment scalaz-stream with Play streaming capabilities in order to see how it behaves in a context I know.</p>
-
-<p>Here is what I decided to study:</p>
-
-<ul>
-<li><strong>Stream data out of a controller action using a scalaz-stream <code>Process</code></strong></li>
-<li><strong>Call an AsyncWebService &amp; consume the response as a stream of <code>Array[Byte]</code> using a scalaz-stream <code>Process</code></strong></li>
-</ul>
-
-
-<p>Here is existing Play API :</p>
-
-<ul>
-<li>Action provides <code>Ok.stream(Enumerator)</code></li>
-<li>WS call consuming response as a stream of data <code>WS.get(r: ResponseHeader =&gt; Iteratee)</code></li>
-</ul>
-
-
-<br/>
-
-
-<blockquote><p>As you can see, these API depends on Iteratee/Enumerator. As I didn&#8217;t want to hack Play too much as a beginning, I decided to try &amp; plug scalaz-stream on Play Iteratee (if possible).</p></blockquote>
-
-<h3>Building <code>Enumerator[O]</code> from <code>Process[Task, O]</code></h3>
-
-<p>The idea is to take a scalaz-stream Source[O] (<code>Process[M,O]</code>) and wrap it into an <code>Enumerator[O]</code> so that it can be used in Play controller actions.</p>
-
-<p>An Enumerator is a data producer which can generate those data using monadic <code>Future</code> effects (Play Iteratee is tightly linked to <code>Future</code>).</p>
-
-<p><code>Process[Task, O]</code> is a machine outputting a stream of <code>O</code> so it&#8217;s logically the right candidate to be adapted with a <code>Enumerator[O]</code>. <em>Let&#8217;s remind&#8217; <code>Task</code> is just a scalaz <code>Future[Either[Throwable,A]]</code> with a few helpers and it&#8217;s used in scalaz-stream</em>.</p>
-
-<p>So I&#8217;ve implemented (at least tried) an <code>Enumerator[O]</code> that accepts a <code>Process[Task, O]</code>:</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">def</span> <span class="n">enumerator</span><span class="o">[</span><span class="kt">O</span><span class="o">](</span><span class="n">p</span><span class="k">:</span> <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">O</span><span class="o">])(</span><span class="k">implicit</span> <span class="n">ctx</span><span class="k">:</span> <span class="kt">ExecutionContext</span><span class="o">)</span> <span class="k">=</span>
-</span><span class='line'>    <span class="k">new</span> <span class="nc">Enumerator</span><span class="o">[</span><span class="kt">O</span><span class="o">]</span> <span class="o">{</span>
-</span><span class='line'>      <span class="o">...</span>
-</span><span class='line'>      <span class="c1">// look the code in github project</span>
-</span><span class='line'>      <span class="o">...</span>
-</span><span class='line'>  <span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<blockquote><p>The implementation just synchronizes the states of the <code>Iteratee[O, A]</code> consuming the <code>Enumerator</code> with the states of <code>Process[Task, O]</code> emitting data chunks of <code>O</code>. It&#8217;s quite simple actually.</p></blockquote>
-
-<br/>
-
-
-<br/>
-
-
-<h3>Building <code>Process1[I, O]</code> from <code>Iteratee[I, O]</code></h3>
-
-<p>The idea is to drive an Iteratee from a scalaz-stream Process so that it can consume an Enumerator and be used in Play WS.</p>
-
-<p>An <code>Iteratee[I, O]</code> accepts inputs of type <code>I</code> (<em>and nothing else</em>) and will fold the input stream into a single result of type <code>O</code>.</p>
-
-<p>A <code>Process1[I, O]</code> accepts inputs of type <code>I</code> and emits chunks of type <code>O</code> but not necessarily one single output chunk. So it&#8217;s a good candidate for our use-case but we need to choose which emitted chunk will be the result of the <code>Iteratee[I, O]</code>. here, totally arbitrarily, I&#8217;ve chosen to take the first emit as the result (<em>but the last would be as good if not better</em>).</p>
-
-<p>So I implemented the following:</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">def</span> <span class="n">iterateeFirstEmit</span><span class="o">[</span><span class="kt">I</span>, <span class="kt">O</span><span class="o">](</span><span class="n">p</span><span class="k">:</span> <span class="kt">Process.Process1</span><span class="o">[</span><span class="kt">I</span>, <span class="kt">O</span><span class="o">])(</span><span class="k">implicit</span> <span class="n">ctx</span><span class="k">:</span> <span class="kt">ExecutionContext</span><span class="o">)</span><span class="k">:</span> <span class="kt">Iteratee</span><span class="o">[</span><span class="kt">I</span>, <span class="kt">O</span><span class="o">]</span> <span class="k">=</span> <span class="o">{</span>
-</span><span class='line'>  <span class="o">...</span>
-</span><span class='line'>  <span class="c1">// look the code in github project</span>
-</span><span class='line'>  <span class="o">...</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<blockquote><p>The implementation is really raw for experimentation as it goes through the states of the <code>Process1[I,O]</code> and generates the corresponding states of <code>Iteratee[I,O]</code> until first emitted value. Nothing more nothing less&#8230;</p></blockquote>
-
-<br/>
-
-
-<br/>
-
-
-<h2>A few basic action samples</h2>
-
-<blockquote><p>Everything done in those samples could be done with Iteratee/Enumeratee more or less simply. The subject is not there!</p></blockquote>
-
-<br/>
-
-
-<h3>Sample 1 : Generates a stream from a Simple Emitter Process</h3>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">def</span> <span class="n">sample1</span> <span class="k">=</span> <span class="nc">Action</span> <span class="o">{</span>
-</span><span class='line'>  <span class="k">val</span> <span class="n">process</span> <span class="k">=</span> <span class="nc">Process</span><span class="o">.</span><span class="n">emitAll</span><span class="o">(</span><span class="nc">Seq</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span> <span class="mi">2</span><span class="o">,</span> <span class="mi">3</span><span class="o">,</span> <span class="mi">4</span><span class="o">)).</span><span class="n">map</span><span class="o">(</span><span class="k">_</span><span class="o">.</span><span class="n">toString</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="nc">Ok</span><span class="o">.</span><span class="n">stream</span><span class="o">(</span><span class="n">enumerator</span><span class="o">(</span><span class="n">process</span><span class="o">))</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="o">&gt;</span> <span class="n">curl</span> <span class="s">&quot;localhost:10000/sample1&quot;</span> <span class="o">--</span><span class="n">no</span><span class="o">-</span><span class="n">buffer</span>
-</span><span class='line'><span class="mi">1234</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-
-
-<br/>
-
-
-<h3>Sample 2 : Generates a stream from a continuous emitter</h3>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="cm">/** A process generating an infinite stream of natural numbers */</span>
-</span><span class='line'><span class="k">val</span> <span class="n">numerals</span> <span class="k">=</span> <span class="nc">Process</span><span class="o">.</span><span class="n">unfold</span><span class="o">(</span><span class="mi">0</span><span class="o">){</span> <span class="n">s</span> <span class="k">=&gt;</span> <span class="k">val</span> <span class="n">x</span> <span class="k">=</span> <span class="n">s</span><span class="o">+</span><span class="mi">1</span><span class="o">;</span> <span class="nc">Some</span><span class="o">(</span><span class="n">x</span><span class="o">,</span> <span class="n">x</span><span class="o">)</span> <span class="o">}.</span><span class="n">repeat</span>
-</span><span class='line'>
-</span><span class='line'><span class="c1">// we limit the number of outputs but you don&#39;t have it can stream forever...</span>
-</span><span class='line'><span class="k">def</span> <span class="n">sample2</span> <span class="k">=</span> <span class="nc">Action</span> <span class="o">{</span>
-</span><span class='line'>  <span class="nc">Ok</span><span class="o">.</span><span class="n">stream</span><span class="o">(</span><span class="n">enumerator</span><span class="o">(</span><span class="n">numerals</span><span class="o">.</span><span class="n">map</span><span class="o">(</span><span class="k">_</span><span class="o">.</span><span class="n">toString</span><span class="o">).</span><span class="n">intersperse</span><span class="o">(</span><span class="s">&quot;,&quot;</span><span class="o">).</span><span class="n">take</span><span class="o">(</span><span class="mi">40</span><span class="o">)))</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="o">&gt;</span> <span class="n">curl</span> <span class="s">&quot;localhost:10000/sample2&quot;</span> <span class="o">--</span><span class="n">no</span><span class="o">-</span><span class="n">buffer</span>
-</span><span class='line'><span class="mi">1</span><span class="o">,</span><span class="mi">2</span><span class="o">,</span><span class="mi">3</span><span class="o">,</span><span class="mi">4</span><span class="o">,</span><span class="mi">5</span><span class="o">,</span><span class="mi">6</span><span class="o">,</span><span class="mi">7</span><span class="o">,</span><span class="mi">8</span><span class="o">,</span><span class="mi">9</span><span class="o">,</span><span class="mi">10</span><span class="o">,</span><span class="mi">11</span><span class="o">,</span><span class="mi">12</span><span class="o">,</span><span class="mi">13</span><span class="o">,</span><span class="mi">14</span><span class="o">,</span><span class="mi">15</span><span class="o">,</span><span class="mi">16</span><span class="o">,</span><span class="mi">17</span><span class="o">,</span><span class="mi">18</span><span class="o">,</span><span class="mi">19</span><span class="o">,</span><span class="mi">20</span><span class="o">,</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-
-
-<br/>
-
-
-<h3>Sample 3 : Generates a stream whose output frequency is controlled by a tee with numeral generator on left and ticker on right</h3>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="cm">/** ticks constant every delay milliseconds */</span>
-</span><span class='line'><span class="k">def</span> <span class="n">ticker</span><span class="o">(</span><span class="n">constant</span><span class="k">:</span> <span class="kt">Int</span><span class="o">,</span> <span class="n">delay</span><span class="k">:</span> <span class="kt">Long</span><span class="o">)</span><span class="k">:</span> <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">Int</span><span class="o">]</span> <span class="k">=</span> <span class="nc">Process</span><span class="o">.</span><span class="n">await</span><span class="o">(</span>
-</span><span class='line'>  <span class="n">scalaFuture2scalazTask</span><span class="o">(</span><span class="n">delayedNumber</span><span class="o">(</span><span class="n">constant</span><span class="o">,</span> <span class="n">delay</span><span class="o">))</span>
-</span><span class='line'><span class="o">)(</span><span class="nc">Process</span><span class="o">.</span><span class="n">emit</span><span class="o">).</span><span class="n">repeat</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">def</span> <span class="n">sample3</span> <span class="k">=</span> <span class="nc">Action</span> <span class="o">{</span>
-</span><span class='line'>  <span class="nc">Ok</span><span class="o">.</span><span class="n">stream</span><span class="o">(</span><span class="n">enumerator</span><span class="o">(</span>
-</span><span class='line'>    <span class="c1">// creates a Tee outputting only numerals but consuming ticker // to have the delayed effect</span>
-</span><span class='line'>    <span class="o">(</span><span class="n">numerals</span> <span class="n">tee</span> <span class="n">ticker</span><span class="o">(</span><span class="mi">0</span><span class="o">,</span> <span class="mi">100</span><span class="o">))(</span><span class="n">processes</span><span class="o">.</span><span class="n">zipWith</span><span class="o">((</span><span class="n">a</span><span class="o">,</span><span class="n">b</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="n">a</span><span class="o">))</span>
-</span><span class='line'>      <span class="o">.</span><span class="n">take</span><span class="o">(</span><span class="mi">100</span><span class="o">)</span>
-</span><span class='line'>      <span class="o">.</span><span class="n">map</span><span class="o">(</span><span class="k">_</span><span class="o">.</span><span class="n">toString</span><span class="o">)</span>
-</span><span class='line'>      <span class="o">.</span><span class="n">intersperse</span><span class="o">(</span><span class="s">&quot;,&quot;</span><span class="o">)</span>
-</span><span class='line'>  <span class="o">))</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Please note :</p>
-
-<ul>
-<li><code>scalaFuture2scalazTask</code> is just a helper to convert a <code>Future</code> into <code>Task</code></li>
-<li><code>ticker</code>is quite simple to understand: it awaits <code>Task[Int] and emits this</code>Int and repeats it again&#8230;</li>
-<li><code>processes.zipWith((a,b) =&gt; a)</code> is a tee (2 inputs left/right) that outputs only left data but consumes right also to have the delay effect.</li>
-<li><code>.map(_.toString)</code> simply converts into something writeable by <code>Ok.stream</code></li>
-<li><code>.intersperse(",")</code> which simply add `&#8221;,&#8221; between each element</li>
-</ul>
-
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="o">&gt;</span> <span class="n">curl</span> <span class="s">&quot;localhost:10000/sample3&quot;</span> <span class="o">--</span><span class="n">no</span><span class="o">-</span><span class="n">buffer</span>
-</span><span class='line'><span class="mf">1.</span><span class="o">..</span> <span class="c1">// to simulate the progressive apparition of numbers on screen</span>
-</span><span class='line'><span class="mi">1</span><span class="o">,...</span>
-</span><span class='line'><span class="mi">1</span><span class="o">,</span><span class="mf">2.</span><span class="o">..</span>
-</span><span class='line'><span class="o">...</span>
-</span><span class='line'><span class="mi">1</span><span class="o">,</span><span class="mi">2</span><span class="o">,</span><span class="mi">3</span><span class="o">,</span><span class="mi">4</span><span class="o">,</span><span class="mi">5</span><span class="o">,</span><span class="mi">6</span><span class="o">,</span><span class="mi">7</span><span class="o">,</span><span class="mi">8</span><span class="o">,</span><span class="mi">9</span><span class="o">,</span><span class="mi">10</span><span class="o">,</span><span class="mi">11</span><span class="o">,</span><span class="mi">12</span><span class="o">,</span><span class="mi">13</span><span class="o">,</span><span class="mi">14</span><span class="o">,</span><span class="mi">15</span><span class="o">,</span><span class="mi">16</span><span class="o">,</span><span class="mi">17</span><span class="o">,</span><span class="mi">18</span><span class="o">,</span><span class="mi">19</span><span class="o">,</span><span class="mi">20</span><span class="o">,</span><span class="mi">21</span><span class="o">,</span><span class="mi">22</span><span class="o">,</span><span class="mi">23</span><span class="o">,</span><span class="mi">24</span><span class="o">,</span><span class="mi">25</span><span class="o">,</span><span class="mi">26</span><span class="o">,</span><span class="mi">27</span><span class="o">,</span><span class="mi">28</span><span class="o">,</span><span class="mi">29</span><span class="o">,</span><span class="mi">30</span><span class="o">,</span><span class="mi">31</span><span class="o">,</span><span class="mi">32</span><span class="o">,</span><span class="mi">33</span><span class="o">,</span><span class="mi">34</span><span class="o">,</span><span class="mi">35</span><span class="o">,</span><span class="mi">36</span><span class="o">,</span><span class="mi">37</span><span class="o">,</span><span class="mi">38</span><span class="o">,</span><span class="mi">39</span><span class="o">,</span><span class="mi">40</span><span class="o">,</span><span class="mi">41</span><span class="o">,</span><span class="mi">42</span><span class="o">,</span><span class="mi">43</span><span class="o">,</span><span class="mi">44</span><span class="o">,</span><span class="mi">45</span><span class="o">,</span><span class="mi">46</span><span class="o">,</span><span class="mi">47</span><span class="o">,</span><span class="mi">48</span><span class="o">,</span><span class="mi">49</span><span class="o">,</span><span class="mi">50</span><span class="o">,</span><span class="mi">51</span><span class="o">,</span><span class="mi">52</span><span class="o">,</span><span class="mi">53</span><span class="o">,</span><span class="mi">54</span><span class="o">,</span><span class="mi">55</span><span class="o">,</span><span class="mi">56</span><span class="o">,</span><span class="mi">57</span><span class="o">,</span><span class="mi">58</span><span class="o">,</span><span class="mi">59</span><span class="o">,</span><span class="mi">60</span><span class="o">,</span><span class="mi">61</span><span class="o">,</span><span class="mi">62</span><span class="o">,</span><span class="mi">63</span><span class="o">,</span><span class="mi">64</span><span class="o">,</span><span class="mi">65</span><span class="o">,</span><span class="mi">66</span><span class="o">,</span><span class="mi">67</span><span class="o">,</span><span class="mi">68</span><span class="o">,</span><span class="mi">69</span><span class="o">,</span><span class="mi">70</span><span class="o">,</span><span class="mi">71</span><span class="o">,</span><span class="mi">72</span><span class="o">,</span><span class="mi">73</span><span class="o">,</span><span class="mi">74</span><span class="o">,</span><span class="mi">75</span><span class="o">,</span><span class="mi">76</span><span class="o">,</span><span class="mi">77</span><span class="o">,</span><span class="mi">78</span><span class="o">,</span><span class="mi">79</span><span class="o">,</span><span class="mi">80</span><span class="o">,</span><span class="mi">81</span><span class="o">,</span><span class="mi">82</span><span class="o">,</span><span class="mi">83</span><span class="o">,</span><span class="mi">84</span><span class="o">,</span><span class="mi">85</span><span class="o">,</span><span class="mi">86</span><span class="o">,</span><span class="mi">87</span><span class="o">,</span><span class="mi">88</span><span class="o">,</span><span class="mi">89</span><span class="o">,</span><span class="mi">90</span><span class="o">,</span><span class="mi">91</span><span class="o">,</span><span class="mi">92</span><span class="o">,</span><span class="mi">93</span><span class="o">,</span><span class="mi">94</span><span class="o">,</span><span class="mi">95</span><span class="o">,</span><span class="mi">96</span><span class="o">,</span><span class="mi">97</span><span class="o">,</span><span class="mi">98</span><span class="o">,</span><span class="mi">99</span><span class="o">,</span><span class="mi">100</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-
-
-<br/>
-
-
-<h3>Sample 4 : Generates a stream using side-effect to control output frequency</h3>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="cm">/** Async generates this Int after delay*/</span>
-</span><span class='line'><span class="k">def</span> <span class="n">delayedNumber</span><span class="o">(</span><span class="n">i</span><span class="k">:</span> <span class="kt">Int</span><span class="o">,</span> <span class="n">delay</span><span class="k">:</span> <span class="kt">Long</span><span class="o">)</span><span class="k">:</span> <span class="kt">Future</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="k">=</span>
-</span><span class='line'>  <span class="n">play</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">libs</span><span class="o">.</span><span class="n">concurrent</span><span class="o">.</span><span class="nc">Promise</span><span class="o">.</span><span class="n">timeout</span><span class="o">(</span><span class="n">i</span><span class="o">,</span> <span class="n">delay</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'><span class="cm">/** Creates a process generating an infinite stream natural numbers</span>
-</span><span class='line'><span class="cm">  * every `delay milliseconds</span>
-</span><span class='line'><span class="cm">  */</span>
-</span><span class='line'><span class="k">def</span> <span class="n">delayedNumerals</span><span class="o">(</span><span class="n">delay</span><span class="k">:</span> <span class="kt">Long</span><span class="o">)</span> <span class="k">=</span> <span class="o">{</span>
-</span><span class='line'>  <span class="k">def</span> <span class="n">step</span><span class="o">(</span><span class="n">i</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)</span><span class="k">:</span> <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">Int</span><span class="o">]</span> <span class="k">=</span> <span class="o">{</span>
-</span><span class='line'>    <span class="nc">Process</span><span class="o">.</span><span class="n">emit</span><span class="o">(</span><span class="n">i</span><span class="o">).</span><span class="n">then</span><span class="o">(</span>
-</span><span class='line'>      <span class="nc">Process</span><span class="o">.</span><span class="n">await</span><span class="o">(</span><span class="n">scalaFuture2scalazTask</span><span class="o">(</span><span class="n">delayedNumber</span><span class="o">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="o">,</span> <span class="n">delay</span><span class="o">)))(</span><span class="n">step</span><span class="o">)</span>
-</span><span class='line'>    <span class="o">)</span>
-</span><span class='line'>  <span class="o">}</span>
-</span><span class='line'>  <span class="nc">Process</span><span class="o">.</span><span class="n">await</span><span class="o">(</span><span class="n">scalaFuture2scalazTask</span><span class="o">(</span><span class="n">delayedNumber</span><span class="o">(</span><span class="mi">0</span><span class="o">,</span> <span class="n">delay</span><span class="o">)))(</span><span class="n">step</span><span class="o">)</span>
-</span><span class='line'><span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">def</span> <span class="n">sample4</span> <span class="k">=</span> <span class="nc">Action</span> <span class="o">{</span>
-</span><span class='line'>  <span class="nc">Ok</span><span class="o">.</span><span class="n">stream</span><span class="o">(</span><span class="n">enumerator</span><span class="o">(</span><span class="n">delayedNumerals</span><span class="o">(</span><span class="mi">100</span><span class="o">).</span><span class="n">take</span><span class="o">(</span><span class="mi">100</span><span class="o">).</span><span class="n">map</span><span class="o">(</span><span class="k">_</span><span class="o">.</span><span class="n">toString</span><span class="o">).</span><span class="n">intersperse</span><span class="o">(</span><span class="s">&quot;,&quot;</span><span class="o">)))</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Please note:</p>
-
-<ul>
-<li><code>delayedNumber</code> uses an Akka scheduler to trigger our value after timeout</li>
-<li><code>delayedNumerals</code> shows a simple recursive `Process[Task, Int] construction which shouldn&#8217;t be too hard to understand</li>
-</ul>
-
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="o">&gt;</span> <span class="n">curl</span> <span class="s">&quot;localhost:10000/sample4&quot;</span> <span class="o">--</span><span class="n">no</span><span class="o">-</span><span class="n">buffer</span>
-</span><span class='line'><span class="mf">0.</span><span class="o">..</span> <span class="c1">// to simulate the progressive apparition of numbers every 100ms</span>
-</span><span class='line'><span class="mi">0</span><span class="o">,...</span>
-</span><span class='line'><span class="mi">0</span><span class="o">,</span><span class="mf">1.</span><span class="o">..</span>
-</span><span class='line'><span class="mi">0</span><span class="o">,</span><span class="mi">1</span><span class="o">,...</span>
-</span><span class='line'><span class="mi">0</span><span class="o">,</span><span class="mi">1</span><span class="o">,</span><span class="mf">2.</span><span class="o">..</span>
-</span><span class='line'><span class="o">...</span>
-</span><span class='line'><span class="mi">0</span><span class="o">,</span><span class="mi">1</span><span class="o">,</span><span class="mi">2</span><span class="o">,</span><span class="mi">3</span><span class="o">,</span><span class="mi">4</span><span class="o">,</span><span class="mi">5</span><span class="o">,</span><span class="mi">6</span><span class="o">,</span><span class="mi">7</span><span class="o">,</span><span class="mi">8</span><span class="o">,</span><span class="mi">9</span><span class="o">,</span><span class="mi">10</span><span class="o">,</span><span class="mi">11</span><span class="o">,</span><span class="mi">12</span><span class="o">,</span><span class="mi">13</span><span class="o">,</span><span class="mi">14</span><span class="o">,</span><span class="mi">15</span><span class="o">,</span><span class="mi">16</span><span class="o">,</span><span class="mi">17</span><span class="o">,</span><span class="mi">18</span><span class="o">,</span><span class="mi">19</span><span class="o">,</span><span class="mi">20</span><span class="o">,</span><span class="mi">21</span><span class="o">,</span><span class="mi">22</span><span class="o">,</span><span class="mi">23</span><span class="o">,</span><span class="mi">24</span><span class="o">,</span><span class="mi">25</span><span class="o">,</span><span class="mi">26</span><span class="o">,</span><span class="mi">27</span><span class="o">,</span><span class="mi">28</span><span class="o">,</span><span class="mi">29</span><span class="o">,</span><span class="mi">30</span><span class="o">,</span><span class="mi">31</span><span class="o">,</span><span class="mi">32</span><span class="o">,</span><span class="mi">33</span><span class="o">,</span><span class="mi">34</span><span class="o">,</span><span class="mi">35</span><span class="o">,</span><span class="mi">36</span><span class="o">,</span><span class="mi">37</span><span class="o">,</span><span class="mi">38</span><span class="o">,</span><span class="mi">39</span><span class="o">,</span><span class="mi">40</span><span class="o">,</span><span class="mi">41</span><span class="o">,</span><span class="mi">42</span><span class="o">,</span><span class="mi">43</span><span class="o">,</span><span class="mi">44</span><span class="o">,</span><span class="mi">45</span><span class="o">,</span><span class="mi">46</span><span class="o">,</span><span class="mi">47</span><span class="o">,</span><span class="mi">48</span><span class="o">,</span><span class="mi">49</span><span class="o">,</span><span class="mi">50</span><span class="o">,</span><span class="mi">51</span><span class="o">,</span><span class="mi">52</span><span class="o">,</span><span class="mi">53</span><span class="o">,</span><span class="mi">54</span><span class="o">,</span><span class="mi">55</span><span class="o">,</span><span class="mi">56</span><span class="o">,</span><span class="mi">57</span><span class="o">,</span><span class="mi">58</span><span class="o">,</span><span class="mi">59</span><span class="o">,</span><span class="mi">60</span><span class="o">,</span><span class="mi">61</span><span class="o">,</span><span class="mi">62</span><span class="o">,</span><span class="mi">63</span><span class="o">,</span><span class="mi">64</span><span class="o">,</span><span class="mi">65</span><span class="o">,</span><span class="mi">66</span><span class="o">,</span><span class="mi">67</span><span class="o">,</span><span class="mi">68</span><span class="o">,</span><span class="mi">69</span><span class="o">,</span><span class="mi">70</span><span class="o">,</span><span class="mi">71</span><span class="o">,</span><span class="mi">72</span><span class="o">,</span><span class="mi">73</span><span class="o">,</span><span class="mi">74</span><span class="o">,</span><span class="mi">75</span><span class="o">,</span><span class="mi">76</span><span class="o">,</span><span class="mi">77</span><span class="o">,</span><span class="mi">78</span><span class="o">,</span><span class="mi">79</span><span class="o">,</span><span class="mi">80</span><span class="o">,</span><span class="mi">81</span><span class="o">,</span><span class="mi">82</span><span class="o">,</span><span class="mi">83</span><span class="o">,</span><span class="mi">84</span><span class="o">,</span><span class="mi">85</span><span class="o">,</span><span class="mi">86</span><span class="o">,</span><span class="mi">87</span><span class="o">,</span><span class="mi">88</span><span class="o">,</span><span class="mi">89</span><span class="o">,</span><span class="mi">90</span><span class="o">,</span><span class="mi">91</span><span class="o">,</span><span class="mi">92</span><span class="o">,</span><span class="mi">93</span><span class="o">,</span><span class="mi">94</span><span class="o">,</span><span class="mi">95</span><span class="o">,</span><span class="mi">96</span><span class="o">,</span><span class="mi">97</span><span class="o">,</span><span class="mi">98</span><span class="o">,</span><span class="mi">99</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-
-
-<br/>
-
-
-<h3>Sample 5 : Generates a stream by consuming completely another stream</h3>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// a process folding all Array[Byte] into a big String</span>
-</span><span class='line'><span class="k">val</span> <span class="n">reader</span><span class="k">:</span> <span class="kt">Process.Process1</span><span class="o">[</span><span class="kt">Array</span><span class="o">[</span><span class="kt">Byte</span><span class="o">]</span>, <span class="kt">String</span><span class="o">]</span> <span class="k">=</span> <span class="n">processes</span><span class="o">.</span><span class="n">fold1</span><span class="o">[</span><span class="kt">Array</span><span class="o">[</span><span class="kt">Byte</span><span class="o">]]((</span><span class="n">a</span><span class="o">,</span> <span class="n">b</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="n">a</span> <span class="o">++</span> <span class="n">b</span> <span class="o">)</span>
-</span><span class='line'>  <span class="o">.</span><span class="n">map</span><span class="o">{</span> <span class="n">arr</span> <span class="k">=&gt;</span> <span class="k">new</span> <span class="nc">String</span><span class="o">(</span><span class="n">arr</span><span class="o">)</span> <span class="o">}</span> <span class="o">|&gt;</span> <span class="n">processes</span><span class="o">.</span><span class="n">last</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">def</span> <span class="n">sample5</span> <span class="k">=</span> <span class="nc">Action</span> <span class="o">{</span>
-</span><span class='line'>  <span class="c1">// the WS call with response consumer by previous Process1[Array[Byte], String] driving the Iteratee[Array[Byte], String]</span>
-</span><span class='line'>  <span class="k">val</span> <span class="n">maybeValues</span><span class="k">:</span> <span class="kt">Future</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="k">=</span>
-</span><span class='line'>    <span class="nc">WS</span><span class="o">.</span><span class="n">url</span><span class="o">(</span><span class="n">routes</span><span class="o">.</span><span class="nc">Application</span><span class="o">.</span><span class="n">sample2</span><span class="o">().</span><span class="n">absoluteURL</span><span class="o">())</span>
-</span><span class='line'>      <span class="o">.</span><span class="n">get</span><span class="o">(</span><span class="n">rh</span> <span class="k">=&gt;</span> <span class="n">iterateeFirstEmit</span><span class="o">(</span><span class="n">reader</span><span class="o">))</span>
-</span><span class='line'>      <span class="o">.</span><span class="n">flatMap</span><span class="o">(</span><span class="k">_</span><span class="o">.</span><span class="n">run</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="nc">Ok</span><span class="o">.</span><span class="n">stream</span><span class="o">(</span><span class="n">enumerator</span><span class="o">(</span>
-</span><span class='line'>    <span class="c1">// wraps the received String in a Process</span>
-</span><span class='line'>    <span class="c1">// re-splits it to remove &quot;,&quot;</span>
-</span><span class='line'>    <span class="c1">// emits all chunks</span>
-</span><span class='line'>    <span class="nc">Process</span><span class="o">.</span><span class="n">wrap</span><span class="o">(</span><span class="n">scalaFuture2scalazTask</span><span class="o">(</span><span class="n">maybeValues</span><span class="o">))</span>
-</span><span class='line'>      <span class="o">.</span><span class="n">flatMap</span><span class="o">{</span> <span class="n">values</span> <span class="k">=&gt;</span> <span class="nc">Process</span><span class="o">.</span><span class="n">emitAll</span><span class="o">(</span><span class="n">values</span><span class="o">.</span><span class="n">split</span><span class="o">(</span><span class="s">&quot;,&quot;</span><span class="o">))</span> <span class="o">}</span>
-</span><span class='line'>  <span class="o">))</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Please note:</p>
-
-<ul>
-<li><code>reader</code> is a <code>Process1[Array[Byte], String] that folds all received</code>Array[Byte]<code>into a</code>String`</li>
-<li><code>iterateeFirstEmit(reader)</code> simulates an <code>Iteratee[Array[Byte], String]</code> driven by the <code>reader</code> process that will fold all chunks of data received from WS call to <code>routes.Application.sample2()</code></li>
-<li><code>.get(rh =&gt; iterateeFirstEmit(reader))</code> will return a <code>Future[Iteratee[Array[Byte], String]</code> that is run in <code>.flatMap(_.run)</code> to return a <code>Future[String]</code></li>
-<li><code>Process.wrap(scalaFuture2scalazTask(maybeValues))</code> is a trick to wrap the folded <code>Future[String]</code> into a <code>Process[Task, String]</code></li>
-<li><code>Process.emitAll(values.split(","))</code> splits the resulting string again and emits all chunks outside (stupid, just for demo)</li>
-</ul>
-
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="o">&gt;</span> <span class="n">curl</span> <span class="s">&quot;localhost:10000/sample5&quot;</span> <span class="o">--</span><span class="n">no</span><span class="o">-</span><span class="n">buffer</span>
-</span><span class='line'><span class="mi">1234567891011121314151617181920</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-
-
-<br/>
-
-
-<blockquote><p>Still there? Let&#8217;s dive deeper and be sharper!</p></blockquote>
-
-<br/>
-
-
-<h2>Building recursive streaming action consuming itself</h2>
-
-<br/>
-
-
-<h3>Hacking WS to consume &amp; re-emit WS in realtime</h3>
-
-<p><code>WS.executeStream(r: ResponseHeader =&gt; Iteratee[Array[Byte], A])</code> is cool API because you can build an iteratee from the ResponseHeader and then the iteratee will consume received `Array[Byte] chunks in a reactive way and will fold them. The problem is that until the iteratee has finished, you won&#8217;t have any result.</p>
-
-<p>But I&#8217;d like to be able to receive chunks of data in realtime and re-emit them immediately so that I can inject them in realtime data flow processing. WS API doesn&#8217;t allow this so I decided to hack it a bit. I&#8217;ve written <code>WSZ</code> which provides the API:</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">def</span> <span class="n">getRealTime</span><span class="o">()</span><span class="k">:</span> <span class="kt">Process</span><span class="o">[</span><span class="kt">Future</span>, <span class="kt">Array</span><span class="o">[</span><span class="kt">Byte</span><span class="o">]]</span>
-</span><span class='line'><span class="c1">// based on</span>
-</span><span class='line'><span class="k">private</span><span class="o">[</span><span class="kt">libs</span><span class="o">]</span> <span class="k">def</span> <span class="n">realtimeStream</span><span class="k">:</span> <span class="kt">Process</span><span class="o">[</span><span class="kt">Future</span>, <span class="kt">Array</span><span class="o">[</span><span class="kt">Byte</span><span class="o">]]</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>This API outputs a realtime Stream of <code>Array[Byte]</code> whose flow is controlled by promises (<code>Future</code>) being redeemed in AsyncHttpClient <code>AsyncHandler</code>. <em>I didn&#8217;t care about ResponseHeaders for this experimentation but it should be taken account in a more serious impl.</em></p>
-
-<p>I obtain a <code>Process[Future, Array[Byte]]</code> streaming received chunks in realtime and I can then take advantage of the power of machines to manipulate the data chunks as I want.</p>
-
-<br/>
-
-
-<h3>Sample 6 : Generates a stream by forwarding/refolding another stream in realtime</h3>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-<span class='line-number'>31</span>
-<span class='line-number'>32</span>
-<span class='line-number'>33</span>
-<span class='line-number'>34</span>
-<span class='line-number'>35</span>
-<span class='line-number'>36</span>
-<span class='line-number'>37</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="cm">/** A Process1 splitting input strings using splitter and re-grouping chunks */</span>
-</span><span class='line'><span class="k">def</span> <span class="n">splitFold</span><span class="o">(</span><span class="n">splitter</span><span class="k">:</span> <span class="kt">String</span><span class="o">)</span><span class="k">:</span> <span class="kt">Process.Process1</span><span class="o">[</span><span class="kt">String</span>, <span class="kt">String</span><span class="o">]</span> <span class="k">=</span> <span class="o">{</span>
-</span><span class='line'>  <span class="c1">// the recursive splitter / refolder</span>
-</span><span class='line'>  <span class="k">def</span> <span class="n">go</span><span class="o">(</span><span class="n">rest</span><span class="k">:</span> <span class="kt">String</span><span class="o">)(</span><span class="n">str</span><span class="k">:</span> <span class="kt">String</span><span class="o">)</span><span class="k">:</span> <span class="kt">Process.Process1</span><span class="o">[</span><span class="kt">String</span>, <span class="kt">String</span><span class="o">]</span> <span class="k">=</span> <span class="o">{</span>
-</span><span class='line'>    <span class="k">val</span> <span class="n">splitted</span> <span class="k">=</span> <span class="n">str</span><span class="o">.</span><span class="n">split</span><span class="o">(</span><span class="n">splitter</span><span class="o">)</span>
-</span><span class='line'>    <span class="n">println</span><span class="o">(</span><span class="n">s</span><span class="s">&quot;&quot;&quot;$str - ${splitted.mkString(&quot;,&quot;)} --&quot;&quot;&quot;</span><span class="o">)</span>
-</span><span class='line'>    <span class="o">(</span><span class="n">splitted</span><span class="o">.</span><span class="n">length</span> <span class="k">match</span> <span class="o">{</span>
-</span><span class='line'>      <span class="k">case</span> <span class="mi">0</span> <span class="k">=&gt;</span>
-</span><span class='line'>        <span class="c1">// string == splitter</span>
-</span><span class='line'>        <span class="c1">// emit rest</span>
-</span><span class='line'>        <span class="c1">// loop</span>
-</span><span class='line'>        <span class="nc">Process</span><span class="o">.</span><span class="n">emit</span><span class="o">(</span><span class="n">rest</span><span class="o">).</span><span class="n">then</span><span class="o">(</span> <span class="nc">Process</span><span class="o">.</span><span class="n">await1</span><span class="o">[</span><span class="kt">String</span><span class="o">].</span><span class="n">flatMap</span><span class="o">(</span><span class="n">go</span><span class="o">(</span><span class="s">&quot;&quot;</span><span class="o">))</span> <span class="o">)</span>
-</span><span class='line'>      <span class="k">case</span> <span class="mi">1</span> <span class="k">=&gt;</span>
-</span><span class='line'>        <span class="c1">// splitter not found in string </span>
-</span><span class='line'>        <span class="c1">// so waiting for next string</span>
-</span><span class='line'>        <span class="c1">// loop by adding current str to rest</span>
-</span><span class='line'>        <span class="c1">// but if we reach end of input, then we emit (rest+str) for last element</span>
-</span><span class='line'>        <span class="nc">Process</span><span class="o">.</span><span class="n">await1</span><span class="o">[</span><span class="kt">String</span><span class="o">].</span><span class="n">flatMap</span><span class="o">(</span><span class="n">go</span><span class="o">(</span><span class="n">rest</span> <span class="o">+</span> <span class="n">str</span><span class="o">)).</span><span class="n">orElse</span><span class="o">(</span><span class="nc">Process</span><span class="o">.</span><span class="n">emit</span><span class="o">(</span><span class="n">rest</span><span class="o">+</span><span class="n">str</span><span class="o">))</span>
-</span><span class='line'>      <span class="k">case</span> <span class="k">_</span> <span class="k">=&gt;</span>
-</span><span class='line'>        <span class="c1">// splitter found</span>
-</span><span class='line'>        <span class="c1">// emit rest + splitted.head</span>
-</span><span class='line'>        <span class="c1">// emit all splitted elements but last</span>
-</span><span class='line'>        <span class="c1">// loops with rest = splitted last element</span>
-</span><span class='line'>        <span class="nc">Process</span><span class="o">.</span><span class="n">emit</span><span class="o">(</span><span class="n">rest</span> <span class="o">+</span> <span class="n">splitted</span><span class="o">.</span><span class="n">head</span><span class="o">)</span>
-</span><span class='line'>               <span class="o">.</span><span class="n">then</span><span class="o">(</span> <span class="nc">Process</span><span class="o">.</span><span class="n">emitAll</span><span class="o">(</span><span class="n">splitted</span><span class="o">.</span><span class="n">tail</span><span class="o">.</span><span class="n">init</span><span class="o">)</span> <span class="o">)</span>
-</span><span class='line'>               <span class="o">.</span><span class="n">then</span><span class="o">(</span> <span class="nc">Process</span><span class="o">.</span><span class="n">await1</span><span class="o">[</span><span class="kt">String</span><span class="o">].</span><span class="n">flatMap</span><span class="o">(</span><span class="n">go</span><span class="o">(</span><span class="n">splitted</span><span class="o">.</span><span class="n">last</span><span class="o">))</span> <span class="o">)</span>
-</span><span class='line'>    <span class="o">})</span>
-</span><span class='line'>  <span class="o">}</span>
-</span><span class='line'>  <span class="c1">// await1 simply means &quot;await an input string and emits it&quot;</span>
-</span><span class='line'>  <span class="nc">Process</span><span class="o">.</span><span class="n">await1</span><span class="o">[</span><span class="kt">String</span><span class="o">].</span><span class="n">flatMap</span><span class="o">(</span><span class="n">go</span><span class="o">(</span><span class="s">&quot;&quot;</span><span class="o">))</span>
-</span><span class='line'><span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">def</span> <span class="n">sample6</span> <span class="k">=</span> <span class="nc">Action</span> <span class="o">{</span> <span class="k">implicit</span> <span class="n">request</span> <span class="k">=&gt;</span>
-</span><span class='line'>  <span class="k">val</span> <span class="n">p</span> <span class="k">=</span> <span class="nc">WSZ</span><span class="o">.</span><span class="n">url</span><span class="o">(</span><span class="n">routes</span><span class="o">.</span><span class="nc">Application</span><span class="o">.</span><span class="n">sample4</span><span class="o">().</span><span class="n">absoluteURL</span><span class="o">()).</span><span class="n">getRealTime</span><span class="o">.</span><span class="n">translate</span><span class="o">(</span><span class="nc">Task2FutureNT</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="nc">Ok</span><span class="o">.</span><span class="n">stream</span><span class="o">(</span><span class="n">enumerator</span><span class="o">(</span><span class="n">p</span><span class="o">.</span><span class="n">map</span><span class="o">(</span><span class="k">new</span> <span class="nc">String</span><span class="o">(</span><span class="k">_</span><span class="o">))</span> <span class="o">|&gt;</span> <span class="n">splitFold</span><span class="o">(</span><span class="s">&quot;,&quot;</span><span class="o">)))</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Please note:</p>
-
-<ul>
-<li><code>def splitFold(splitter: String): Process.Process1[String, String]</code> is just a demo that coding a Process transducer isn&#8217;t so crazy&#8230; Look at comments in code</li>
-<li><code>.translate(Task2FutureNF)</code> converts the <code>Process[Future, Array[Byte]]</code> to <code>Process[Task, Array[Byte]]</code> using Scalaz Natural Transformation.</li>
-<li><code>p |&gt; splitFold(",")</code> means &#8220;pipe output of process <code>p</code> to input of <code>splitFold</code>&#8221;.</li>
-</ul>
-
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="o">&gt;</span> <span class="n">curl</span> <span class="s">&quot;localhost:10000/sample6&quot;</span> <span class="o">--</span><span class="n">no</span><span class="o">-</span><span class="n">buffer</span>
-</span><span class='line'><span class="mf">0.</span><span class="o">..</span>
-</span><span class='line'><span class="mf">01.</span><span class="o">..</span>
-</span><span class='line'><span class="mf">012.</span><span class="o">..</span>
-</span><span class='line'><span class="o">...</span>
-</span><span class='line'><span class="mi">01234567891011121314151617181920212223242526272829303132333435363738394041424344454647484950515253545556575859606162636465666768697071727374757677787980818283848586878889909192939495969798</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-
-
-<br/>
-
-
-<blockquote><p>Let&#8217;s finish our trip with a bit of puzzle and mystery.</p></blockquote>
-
-<br/>
-
-
-<h3>THE FINAL MYSTERY: recursive stream generating Fibonacci series</h3>
-
-<p>As soon as my first experimentations of scalaz-stream with Play were operational, I&#8217;ve imagined an interesting case:</p>
-
-<blockquote><p>Is it possible to build an action generating a stream of data fed by itself: a kind of recursive stream.</p></blockquote>
-
-<p>With Iteratee, it&#8217;s not really possible since it can&#8217;t emit data before finishing iteration. It would certainly be possible with an Enumeratee but the API doesn&#8217;t exist and I find it much more obvious with scalaz-stream API!</p>
-
-<p>The mystery isn&#8217;t in the answer to my question: YES it is possible!</p>
-
-<p>The idea is simple:</p>
-
-<ul>
-<li>Create a simple action</li>
-<li>Create a first process emitting a few initialization data</li>
-<li>Create a second process which consumes the WS calling my own action and re-emits the received chunks in realtime</li>
-<li>Append first process output and second process output</li>
-<li>Stream global output as a result of the action which will back-propagated along time to the action itself&#8230;</li>
-</ul>
-
-
-<p>Naturally, if it consumes its own data, it will recall itself again and again and again until you reach the connections or opened file descriptors limit. As a consequence, you must limit the depth of recursion.</p>
-
-<p>I performed different experiences to show this use-case by zipping the stream with itself, adding elements with themselves etc&#8230;
-And after a few tries, I implemented the following code quite fortuitously :</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-<span class='line-number'>31</span>
-<span class='line-number'>32</span>
-<span class='line-number'>33</span>
-<span class='line-number'>34</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="cm">/** @param curDepth the current recursion depth</span>
-</span><span class='line'><span class="cm">  * @param maxDepth the max recursion depth</span>
-</span><span class='line'><span class="cm">  */</span>
-</span><span class='line'><span class="k">def</span> <span class="n">sample7</span><span class="o">(</span><span class="n">curDepth</span><span class="k">:</span> <span class="kt">Int</span><span class="o">,</span> <span class="n">maxDepth</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)</span> <span class="k">=</span> <span class="nc">Action</span> <span class="o">{</span> <span class="k">implicit</span> <span class="n">request</span> <span class="k">=&gt;</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="c1">// initializes serie with 2 first numerals output with a delay of 100ms</span>
-</span><span class='line'>  <span class="k">val</span> <span class="n">init</span><span class="k">:</span> <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">String</span><span class="o">]</span> <span class="k">=</span> <span class="n">delayedNumerals</span><span class="o">(</span><span class="mi">100</span><span class="o">).</span><span class="n">take</span><span class="o">(</span><span class="mi">2</span><span class="o">).</span><span class="n">map</span><span class="o">(</span><span class="k">_</span><span class="o">.</span><span class="n">toString</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="c1">// Creates output Process</span>
-</span><span class='line'>  <span class="c1">// If didn&#39;t reach maxDepth, creates a process consuming my own action</span>
-</span><span class='line'>  <span class="c1">// If reach maxDepth, just emit 0</span>
-</span><span class='line'>  <span class="k">val</span> <span class="n">outputProcess</span> <span class="k">=</span>
-</span><span class='line'>    <span class="k">if</span><span class="o">(</span><span class="n">curDepth</span> <span class="o">&lt;</span> <span class="n">maxDepth</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>      <span class="c1">// calling my own action and streaming chunks using getRealTime</span>
-</span><span class='line'>
-</span><span class='line'>      <span class="k">val</span> <span class="n">myself</span> <span class="k">=</span> <span class="nc">WSZ</span><span class="o">.</span><span class="n">url</span><span class="o">(</span>
-</span><span class='line'>        <span class="n">routes</span><span class="o">.</span><span class="nc">Application</span><span class="o">.</span><span class="n">sample7</span><span class="o">(</span><span class="n">curDepth</span><span class="o">+</span><span class="mi">1</span><span class="o">,</span> <span class="n">maxDepth</span><span class="o">).</span><span class="n">absoluteURL</span><span class="o">()</span>
-</span><span class='line'>      <span class="o">).</span><span class="n">getRealTime</span><span class="o">.</span><span class="n">translate</span><span class="o">(</span><span class="nc">Task2FutureNT</span><span class="o">).</span><span class="n">map</span><span class="o">(</span><span class="k">new</span> <span class="nc">String</span><span class="o">(</span><span class="k">_</span><span class="o">))</span>
-</span><span class='line'>      <span class="c1">// splitFold isn&#39;t useful, just for demo</span>
-</span><span class='line'>      <span class="o">|&gt;</span> <span class="n">splitFold</span><span class="o">(</span><span class="s">&quot;,&quot;</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'>      <span class="c1">// THE IMPORTANT PART BEGIN</span>
-</span><span class='line'>      <span class="c1">// appends `init` output with `myself` output</span>
-</span><span class='line'>      <span class="c1">// pipe it through a helper provided scalaz-stream `processes.sum[Long]`</span>
-</span><span class='line'>      <span class="c1">// which sums elements and emits partial sums</span>
-</span><span class='line'>      <span class="o">((</span><span class="n">init</span> <span class="n">append</span> <span class="n">myself</span><span class="o">).</span><span class="n">map</span><span class="o">(</span><span class="k">_</span><span class="o">.</span><span class="n">toLong</span><span class="o">)</span> <span class="o">|&gt;</span> <span class="n">processes</span><span class="o">.</span><span class="n">sum</span><span class="o">[</span><span class="kt">Long</span><span class="o">])</span>
-</span><span class='line'>      <span class="c1">// THE IMPORTANT PART END</span>
-</span><span class='line'>      <span class="c1">// just for output format</span>
-</span><span class='line'>      <span class="o">.</span><span class="n">map</span><span class="o">(</span><span class="k">_</span><span class="o">.</span><span class="n">toString</span><span class="o">).</span><span class="n">intersperse</span><span class="o">(</span><span class="s">&quot;,&quot;</span><span class="o">)</span>
-</span><span class='line'>    <span class="o">}</span>
-</span><span class='line'>    <span class="k">else</span> <span class="nc">Process</span><span class="o">.</span><span class="n">emit</span><span class="o">(</span><span class="mi">0</span><span class="o">).</span><span class="n">map</span><span class="o">(</span><span class="k">_</span><span class="o">.</span><span class="n">toString</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="nc">Ok</span><span class="o">.</span><span class="n">stream</span><span class="o">(</span><span class="n">enumerator</span><span class="o">(</span><span class="n">outputProcess</span><span class="o">))</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Launch it:</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">curl</span> <span class="s">&quot;localhost:10000/sample7?curDepth=0&amp;maxDepth=10&quot;</span> <span class="o">--</span><span class="n">no</span><span class="o">-</span><span class="n">buffer</span>
-</span><span class='line'><span class="mi">0</span><span class="o">,</span><span class="mi">1</span><span class="o">,</span><span class="mi">1</span><span class="o">,</span><span class="mi">2</span><span class="o">,</span><span class="mi">3</span><span class="o">,</span><span class="mi">5</span><span class="o">,</span><span class="mi">8</span><span class="o">,</span><span class="mi">13</span><span class="o">,</span><span class="mi">21</span><span class="o">,</span><span class="mi">34</span><span class="o">,</span><span class="mi">55</span><span class="o">,</span><span class="mi">89</span><span class="o">,</span><span class="mi">144</span><span class="o">,</span><span class="mi">233</span><span class="o">,</span><span class="mi">377</span><span class="o">,</span><span class="mi">610</span><span class="o">,</span><span class="mi">987</span><span class="o">,</span><span class="mi">1597</span><span class="o">,</span><span class="mi">2584</span><span class="o">,</span><span class="mi">4181</span><span class="o">,</span><span class="mi">6765</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>WTF??? This is Fibonacci series?</p>
-
-<p>Just to remind you about it:</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">e</span><span class="o">(</span><span class="mi">0</span><span class="o">)</span> <span class="k">=</span> <span class="mi">0</span>
-</span><span class='line'><span class="n">e</span><span class="o">(</span><span class="mi">1</span><span class="o">)</span> <span class="k">=</span> <span class="mi">1</span>
-</span><span class='line'><span class="n">e</span><span class="o">(</span><span class="n">n</span><span class="o">)</span> <span class="k">=</span> <span class="n">e</span><span class="o">(</span><span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="o">)</span> <span class="o">+</span> <span class="n">e</span><span class="o">(</span><span class="n">n</span><span class="o">-</span><span class="mi">2</span><span class="o">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<blockquote><p>Here is the mystery!!!</p>
-
-<p>How does it work???</p>
-
-<p>I won&#8217;t tell the answer to this puzzling side-effect and let you think about it and discover why it works XD</p></blockquote>
-
-<p>But this sample shows exactly what I wanted: <strong>Yes, it&#8217;s possible to feed an action with its own feed! Victory!</strong></p>
-
-<br/>
-
-
-<br/>
-
-
-<h2>Conclusion</h2>
-
-<p>Ok all of that was really funky but is it useful in real projects? I don&#8217;t really know yet but it provides a great proof of the very reactive character of scalaz-stream and Play too!</p>
-
-<p>I tend to like scalaz-stream and I feel more comfortable, more natural using Process than Iteratee right now&#8230; Maybe this is just an impression so I&#8217;ll keep cautious about my conclusions for now&#8230;</p>
-
-<p>All of this code is just experimental so be aware about it. If you like it and see that it could be useful, tell me so that we create a real library from it!</p>
-
-<p>Have Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,
-Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,
-Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,!</p>
-
-<br/>
-
-
-<br/>
-
-
-<h2>PostScriptum</h2>
-
-<h3><a name="iteratee-details">A few more details about Iteratees</a></h3>
-
-<p>Here are a few things that bother me when I use Play Iteratee (you don&#8217;t have to agree, this is very subjective):</p>
-
-<ul>
-<li>Enumeratees are really powerful (maybe the most powerful part of the API) but they can be tricky: for ex, defining a new Enumeratee from scratch isn&#8217;t easy at first sight due to the signature of the Enumeratee itself, Enumeratee composes differently on left (with Enumerators) and on right (with Iteratees) and it can be strange at beginning&#8230;</li>
-<li>Enumerators are not defined (when not using helpers) in terms of the data they produce but with respect to the way an Iteratee will consume the data they will produce. You must somewhat reverse your way of thinking which is not so natural.</li>
-<li>Iteratees are great to produce one result by folding a stream of data but if you want to consume/cut/aggregate/re-emit the chunks, the code you write based on Iteratee/Enumeratee quickly becomes complex, hard to re-read and edge cases (error, end of stream) are hard to treat.</li>
-<li>When you want to manipulate multiple streams together, zip/interleave them, you must write very complex code too.</li>
-<li>End of iteration and Error management with Iteratees isn&#8217;t really clear IMHO and when you begin to compose Iteratees together, it becomes hard to know what will happen&#8230;</li>
-<li>If you want to manipulate a stream with side-effecting, you can do it with Enumeratees but it&#8217;s not so obvious&#8230;</li>
-</ul>
-
-
-<br/>
-
-
-<br/>
-
-
-<br/>
-
-
-<br/>
-
-</div>
-  
-  
-
-
-    </article>
-  
   <ul class="pager">
     
     <li class="previous"><a href="/blog/page/2/">&larr; Older</a></li>
@@ -6416,6 +6385,10 @@ Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,
     <li class="nav-header">Recent Posts</li>
     
       <li class="post">
+        <a href="/2014/12/21/scaledn/">Scaledn: Promote EDN as a far better alternative to Json in Scala</a>
+      </li>
+    
+      <li class="post">
         <a href="/2014/07/30/hfunctor/">Shapeless HFunctor for Heterogenous Structures (& others)</a>
       </li>
     
@@ -6429,10 +6402,6 @@ Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,
     
       <li class="post">
         <a href="/2014/03/10/zpark-ml-nio-3/">ZPark-Ztream II (Part 3/3): Fancy Spark Streamed Machine-Learning & new Scalaz-Stream NIO API</a>
-      </li>
-    
-      <li class="post">
-        <a href="/2014/03/09/zpark-ml-nio-2/">ZPark-Ztream II (Part 2/3): Fancy Spark Streamed Machine-Learning & new Scalaz-Stream NIO API</a>
       </li>
     
   </ul>

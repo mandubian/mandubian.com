@@ -1,0 +1,1119 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Scaledn: Promote EDN as a far better alternative to Json in Scala - Mandubian Blog</title>
+  <meta name="author" content="Pascal Voitot">
+
+  
+  <meta name="description" content="Scaledn: Promote EDN as a Far Better Alternative to Json in Scala
+    
+    
+      
+        
+
+
+
+
+
+
+
+
+  
+
+
+Dec 21st, 2014 &hellip;">
+  <meta name="keywords" content="scala,edn,parboiled2,shapeless,validation,macro,quasiquote,string interpolation,json">
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://www.mandubian.com/2014/12/21/scaledn">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/bootstrap/bootstrap.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/stylesheets/bootstrap/responsive.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/stylesheets/syntax/syntax.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/stylesheets/d3d.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <style type="text/css">
+    body {
+      padding-bottom: 40px;
+    }
+    h1 {
+      margin-bottom: 15px;
+    }
+    img {
+      max-width: 100%;
+    }
+    .sharing, .meta, .pager {
+      margin: 20px 0px 20px 0px;
+    }
+    .page-footer p {
+      text-align: center;
+    }
+
+    article {
+      margin-bottom: 50px;
+      border-top: #DDD solid 20px;
+    }
+ 
+  </style>
+  <script src="/javascripts/libs/jquery.js"></script>
+  <script src="/javascripts/libs/modernizr-2.0.js"></script>
+  <script src="/javascripts/libs/bootstrap.js"></script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <link href="/atom.xml" rel="alternate" title="Mandubian Blog" type="application/atom+xml">
+  
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-10417377-11']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   >
+  <nav role="navigation"><div class="navbar">
+  <div class="navbar-inner">
+    <div class="container">
+      <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </a>
+
+      <a class="brand" href="/">Mandubian Blog</a>
+
+      <div class="nav-collapse">
+        <ul class="nav">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+
+        <ul class="nav pull-right" data-subscription="rss">
+          <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+          
+        </ul>
+
+        
+          <form class="pull-right navbar-search" action="http://google.com/search" method="get">
+            <fieldset role="search">
+              <input type="hidden" name="q" value="site:www.mandubian.com" />
+              <input class="search-query" type="text" name="q" results="0" placeholder="Search"/>
+            </fieldset>
+          </form>
+        
+      </div>
+    </div>
+  </div>
+</div>
+</nav>
+  <div class="container">
+    <div class="row-fluid">
+      
+<article class="hentry span9" role="article">
+
+  
+  <header class="page-header">
+    
+      <h1 class="entry-title">Scaledn: Promote EDN as a Far Better Alternative to Json in Scala</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-12-21T23:23:00+01:00" pubdate data-updated="true">Dec 21<span>st</span>, 2014</time>
+        
+         | <a href="#disqus_thread">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><h1>SCALEDN, <a href="https://github.com/edn-format/edn">EDN</a> Scala API</h1>
+
+<p><a href="https://github.com/mandubian/scaledn">Scaledn</a> is a Scala <a href="https://github.com/edn-format/edn">EDN</a> parser (runtime &amp; compile-time)/serializer/validator based on :</p>
+
+<ul>
+<li><a href="https://github.com/sirthias/parboiled2">Parboiled2</a>,</li>
+<li><a href="https://github.com/milessabin/shapeless">Shapeless</a>,</li>
+<li><a href="https://github.com/jto/validation">Generic Validation</a></li>
+<li>Scala Macros</li>
+</ul>
+
+
+<blockquote><p>It works only in Scala 2.11.x</p></blockquote>
+
+<p>The code &amp; sample apps can be found on <a href="https://github.com/mandubian/scaledn">Github</a></p>
+
+<br/>
+
+
+<h2>Why EDN?&#8230;</h2>
+
+<blockquote><p>Because Json is not so good &amp; quite limitating</p></blockquote>
+
+<p><strong>EDN is described as an <em>extensible data notation</em></strong> specified (not really standardized) <a href="https://github.com/edn-format/edn">there</a>. Clojure &amp; Datalog used in Datomic are supersets of EDN.</p>
+
+<p>EDN allows much more things than Json while <strong>keeping the same simplicity</strong>.</p>
+
+<p>Here are the main points making EDN great to represent &amp; exchange Data.</p>
+
+<br/>
+
+
+<h3>EDN manages number types far better than Json</h3>
+
+<p>For Json, all numbers (floating or integer, exponential or not) are all considered in the same way so numbers can only be mapped to the biggest number format: <code>BigDecimal</code>. It is really bad in terms of semantics and performance.</p>
+
+<p>In EDN, numbers can be :</p>
+
+<ul>
+<li>64bits integer aka <code>Long</code> in Scala: <code>12345</code></li>
+<li>64bits floating point numbers &amp; exponentials aka <code>Double</code> in Scala: <code>123.45e-9</code></li>
+<li>Natural Integers aka <code>BigInt</code> in Scala: <code>1234567891234N</code></li>
+<li>Exact Floating Number aka <code>BigDecimal</code> in Scala: <code>123.4578972345M</code></li>
+</ul>
+
+
+<br/>
+
+
+<h3>EDN knows much more about collections</h3>
+
+<p>Collections in Json are just:</p>
+
+<ul>
+<li>lists of heterogenous json values</li>
+<li>maps of key strings and json values.</li>
+</ul>
+
+
+<p>In EDN, you can have:</p>
+
+<ul>
+<li>heterogenous lists</li>
+</ul>
+
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="o">(</span><span class="mi">1</span> <span class="kc">true</span> <span class="err">&quot;</span><span class="n">toto</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<ul>
+<li>heterogenous vectors/arrays</li>
+</ul>
+
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="o">[</span><span class="err">1</span> <span class="kt">true</span> <span class="err">&quot;</span><span class="kt">toto</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<ul>
+<li>heterogenous sets</li>
+</ul>
+
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="o">#{</span><span class="mi">1</span> <span class="kc">true</span> <span class="err">&quot;</span><span class="n">toto</span><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<ul>
+<li>heterogenous maps with heterogenous keys &amp; values</li>
+</ul>
+
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="o">{</span><span class="mi">1</span> <span class="s">&quot;toto&quot;</span><span class="o">,</span> <span class="s">&quot;foo&quot;</span> <span class="mi">2</span><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<h3>EDN accepts characters &amp; unicode</h3>
+
+<p>Json doesn&#8217;t know about characters outside strings.</p>
+
+<p>EDN can manage chars:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// simple char</span>
+</span><span class='line'><span class="o">\</span><span class="n">c</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// special chars</span>
+</span><span class='line'><span class="o">\</span><span class="n">newline</span>
+</span><span class='line'><span class="o">\</span><span class="k">return</span>
+</span><span class='line'><span class="o">\</span><span class="n">space</span>
+</span><span class='line'><span class="o">\</span><span class="n">tag</span>
+</span><span class='line'><span class="o">\\</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// unicode</span>
+</span><span class='line'><span class="o">\</span><span class="n">u0308</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<h3>EDN accepts comments &amp; discarded values</h3>
+
+<p>There are special syntaxes:</p>
+
+<ul>
+<li>comments are lines starting with <code>;</code></li>
+</ul>
+
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="o">;</span> <span class="k">this</span> <span class="n">is</span> <span class="n">a</span> <span class="n">comment</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<ul>
+<li>values starting with <code>#_</code> are parsed but discarded</li>
+</ul>
+
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="s">&quot;toto&quot;</span> <span class="mi">3</span> <span class="k">#</span><span class="nc">_discarded</span> <span class="mf">1.234</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<h3>EDN knows about symbols &amp; keywords</h3>
+
+<p>These are notions that don&#8217;t exist in Json.</p>
+
+<p>Symbols can reference anything external or internal that you want to identify. A <code>Symbol</code> can have a namespace such as:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">foo</span><span class="o">.</span><span class="n">foo2</span><span class="o">/</span><span class="n">bar</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Keywords are unique identifiers or enumerated values that can be reused in your data structure. A <code>Keyword</code> is just a symbol preceded by a <code>:</code> such as</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">:</span><span class="kt">foo.foo2/bar</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<h3>EDN is extensible using tags</h3>
+
+<p>EDN is an extensible format using tags starting with <code>#</code> such as:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">#</span><span class="n">foo</span><span class="o">/</span><span class="n">bar</span> <span class="n">value</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>When parsing EDN format, the parser should provide tag handlers that can be applied when a tag is discovered. In this way, you can extend default format with your own formats.</p>
+
+<p>EDN specifies 2 tag handlers by default:</p>
+
+<ul>
+<li><code>#inst "1985-04-12T23:20:50.52Z"</code> for RFC-3339 instants</li>
+<li><code>#uuid "f81d4fae-7dec-11d0-a765-00a0c91e6bf6"</code> for UUID</li>
+</ul>
+
+
+<br/>
+
+
+<h3>EDN has no root node &amp; can be streamed</h3>
+
+<p>Json is defined to have a root <code>map</code> node: <code>{ key : value }</code> or <code>[ ... ]</code>.</p>
+
+<p>Json can&#8217;t accept single values outside of this. So Json isn&#8217;t really meant to be streamed as you need to find closing tags to finish parsing a value.</p>
+
+<p>EDN doesn&#8217;t require this and can consist in multiple heterogenous values:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="mi">1</span> <span class="mf">123.45</span> <span class="s">&quot;toto&quot;</span> <span class="kc">true</span> <span class="n">nil</span> <span class="o">(</span><span class="mi">1</span> <span class="mi">2</span> <span class="mi">3</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>As a consequence, EDN can be used to stream your data structures.</p>
+
+<br/>
+
+
+<h3>Conclusion: EDN should be preferred to Json</h3>
+
+<p>All of these points make EDN a far better &amp; stricter &amp; more evolutive notation to represent data structures than Json. It can be used in the same way as Json but could make a far better RPC string format than Json.</p>
+
+<p>I still wonder why Json has become the de-facto standard except for the reason that the <em>not so serious</em> Javascript language parses it natively and because people were so sick about XML that they would have accepted anything changing their daily life.</p>
+
+<p>But JS could also parse EDN without any problem and all more robust &amp; typed backend languages would earn a lot from using EDN instead of JSON for their interfaces.</p>
+
+<p>EDN could be used in REST API &amp; also for streaming API.
+That&#8217;s exactly why, I wanted to provide a complete Scala API for EDN to test this idea a bit further.</p>
+
+<br/>
+
+
+<br/>
+
+
+<h2>Scaledn insight</h2>
+
+<br/>
+
+
+<h3>Runtime Parsing</h3>
+
+<p>Scaledn can be used to parse the EDN string or arrays of chars received by your API.</p>
+
+<p>All types described in EDN format are isomorphic to Scala types so I&#8217;ve decided to skip the complete AST wrapping those types and directly parse to Scala types.</p>
+
+<ul>
+<li><code>"foobar"</code> is parsed to <code>String</code></li>
+<li><code>123</code> is parsed to <code>Long</code></li>
+<li><code>(1 2 3)</code> is parsed to <code>List[Long]</code></li>
+<li><code>(1 "toto" 3)</code> is parsed to <code>List[Any]</code></li>
+<li><code>{"toto" 1 "tata" 2}</code> is parsed to <code>Map[String, Long]</code></li>
+<li><code>{1 "toto" 2 "tata"}</code> is parsed to <code>Map[Long, String]</code></li>
+<li><code>{1 "toto" true 3}</code> is parsed to <code>Map[Any, Any]</code></li>
+<li>etc&#8230;</li>
+</ul>
+
+
+<p>The parser (based on <a href="https://github.com/sirthias/parboiled2">Parboiled2</a>) provides 2 main functions:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">scaledn._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">parser._</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// parses only the first EDN value discovered in the String input</span>
+</span><span class='line'><span class="k">def</span> <span class="n">parseEDN</span><span class="o">(</span><span class="n">in</span><span class="k">:</span> <span class="kt">ParserInput</span><span class="o">)</span><span class="k">:</span> <span class="kt">Try</span><span class="o">[</span><span class="kt">EDN</span><span class="o">]</span> <span class="k">=</span> <span class="o">...</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// parses all EDN values discovered in the String input</span>
+</span><span class='line'><span class="k">def</span> <span class="n">parseEDNs</span><span class="o">(</span><span class="n">in</span><span class="k">:</span> <span class="kt">ParserInput</span><span class="o">)</span><span class="k">:</span> <span class="kt">Try</span><span class="o">[</span><span class="kt">Seq</span><span class="o">[</span><span class="kt">EDN</span><span class="o">]]</span> <span class="k">=</span> <span class="o">...</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>If you look in common package, you&#8217;ll see that <code>EDN</code> is just an alias for <code>Any</code> ;)</p>
+
+<p>Here is how you can use it:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">scaledn._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">parser._</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Single Value</span>
+</span><span class='line'><span class="n">parseEDN</span><span class="o">(</span><span class="s">&quot;&quot;&quot;{1 &quot;foo&quot;, &quot;bar&quot; 1.234M, :foo/bar [1,2,3]} #_foo/bar :bar/foo&quot;&quot;&quot;</span><span class="o">)</span> <span class="k">match</span> <span class="o">{</span>
+</span><span class='line'>  <span class="k">case</span> <span class="nc">Success</span><span class="o">(</span><span class="n">t</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="o">\/-(</span><span class="n">t</span><span class="o">)</span>
+</span><span class='line'>  <span class="k">case</span> <span class="nc">Failure</span><span class="o">(</span><span class="n">f</span> <span class="k">:</span> <span class="kt">org.parboiled2.ParseError</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="o">-\/(</span><span class="n">parser</span><span class="o">.</span><span class="n">formatError</span><span class="o">(</span><span class="n">f</span><span class="o">))</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Multiple Value</span>
+</span><span class='line'><span class="n">parseEDNs</span><span class="o">(</span><span class="s">&quot;&quot;&quot;{1 &quot;foo&quot;, &quot;bar&quot; 1.234M, :foo/bar [1,2,3]} :bar/foo&quot;&quot;&quot;</span><span class="o">).</span><span class="n">success</span><span class="o">.</span><span class="n">value</span> <span class="n">should</span> <span class="n">be</span> <span class="o">(</span>
+</span><span class='line'>  <span class="nc">Vector</span><span class="o">(</span>
+</span><span class='line'>    <span class="nc">Map</span><span class="o">(</span>
+</span><span class='line'>      <span class="mi">1L</span> <span class="o">-&gt;</span> <span class="s">&quot;foo&quot;</span><span class="o">,</span>
+</span><span class='line'>      <span class="s">&quot;bar&quot;</span> <span class="o">-&gt;</span> <span class="nc">BigDecimal</span><span class="o">(</span><span class="s">&quot;1.234&quot;</span><span class="o">),</span>
+</span><span class='line'>      <span class="nc">EDNKeyword</span><span class="o">(</span><span class="nc">EDNSymbol</span><span class="o">(</span><span class="s">&quot;foo/bar&quot;</span><span class="o">,</span> <span class="nc">Some</span><span class="o">(</span><span class="s">&quot;foo&quot;</span><span class="o">)))</span> <span class="o">-&gt;</span> <span class="nc">Vector</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span> <span class="mi">2</span><span class="o">,</span> <span class="mi">3</span><span class="o">)</span>
+</span><span class='line'>    <span class="o">),</span>
+</span><span class='line'>    <span class="nc">EDNKeyword</span><span class="o">(</span><span class="nc">EDNSymbol</span><span class="o">(</span><span class="s">&quot;bar/foo&quot;</span><span class="o">,</span> <span class="nc">Some</span><span class="o">(</span><span class="s">&quot;bar&quot;</span><span class="o">)))</span>
+</span><span class='line'>  <span class="o">)</span>
+</span><span class='line'><span class="o">))</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>Some people will think <code>Any</code> is a bit too large and I agree but it&#8217;s quite practical to use. Moreover, using validation explained a bit later, you can parse your EDN and then map it to a stronger typed scala structure and then <code>Any</code> disappears.</p></blockquote>
+
+<br/>
+
+
+<h2>Compile-time parsing with Macros</h2>
+
+<p>When you use static EDN structures in your Scala code, you can write them in their string format and <em>scaledn</em> can parse them at compile-time using Scala macros and thus prevent a lot of errors you can encounter in dynamic languages.</p>
+
+<p>The macro mechanism is based on quasiquotes &amp; whitebox macro contexts which allow to infer types of your parsed EDN structures at compile-time. For example:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="o">&gt;</span> <span class="k">val</span> <span class="n">s</span><span class="k">:</span><span class="kt">Long</span> <span class="o">=</span> <span class="nc">EDN</span><span class="o">(</span><span class="s">&quot;\&quot;toto\&quot;&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">[</span><span class="kt">error</span><span class="o">]</span>  <span class="n">found</span>   <span class="k">:</span> <span class="kt">String</span><span class="o">(</span><span class="err">&quot;</span><span class="kt">toto</span><span class="err">&quot;</span><span class="o">)</span>
+</span><span class='line'><span class="err">[</span><span class="kt">error</span><span class="err">]</span>  <span class="kt">required:</span> <span class="kt">Long</span>
+</span><span class='line'><span class="o">[</span><span class="kt">error</span><span class="o">]</span>     <span class="k">val</span> <span class="n">e</span><span class="k">:</span> <span class="kt">Long</span> <span class="o">=</span> <span class="nc">EDN</span><span class="o">(</span><span class="s">&quot;\&quot;toto\&quot;&quot;</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Whooohooo magic :)</p>
+
+<br/>
+
+
+<h3>Classic Scala types</h3>
+
+<p>Here is how you can use it:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">scaledn._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">macros._</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// All types are just for info and can be omitted below, the macro infers them quite well</span>
+</span><span class='line'><span class="k">val</span> <span class="n">e</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=</span> <span class="nc">EDN</span><span class="o">(</span><span class="s">&quot;\&quot;toto\&quot;&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">bt</span><span class="k">:</span> <span class="kt">Boolean</span> <span class="o">=</span> <span class="nc">EDN</span><span class="o">(</span><span class="s">&quot;true&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">bf</span><span class="k">:</span> <span class="kt">Boolean</span> <span class="o">=</span> <span class="nc">EDN</span><span class="o">(</span><span class="s">&quot;false&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">l</span><span class="k">:</span> <span class="kt">Long</span> <span class="o">=</span> <span class="nc">EDN</span><span class="o">(</span><span class="s">&quot;123&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">d</span><span class="k">:</span> <span class="kt">Double</span> <span class="o">=</span> <span class="nc">EDN</span><span class="o">(</span><span class="s">&quot;123.456&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">bi</span><span class="k">:</span> <span class="kt">BigInt</span> <span class="o">=</span> <span class="nc">EDN</span><span class="o">(</span><span class="s">&quot;123M&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">bd</span><span class="k">:</span> <span class="kt">BigDecimal</span> <span class="o">=</span> <span class="nc">EDN</span><span class="o">(</span><span class="s">&quot;123.456N&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">s</span><span class="k">:</span> <span class="kt">EDNSymbol</span> <span class="o">=</span> <span class="nc">EDN</span><span class="o">(</span><span class="s">&quot;foo/bar&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">kw</span><span class="k">:</span> <span class="kt">EDNKeyword</span> <span class="o">=</span> <span class="nc">EDN</span><span class="o">(</span><span class="s">&quot;:foo/bar&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Homogenous collection inferred as Vecto[String]</span>
+</span><span class='line'><span class="k">val</span> <span class="n">vector</span><span class="k">:</span> <span class="kt">Vector</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="k">=</span> <span class="nc">EDN</span><span class="o">(</span><span class="s">&quot;&quot;&quot;[&quot;tata&quot; &quot;toto&quot; &quot;tutu&quot;]&quot;&quot;&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// multiple heterogenous values inferred as Seq[Any]</span>
+</span><span class='line'><span class="k">val</span> <span class="n">s</span> <span class="k">=</span> <span class="nc">EDNs</span><span class="o">(</span><span class="s">&quot;&quot;&quot;(1 2 3) &quot;toto&quot; [true false] :foo/bar&quot;&quot;&quot;</span><span class="o">)</span>
+</span><span class='line'><span class="c1">// note the small s at the end of EDN to inform the macro there are several values</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>Shapeless heterogenous collections</h3>
+
+<p>EDN allows to manipulate heterogenous collections. In Scala, when one thinks <em>heterogenous collection</em>, one thinks <a href="https://github.com/milessabin/shapeless">Shapeless</a>. Scaledn macros can parse &amp; map your EDN stringified structures to Scala strongly typed structures.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">scaledn._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">macros._</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">import</span> <span class="nn">shapeless.</span><span class="o">{</span><span class="nc">HNil</span><span class="o">,</span> <span class="o">::}</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">shapeless.record._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">shapeless.syntax.singleton._</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Heterogenous list</span>
+</span><span class='line'><span class="k">val</span> <span class="n">s</span> <span class="k">=</span> <span class="nc">EDNH</span><span class="o">(</span><span class="s">&quot;&quot;&quot;(1 &quot;toto&quot; true)&quot;&quot;&quot;</span><span class="o">)</span>
+</span><span class='line'><span class="n">s</span> <span class="n">should</span> <span class="n">equal</span> <span class="o">(</span><span class="mi">1L</span> <span class="o">::</span> <span class="s">&quot;toto&quot;</span> <span class="o">::</span> <span class="kc">true</span> <span class="o">::</span> <span class="nc">HNil</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Heterogenous Map/Record</span>
+</span><span class='line'><span class="k">val</span> <span class="n">s3</span> <span class="k">=</span> <span class="nc">EDNH</span><span class="o">(</span><span class="s">&quot;&quot;&quot;{1 &quot;toto&quot; true 1.234 &quot;foo&quot; (1 2 3)}&quot;&quot;&quot;</span><span class="o">)</span>
+</span><span class='line'><span class="n">s3</span> <span class="n">should</span> <span class="n">equal</span> <span class="o">(</span>
+</span><span class='line'>  <span class="mi">1L</span> <span class="o">-&gt;&gt;</span> <span class="s">&quot;toto&quot;</span> <span class="o">::</span>
+</span><span class='line'>  <span class="kc">true</span> <span class="o">-&gt;&gt;</span> <span class="mf">1.234</span> <span class="o">::</span>
+</span><span class='line'>  <span class="s">&quot;foo&quot;</span> <span class="o">-&gt;&gt;</span> <span class="nc">List</span><span class="o">(</span><span class="mi">1L</span><span class="o">,</span> <span class="mi">2L</span><span class="o">,</span> <span class="mi">3L</span><span class="o">)</span> <span class="o">::</span>
+</span><span class='line'>  <span class="nc">HNil</span>
+</span><span class='line'><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>please note the <code>H</code> in <code>EDNH</code> for heterogenous</p>
+
+<p>I must say using these macros, it might be even simpler to write Shapeless hlists or records than using scala API ;)</p></blockquote>
+
+<br/>
+
+
+<h3>Macro API</h3>
+
+<p>Scaledn provides different macros depending on the depth of introspection you require in your collection with respect to heterogeneity.</p>
+
+<p>Have a look directly at <a href="https://github.com/mandubian/scaledn/blob/master/macros/src/main/scala/macros.scala">Macro API</a></p>
+
+<br/>
+
+
+<h3>Mixing macro with Scala string interpolation</h3>
+
+<p>Following ideas implemented by Daniel James in <a href="http://pellucidanalytics.github.io/datomisca/">Datomisca</a>, scaledn proposes to use String interpolation mixed with parsing macro such as:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">scaledn._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">macros._</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">import</span> <span class="nn">shapeless.</span><span class="o">{</span><span class="nc">HNil</span><span class="o">,</span> <span class="o">::}</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">l</span> <span class="k">=</span> <span class="mi">123L</span>
+</span><span class='line'><span class="k">val</span> <span class="n">s</span> <span class="k">=</span> <span class="nc">List</span><span class="o">(</span><span class="s">&quot;foo&quot;</span><span class="o">,</span> <span class="s">&quot;bar&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">r</span><span class="k">:</span> <span class="kt">Long</span> <span class="o">=</span> <span class="nc">EDN</span><span class="o">(</span><span class="n">s</span><span class="s">&quot;$l&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">r1</span><span class="k">:</span> <span class="kt">Seq</span><span class="o">[</span><span class="kt">Any</span><span class="o">]</span> <span class="k">=</span> <span class="nc">EDN</span><span class="o">(</span><span class="n">s</span><span class="s">&quot;($l $s)&quot;</span><span class="o">)</span>
+</span><span class='line'><span class="k">val</span> <span class="n">r2</span><span class="k">:</span> <span class="kt">Long</span> <span class="kt">::</span> <span class="kt">List</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="o">::</span> <span class="nc">HNil</span> <span class="k">=</span> <span class="nc">EDNH</span><span class="o">(</span><span class="n">s</span><span class="s">&quot;($l $s)&quot;</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Nothing to add, macros are cool sometimes :)</p>
+
+<br/>
+
+
+<br/>
+
+
+<h2>Runtime validation of EDN to Scala</h2>
+
+<p>When writing REST or external API, the received data can never be trusted before being validated. So, you generally try to validate what is received and map it to a strong-typed structures. For example:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// parse the received string input</span>
+</span><span class='line'><span class="n">parseEDN</span><span class="o">(</span><span class="s">&quot;&quot;&quot;{ 1 &quot;toto&quot; 2 &quot;tata&quot; 3 &quot;tutu&quot; }&quot;&quot;&quot;</span><span class="o">)</span>
+</span><span class='line'><span class="c1">// then validate it to a Scala type</span>
+</span><span class='line'>  <span class="o">.</span><span class="n">map</span><span class="o">(</span><span class="n">validate</span><span class="o">[</span><span class="kt">Map</span><span class="o">[</span><span class="kt">Long</span>, <span class="kt">String</span><span class="o">]])</span>
+</span><span class='line'>  <span class="o">.</span><span class="n">success</span><span class="o">.</span><span class="n">value</span> <span class="n">should</span> <span class="n">be</span> <span class="o">(</span>
+</span><span class='line'>    <span class="n">play</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">mapping</span><span class="o">.</span><span class="nc">Success</span><span class="o">(</span><span class="nc">Map</span><span class="o">(</span>
+</span><span class='line'>      <span class="mi">1L</span> <span class="o">-&gt;</span> <span class="s">&quot;toto&quot;</span><span class="o">,</span>
+</span><span class='line'>      <span class="mi">2L</span> <span class="o">-&gt;</span> <span class="s">&quot;tata&quot;</span><span class="o">,</span>
+</span><span class='line'>      <span class="mi">3L</span> <span class="o">-&gt;</span> <span class="s">&quot;tutu&quot;</span>
+</span><span class='line'>    <span class="o">))</span>
+</span><span class='line'>  <span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The validation API is the following:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">scaledn._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">validate._</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">def</span> <span class="n">validate</span><span class="o">[</span><span class="kt">T</span><span class="o">](</span><span class="n">edn</span><span class="k">:</span> <span class="kt">EDN</span><span class="o">)(</span><span class="k">implicit</span> <span class="n">r</span><span class="k">:</span> <span class="kt">RuleLike</span><span class="o">[</span><span class="kt">EDN</span>, <span class="kt">T</span><span class="o">])</span><span class="k">:</span> <span class="kt">Validation</span><span class="o">[</span><span class="kt">EDN</span>, <span class="kt">T</span><span class="o">]</span> <span class="k">=</span> <span class="n">r</span><span class="o">.</span><span class="n">validate</span><span class="o">(</span><span class="n">edn</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Scaledn validation is based on <a href="https://github.com/jto/validation">Generic Validation API</a> developed by my <a href="http://www.mfglabs.com">MFGLabs</a>&#8217;s colleague &amp; friend <a href="https://github.com/jto">Julien Tournay</a>. This API was developed for Play Framework &amp; Typesafe last year to generalize Json validation API to all data formats. But it will never be integrated in Play as Typesafe considers it to be too pure Scala &amp; pure FP-oriented. Yet, we use this API in production at <a href="http://www.mfglabs.com">MFGLabs</a> and maintain/extend it ourselves.</p>
+
+<p>As explained before, Scaledn parser parses EDN values directly to Scala types as they are bijective so validation is often just a runtime cast and not very interesting in general.</p>
+
+<p>What&#8217;s much more interesting is to validate to Shapeless HList, Records and even more interesting to CaseClasses &amp; Tuples based on Shapeless fantastic auto-generated Generic macros.</p>
+
+<p>Let&#8217;s take a few examples to show the power of this feature:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">scaledn._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">validate._</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">import</span> <span class="nn">play.api.data.mapping._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">shapeless.</span><span class="o">{</span><span class="nc">HNil</span><span class="o">,</span> <span class="o">::}</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">CP</span><span class="o">(</span><span class="n">cp</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)</span>
+</span><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">Address</span><span class="o">(</span><span class="n">street</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">cp</span><span class="k">:</span> <span class="kt">CP</span><span class="o">)</span>
+</span><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">Person</span><span class="o">(</span><span class="n">name</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">age</span><span class="k">:</span> <span class="kt">Int</span><span class="o">,</span> <span class="n">addr</span><span class="k">:</span> <span class="kt">Address</span><span class="o">)</span>
+</span><span class='line'><span class="c1">// Remark that NO implicits must be declared on our case classes</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// HLISTS</span>
+</span><span class='line'><span class="n">parseEDN</span><span class="o">(</span><span class="s">&quot;&quot;&quot;(1 &quot;toto&quot; true nil)&quot;&quot;&quot;</span><span class="o">).</span><span class="n">map</span><span class="o">(</span>
+</span><span class='line'>  <span class="n">validate</span><span class="o">[</span><span class="kt">Long</span> <span class="kt">::</span> <span class="kt">String</span> <span class="kt">::</span> <span class="kt">Boolean</span> <span class="kt">::</span> <span class="kt">EDNNil.</span><span class="k">type</span> <span class="kt">::</span> <span class="kt">HNil</span><span class="o">]</span>
+</span><span class='line'><span class="o">).</span><span class="n">success</span><span class="o">.</span><span class="n">value</span> <span class="n">should</span> <span class="n">be</span> <span class="o">(</span>
+</span><span class='line'>  <span class="nc">Success</span><span class="o">(</span><span class="mi">1L</span> <span class="o">::</span> <span class="s">&quot;toto&quot;</span> <span class="o">::</span> <span class="kc">true</span> <span class="o">::</span> <span class="nc">EDNNil</span> <span class="o">::</span> <span class="nc">HNil</span><span class="o">)</span>
+</span><span class='line'><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// TUPLES</span>
+</span><span class='line'><span class="n">parseEDN</span><span class="o">(</span><span class="s">&quot;&quot;&quot;(&quot;toto&quot; 34 {&quot;street&quot; &quot;chboing&quot;, &quot;cp&quot; {&quot;cp&quot; 75009}})&quot;&quot;&quot;</span><span class="o">).</span><span class="n">map</span><span class="o">(</span>
+</span><span class='line'>  <span class="n">validate</span><span class="o">[</span><span class="kt">Tuple3</span><span class="o">[</span><span class="kt">String</span>, <span class="kt">Int</span>, <span class="kt">Address</span><span class="o">]]</span>
+</span><span class='line'><span class="o">).</span><span class="n">success</span><span class="o">.</span><span class="n">value</span> <span class="n">should</span> <span class="n">be</span> <span class="o">(</span>
+</span><span class='line'>  <span class="nc">Success</span><span class="o">((</span><span class="s">&quot;toto&quot;</span><span class="o">,</span> <span class="mi">34</span><span class="o">,</span> <span class="nc">Address</span><span class="o">(</span><span class="s">&quot;chboing&quot;</span><span class="o">,</span> <span class="nc">CP</span><span class="o">(</span><span class="mi">75009</span><span class="o">))))</span>
+</span><span class='line'><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// CASECLASSES</span>
+</span><span class='line'><span class="n">parseEDN</span><span class="o">(</span><span class="s">&quot;&quot;&quot;(&quot;toto&quot; 34 (&quot;chboing&quot; (75009)))&quot;&quot;&quot;</span><span class="o">).</span><span class="n">map</span><span class="o">(</span>
+</span><span class='line'>  <span class="n">validate</span><span class="o">[</span><span class="kt">Person</span><span class="o">]</span>
+</span><span class='line'><span class="o">).</span><span class="n">success</span><span class="o">.</span><span class="n">value</span> <span class="n">should</span> <span class="n">be</span> <span class="o">(</span>
+</span><span class='line'>  <span class="nc">Success</span><span class="o">(</span><span class="nc">Person</span><span class="o">(</span><span class="s">&quot;toto&quot;</span><span class="o">,</span> <span class="mi">34</span><span class="o">,</span> <span class="nc">Address</span><span class="o">(</span><span class="s">&quot;chboing&quot;</span><span class="o">,</span> <span class="nc">CP</span><span class="o">(</span><span class="mi">75009</span><span class="o">))))</span>
+</span><span class='line'><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">parseEDN</span><span class="o">(</span><span class="s">&quot;&quot;&quot;{&quot;name&quot; &quot;toto&quot;, &quot;age&quot; 34, &quot;addr&quot; {&quot;street&quot; &quot;chboing&quot;, &quot;cp&quot; {&quot;cp&quot; 75009}}}&quot;&quot;&quot;</span><span class="o">).</span><span class="n">map</span><span class="o">(</span>
+</span><span class='line'>  <span class="n">validate</span><span class="o">[</span><span class="kt">Person</span><span class="o">]</span>
+</span><span class='line'><span class="o">).</span><span class="n">success</span><span class="o">.</span><span class="n">value</span> <span class="n">should</span> <span class="n">be</span> <span class="o">(</span>
+</span><span class='line'>  <span class="nc">Success</span><span class="o">(</span><span class="nc">Person</span><span class="o">(</span><span class="s">&quot;toto&quot;</span><span class="o">,</span> <span class="mi">34</span><span class="o">,</span> <span class="nc">Address</span><span class="o">(</span><span class="s">&quot;chboing&quot;</span><span class="o">,</span> <span class="nc">CP</span><span class="o">(</span><span class="mi">75009</span><span class="o">))))</span>
+</span><span class='line'><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>I think here you can see the power of this validation feature without writing any boilerplate&#8230;</p></blockquote>
+
+<br/>
+
+
+<br/>
+
+
+<h2>Serializing Scala to EDN</h2>
+
+<p>Using <a href="https://github.com/jto/validation">Generic Validation API</a>, you can also write scala structures to any other data format.</p>
+
+<p>Scaledn provides serialization from scala structures to EDN Strings. For example:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">scaledn._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">write._</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">toEDNString</span><span class="o">(</span><span class="s">&quot;toto&quot;</span><span class="o">)</span> <span class="n">should</span> <span class="n">equal</span> <span class="o">(</span><span class="s">&quot;\&quot;toto\&quot;&quot;</span><span class="o">)</span>
+</span><span class='line'><span class="n">toEDNString</span><span class="o">(</span><span class="nc">List</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span> <span class="mi">2</span><span class="o">,</span> <span class="mi">3</span><span class="o">))</span> <span class="n">should</span> <span class="n">equal</span> <span class="o">(</span><span class="s">&quot;&quot;&quot;(1 2 3)&quot;&quot;&quot;</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The write API is the following:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">scaledn._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">write._</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">def</span> <span class="n">toEDNString</span><span class="o">[</span><span class="kt">I</span><span class="o">](</span><span class="n">i</span><span class="k">:</span> <span class="kt">I</span><span class="o">)(</span><span class="k">implicit</span> <span class="n">w</span><span class="k">:</span> <span class="kt">WriteLike</span><span class="o">[</span><span class="kt">I</span>, <span class="kt">String</span><span class="o">])</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=</span> <span class="n">w</span><span class="o">.</span><span class="n">writes</span><span class="o">(</span><span class="n">i</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Once again, what&#8217;s more interesting is using shapeless &amp; caseclasses &amp; tuples.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">scaledn._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">write._</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">import</span> <span class="nn">shapeless.</span><span class="o">{</span><span class="nc">HNil</span><span class="o">,</span> <span class="o">::}</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// HLIST</span>
+</span><span class='line'><span class="n">toEDNString</span><span class="o">(</span><span class="mi">1</span> <span class="o">::</span> <span class="kc">true</span> <span class="o">::</span> <span class="nc">List</span><span class="o">(</span><span class="mi">1L</span><span class="o">,</span> <span class="mi">2L</span><span class="o">,</span> <span class="mi">3L</span><span class="o">)</span> <span class="o">::</span> <span class="nc">HNil</span><span class="o">)</span> <span class="n">should</span> <span class="n">equal</span> <span class="o">(</span><span class="s">&quot;&quot;&quot;(1 true (1 2 3))&quot;&quot;&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// TUPLE</span>
+</span><span class='line'><span class="n">toEDNString</span><span class="o">((</span><span class="mi">23</span><span class="o">,</span> <span class="kc">true</span><span class="o">))</span> <span class="n">should</span> <span class="n">equal</span> <span class="o">(</span><span class="s">&quot;&quot;&quot;(23 true)&quot;&quot;&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// CASE CLASS</span>
+</span><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">Address</span><span class="o">(</span><span class="n">street</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">cp</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)</span>
+</span><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">Person</span><span class="o">(</span><span class="n">name</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">age</span><span class="k">:</span> <span class="kt">Int</span><span class="o">,</span> <span class="n">addr</span><span class="k">:</span> <span class="kt">Address</span><span class="o">)</span>
+</span><span class='line'><span class="c1">// Remark that NO implicits must be declared on our case classes</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">toEDNString</span><span class="o">(</span><span class="nc">Person</span><span class="o">(</span><span class="s">&quot;toto&quot;</span><span class="o">,</span> <span class="mi">34</span><span class="o">,</span> <span class="nc">Address</span><span class="o">(</span><span class="s">&quot;chboing&quot;</span><span class="o">,</span> <span class="mi">75009</span><span class="o">)))</span> <span class="n">should</span> <span class="n">equal</span> <span class="o">(</span>
+</span><span class='line'>  <span class="s">&quot;&quot;&quot;{&quot;name&quot; &quot;toto&quot;, &quot;age&quot; 34, &quot;addr&quot; {&quot;street&quot; &quot;chboing&quot;, &quot;cp&quot; 75009}}&quot;&quot;&quot;</span>
+</span><span class='line'><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>TODO</h2>
+
+<p>This project is a first draft so it requires a bit more work.</p>
+
+<p>Here are a few points to work on:</p>
+
+<ul>
+<li>patch remaining glitches/bugs</li>
+<li>write more tests for all cases</li>
+<li>study streamed parser asap</li>
+<li>write sample apps</li>
+</ul>
+
+
+<p>Don&#8217;t hesitate to test, find bugs, contribute, give remarks, ideas&#8230;</p>
+
+<p>Have fun in EDN world&#8230;</p>
+
+<br/>
+
+
+<br/>
+
+
+<br/>
+
+
+<br/>
+
+
+
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Pascal Voitot</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-12-21T23:23:00+01:00" pubdate data-updated="true">Dec 21<span>st</span>, 2014</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/edn/'>edn</a>, <a class='category' href='/blog/categories/json/'>json</a>, <a class='category' href='/blog/categories/macro/'>macro</a>, <a class='category' href='/blog/categories/parboiled2/'>parboiled2</a>, <a class='category' href='/blog/categories/quasiquote/'>quasiquote</a>, <a class='category' href='/blog/categories/scala/'>scala</a>, <a class='category' href='/blog/categories/shapeless/'>shapeless</a>, <a class='category' href='/blog/categories/string-interpolation/'>string interpolation</a>, <a class='category' href='/blog/categories/validation/'>validation</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://www.mandubian.com/2014/12/21/scaledn/" data-via="mandubian" data-counturl="http://www.mandubian.com/2014/12/21/scaledn/" >Tweet</a>
+  
+  
+  <div class="g-plusone" data-size="medium"></div>
+  
+  
+</div>
+
+    
+    
+    <section>
+      <h1>Comments</h1>
+      <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+    </section>
+    
+    <ul class="pager">
+      
+      <li class="previous"><a class="basic-alignment left"
+        href="/2014/07/30/hfunctor/" title="Previous Post:
+        Shapeless HFunctor for Heterogenous Structures (& others)">&laquo; Shapeless HFunctor for Heterogenous Structures (& others)</a></li>
+      
+      <li><a href="/blog/archives">Blog Archives</a></li>
+      
+    </ul>
+  </footer>
+</article>
+
+<aside class="sidebar-nav span3">
+  
+    <section class="well">
+  <ul id="recent_posts" class="nav nav-list">
+    <li class="nav-header">Recent Posts</li>
+    
+      <li class="post">
+        <a href="/2014/12/21/scaledn/">Scaledn: Promote EDN as a far better alternative to Json in Scala</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014/07/30/hfunctor/">Shapeless HFunctor for Heterogenous Structures (& others)</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014/07/29/hmonoid/">Shapeless HMonoid for Heterogenous Structures (& others)</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014/06/11/daemonad/">Summon Daemonad to macro-snoop into monad stacks</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014/03/10/zpark-ml-nio-3/">ZPark-Ztream II (Part 3/3): Fancy Spark Streamed Machine-Learning & new Scalaz-Stream NIO API</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+<section class="well">
+  <ul id="gh_repos" data-user="mandubian" data-count="5" data-skip="true" class="nav">
+	<li class="nav-header">On GitHub</li>
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+  <a class="github-follow" href="https://github.com/mandubian">Follow @mandubian</a>
+  
+</section>
+
+
+
+<section class="well">
+  <ul id="tweets" class="nav" data-user="mandubian" data-count="4" data-replies="false">
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+    <a href="http://twitter.com/mandubian" class="twitter-follow-button" data-show-count="false">Follow @mandubian</a>
+  
+</section>
+
+
+
+
+
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo" class="page-footer"><hr>
+<p>
+  Copyright &copy; 2014 - Pascal Voitot -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'mandubian';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://www.mandubian.com/2014/12/21/scaledn/';
+        var disqus_url = 'http://www.mandubian.com/2014/12/21/scaledn/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+  <script type="text/javascript">
+    (function() {
+      var script = document.createElement('script'); script.type = 'text/javascript'; script.async = true;
+      script.src = 'https://apis.google.com/js/plusone.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(script, s);
+    })();
+  </script>
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = 'http://platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>
