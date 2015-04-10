@@ -1,0 +1,1452 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Unveiling Play 2.1 Json API - Part 1 : JsPath & Reads combinators - Mandubian Blog</title>
+  <meta name="author" content="Pascal Voitot">
+
+  
+  <meta name="description" content="Unveiling Play 2.1 Json API - Part 1 : JsPath & Reads Combinators
+    
+    
+      
+        
+
+
+
+
+
+
+
+
+  
+
+
+Sep 8th, 2012 &hellip;">
+  <meta name="keywords" content="play 2.1, json, json serialization, json parsing, json validation, json cumulative errors, play framework, combinators, applicative">
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://www.mandubian.com/2012/09/08/unveiling-play-2-dot-1-json-api-part1-jspath-reads-combinators">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/bootstrap/bootstrap.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/stylesheets/bootstrap/responsive.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/stylesheets/syntax/syntax.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/stylesheets/d3d.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <style type="text/css">
+    body {
+      padding-bottom: 40px;
+    }
+    h1 {
+      margin-bottom: 15px;
+    }
+    img {
+      max-width: 100%;
+    }
+    .sharing, .meta, .pager {
+      margin: 20px 0px 20px 0px;
+    }
+    .page-footer p {
+      text-align: center;
+    }
+
+    article {
+      margin-bottom: 50px;
+      border-top: #DDD solid 20px;
+    }
+ 
+  </style>
+  <script src="/javascripts/libs/jquery.js"></script>
+  <script src="/javascripts/libs/modernizr-2.0.js"></script>
+  <script src="/javascripts/libs/bootstrap.js"></script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <link href="/atom.xml" rel="alternate" title="Mandubian Blog" type="application/atom+xml">
+  
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-10417377-11']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   >
+  <nav role="navigation"><div class="navbar">
+  <div class="navbar-inner">
+    <div class="container">
+      <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </a>
+
+      <a class="brand" href="/">Mandubian Blog</a>
+
+      <div class="nav-collapse">
+        <ul class="nav">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+
+        <ul class="nav pull-right" data-subscription="rss">
+          <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+          
+        </ul>
+
+        
+          <form class="pull-right navbar-search" action="http://google.com/search" method="get">
+            <fieldset role="search">
+              <input type="hidden" name="q" value="site:www.mandubian.com" />
+              <input class="search-query" type="text" name="q" results="0" placeholder="Search"/>
+            </fieldset>
+          </form>
+        
+      </div>
+    </div>
+  </div>
+</div>
+</nav>
+  <div class="container">
+    <div class="row-fluid">
+      
+<article class="hentry span9" role="article">
+
+  
+  <header class="page-header">
+    
+      <h1 class="entry-title">Unveiling Play 2.1 Json API - Part 1 : JsPath & Reads Combinators</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-09-08T11:10:00+02:00" pubdate data-updated="true">Sep 8<span>th</span>, 2012</time>
+        
+         | <a href="#disqus_thread">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><blockquote><p><strong>Addendum: recent API refactoring (modified in the articled)</strong></p>
+
+<ul>
+<li><code>Reads[A] provided Reads[B]</code> has been renamed to <code>Reads[A] keepAnd Reads[B]</code></li>
+<li><code>Reads[A] andThen Reads[B]</code> has been renamed to <code>Reads[A] andKeep Reads[B]</code></li>
+</ul>
+</blockquote>
+
+<p>In incoming <code>Play2.1</code> version, a huge <strong>re-thinking</strong> has been done about <strong><code>JSON API</code> provided by <code>Play2.0.x</code></strong> which provides some great features but is clearly just the tip of the iceberg…<br/>
+Here is a first presentation of those evolutions aimed at <strong>unleashing your JSON usage in Play2</strong> and <strong>revealing new forms of manipulation of web dataflows from/to external data systems</strong>. <br/>
+A usecase of this is manipulating DB structures directly using Json without any class models for document oriented structures such as <a href="http://www.mongodb.org">MongoDB</a></p>
+
+<blockquote><p>BTW Don&#8217;t forget the recent release of new MongoDB async/non-blocking driver <a href="http://reactivemongo.org">ReactiveMongo</a> ;-)</p></blockquote>
+
+<div class="well">
+<h3><a name="summary">Summary of main new features added in <code>Play2.1</code></a></h3>
+<ul>
+    <li><b>Simplified Json Objects/Arrays syntax</b> 
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span>
+</span><span class='line'>  <span class="s">&quot;key&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;value&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;key2&quot;</span> <span class="o">-&gt;</span> <span class="mi">123</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;key3&quot;</span> <span class="o">-&gt;</span> <span class="nc">Json</span><span class="o">.</span><span class="n">arr</span><span class="o">(</span><span class="s">&quot;alpha&quot;</span><span class="o">,</span> <span class="mf">143.55</span><span class="o">,</span> <span class="kc">false</span><span class="o">)</span>
+</span><span class='line'><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+</li>
+    <li><b><code>JsPath</code> for manipulating JSON in <code>XmlPath</code>-style</b> 
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="o">(</span><span class="nc">JsPath</span> <span class="o">\</span> <span class="s">&quot;key&quot;</span> <span class="o">\</span> <span class="s">&quot;key2&quot;</span> <span class="o">\\</span> <span class="s">&quot;key3&quot;</span><span class="o">)(</span><span class="mi">3</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+</li>
+    <li><b><code>Reads[T]</code> / <code>Writes[T]</code> / <code>Format[T]</code> combinators</b> based on JsPath and simple logic operators</b>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">customReads</span><span class="k">:</span> <span class="kt">Reads</span><span class="o">[(</span><span class="kt">String</span>, <span class="kt">Float</span>, <span class="kt">List</span><span class="o">[</span><span class="kt">String</span><span class="o">])]</span> <span class="k">=</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">JsPath</span> <span class="o">\</span> <span class="s">&quot;key1&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">](</span><span class="n">email</span> <span class="n">keepAnd</span> <span class="n">minLength</span><span class="o">(</span><span class="mi">5</span><span class="o">))</span> <span class="n">and</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">JsPath</span><span class="err"> </span><span class="o">\</span> <span class="s">&quot;key2&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Float</span><span class="o">](</span><span class="n">min</span><span class="o">(</span><span class="mi">45</span><span class="o">))</span> <span class="n">and</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">JsPath</span><span class="err"> </span><span class="o">\</span> <span class="s">&quot;key3&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">List</span><span class="o">[</span><span class="kt">String</span><span class="o">]]</span>
+</span><span class='line'>  <span class="n">tupled</span>
+</span></code></pre></td></tr></table></div></figure>
+
+    </li>
+    <li><b><code>Reads[T]</code> API now validates JSON</b> by returning a monadic <code>JsResult[T]</code> being a <code>JsSuccess[T]</code> or a <code>JsError</code> aggregating all validation errors 
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">js</span> <span class="k">=</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span>
+</span><span class='line'>  <span class="s">&quot;key1&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;alpha&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;key2&quot;</span> <span class="o">-&gt;</span> <span class="mf">123.345F</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;key3&quot;</span> <span class="o">-&gt;</span> <span class="nc">Json</span><span class="o">.</span><span class="n">arr</span><span class="o">(</span><span class="s">&quot;alpha&quot;</span><span class="o">,</span> <span class="s">&quot;beta&quot;</span><span class="o">)</span>
+</span><span class='line'><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="n">customReads</span><span class="o">.</span><span class="n">reads</span><span class="o">(</span><span class="n">js</span><span class="o">)</span>
+</span><span class='line'><span class="n">res5</span><span class="k">:</span> <span class="kt">JsSuccess</span><span class="o">((</span><span class="err">&quot;</span><span class="kt">alpha</span><span class="err">&quot;</span><span class="o">,</span> <span class="err">123</span><span class="kt">.</span><span class="err">345</span><span class="kt">F</span><span class="o">,</span> <span class="kt">List</span><span class="o">(</span><span class="err">&quot;</span><span class="kt">alpha</span><span class="err">&quot;</span><span class="o">,</span> <span class="err">&quot;</span><span class="kt">beta</span><span class="err">&quot;</span><span class="o">)))</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">customReads</span><span class="o">.</span><span class="n">reads</span><span class="o">(</span><span class="n">js</span><span class="o">).</span><span class="n">fold</span><span class="o">(</span>
+</span><span class='line'>  <span class="n">valid</span> <span class="k">=</span> <span class="o">{</span> <span class="n">res</span> <span class="k">=&gt;</span>
+</span><span class='line'>    <span class="k">val</span> <span class="o">(</span><span class="n">s</span><span class="o">,</span> <span class="n">f</span><span class="o">,</span> <span class="n">l</span><span class="o">)</span><span class="k">:</span> <span class="o">(</span><span class="kt">String</span><span class="o">,</span> <span class="kt">Float</span><span class="o">,</span> <span class="nc">List</span><span class="o">[</span><span class="kt">String</span><span class="o">])</span> <span class="k">=</span> <span class="n">res</span>
+</span><span class='line'>    <span class="o">...</span>
+</span><span class='line'>  <span class="o">},</span>
+</span><span class='line'>  <span class="n">invalid</span> <span class="k">=</span> <span class="o">{</span> <span class="n">errors</span> <span class="k">=&gt;</span> <span class="o">...</span> <span class="o">}</span>
+</span><span class='line'><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+    
+    </li>
+</ul>
+</div>
+
+
+<p><strong>Now let&#8217;s go in the details ;)</strong></p>
+
+<br/>
+
+
+<br/>
+
+
+<h1><a name="quick-json-syntax">Very Quick Json syntax</a></h1>
+
+<p>Concerning the new Json syntax, I won&#8217;t spend time on this, it&#8217;s quite explicit and you can try it very easily by yourself.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">js</span> <span class="k">=</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span>
+</span><span class='line'>  <span class="s">&quot;key1&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;value1&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;key2&quot;</span> <span class="o">-&gt;</span> <span class="mi">234</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;key3&quot;</span> <span class="o">-&gt;</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span>
+</span><span class='line'>    <span class="s">&quot;key31&quot;</span> <span class="o">-&gt;</span> <span class="kc">true</span><span class="o">,</span>
+</span><span class='line'>    <span class="s">&quot;key32&quot;</span> <span class="o">-&gt;</span> <span class="nc">Json</span><span class="o">.</span><span class="n">arr</span><span class="o">(</span><span class="s">&quot;alpha&quot;</span><span class="o">,</span> <span class="s">&quot;beta&quot;</span><span class="o">,</span> <span class="mf">234.13</span><span class="o">),</span>
+</span><span class='line'>    <span class="s">&quot;key33&quot;</span> <span class="o">-&gt;</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span><span class="s">&quot;key1&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;value2&quot;</span><span class="o">,</span> <span class="s">&quot;key34&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;value34&quot;</span><span class="o">)</span>
+</span><span class='line'>  <span class="o">)</span>
+</span><span class='line'><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<br/>
+
+
+<h1><a name="quick-jspath">Quick JsPath</a></h1>
+
+<p>You certainly know <code>XMLPath</code> in which you can access a node of an XML AST using a simple syntax based on path.<br/>
+JSON is already an AST and we can apply the same kind of syntax to it and logically we called it <code>JsPath</code>.</p>
+
+<p>All following examples use JSON defined in previous paragraph.</p>
+
+<h3>Building JsPath</h3>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// Simple path</span>
+</span><span class='line'><span class="nc">JsPath</span> <span class="o">\</span> <span class="s">&quot;key1&quot;</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// 2-levels path</span>
+</span><span class='line'><span class="nc">JsPath</span> <span class="o">\</span> <span class="s">&quot;key3&quot;</span> <span class="o">\</span> <span class="s">&quot;key33&quot;</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// indexed path</span>
+</span><span class='line'><span class="o">(</span><span class="nc">JsPath</span> <span class="o">\</span> <span class="s">&quot;key3&quot;</span> <span class="o">\</span> <span class="s">&quot;key32&quot;</span><span class="o">)(</span><span class="mi">2</span><span class="o">)</span> <span class="c1">// 2nd element in a JsArray</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// multiple paths</span>
+</span><span class='line'><span class="nc">JsPath</span> <span class="o">\\</span> <span class="s">&quot;key1&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>Alternative syntax</h3>
+
+<p><code>JsPath</code> is quite cool but we found this syntax could be made even clearer to highlight <code>Reads[T]</code> combinators in the code.<br/>
+That&#8217;s why we provide an alias for <code>JsPath</code>: <code>__</code> (2 underscores).<br/>
+<em>You can use it or not. This is just a visual facility because with it, you immediately find your JsPath in the code…</em></p>
+
+<p>You can write:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// Simple path</span>
+</span><span class='line'><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;key1&quot;</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// 2-levels path</span>
+</span><span class='line'><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;key3&quot;</span> <span class="o">\</span> <span class="s">&quot;key33&quot;</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// indexed path</span>
+</span><span class='line'><span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;key3&quot;</span> <span class="o">\</span> <span class="s">&quot;key32&quot;</span><span class="o">)(</span><span class="mi">2</span><span class="o">)</span> <span class="c1">// 2nd element in a JsArray</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// multiple paths</span>
+</span><span class='line'><span class="nc">__</span> <span class="o">\\</span> <span class="s">&quot;key1&quot;</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// a sample on Reads[T] combinators to show the difference with both syntax</span>
+</span><span class='line'><span class="c1">// DON&#39;T TRY TO UNDERSTAND THIS CODE RIGHT NOW… It&#39;s explained in next paragraphs</span>
+</span><span class='line'><span class="k">val</span> <span class="n">customReads</span> <span class="k">=</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">JsPath</span> <span class="o">\</span> <span class="s">&quot;key1&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">(</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">JsPath</span> <span class="o">\</span> <span class="s">&quot;key11&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="n">and</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">JsPath</span> <span class="o">\</span> <span class="s">&quot;key11&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="n">and</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">JsPath</span> <span class="o">\</span> <span class="s">&quot;key11&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span>
+</span><span class='line'>    <span class="n">tupled</span>
+</span><span class='line'>  <span class="o">)</span> <span class="n">and</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">JsPath</span><span class="err"> </span><span class="o">\</span> <span class="s">&quot;key2&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Float</span><span class="o">](</span><span class="n">min</span><span class="o">(</span><span class="mi">45</span><span class="o">))</span> <span class="n">and</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">JsPath</span><span class="err"> </span><span class="o">\</span> <span class="s">&quot;key3&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">(</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">JsPath</span> <span class="o">\</span> <span class="s">&quot;key31&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="n">and</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">JsPath</span> <span class="o">\</span> <span class="s">&quot;key32&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="n">and</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">JsPath</span> <span class="o">\</span> <span class="s">&quot;key33&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span>
+</span><span class='line'>    <span class="n">tupled</span>
+</span><span class='line'>  <span class="o">)</span>
+</span><span class='line'>  <span class="n">tupled</span>
+</span><span class='line'>  
+</span><span class='line'><span class="c1">// with __</span>
+</span><span class='line'><span class="k">val</span> <span class="n">customReads</span> <span class="k">=</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;key1&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">(</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;key11&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="n">and</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;key11&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="n">and</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;key11&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span>
+</span><span class='line'>    <span class="n">tupled</span>
+</span><span class='line'>  <span class="o">)</span> <span class="n">and</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span><span class="err"> </span><span class="o">\</span> <span class="s">&quot;key2&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Float</span><span class="o">](</span><span class="n">min</span><span class="o">(</span><span class="mi">45</span><span class="o">))</span> <span class="n">and</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span><span class="err"> </span><span class="o">\</span> <span class="s">&quot;key3&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">List</span><span class="o">[</span><span class="kt">String</span><span class="o">]]</span> <span class="o">(</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;key31&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="n">and</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;key32&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="n">and</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;key33&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span>
+</span><span class='line'>    <span class="n">tupled</span>
+</span><span class='line'>  <span class="o">)</span>
+</span><span class='line'>  <span class="n">tupled</span>
+</span><span class='line'>  
+</span><span class='line'><span class="c1">// You can immediately see the structure of the JSON tree</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>Accessing value of JsPath</h3>
+
+<p>The important function to retrieve the value at a given JsPath in a JsValue is the following:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">sealed</span> <span class="k">trait</span> <span class="nc">PathNode</span> <span class="o">{</span>
+</span><span class='line'>  <span class="k">def</span> <span class="n">apply</span><span class="o">(</span><span class="n">json</span><span class="k">:</span> <span class="kt">JsValue</span><span class="o">)</span><span class="k">:</span> <span class="kt">List</span><span class="o">[</span><span class="kt">JsValue</span><span class="o">]</span>
+</span><span class='line'>  <span class="err">…</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>As you can see, this function retrieves a <code>List[JsValue]</code></p>
+
+<p>You can simply use it like:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// build a JsPath</span>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;key1&quot;</span><span class="o">)(</span><span class="n">js</span><span class="o">)</span>
+</span><span class='line'><span class="n">res12</span><span class="k">:</span> <span class="kt">List</span><span class="o">[</span><span class="kt">play.api.libs.json.JsValue</span><span class="o">]</span> <span class="k">=</span> <span class="nc">List</span><span class="o">(</span><span class="s">&quot;value1&quot;</span><span class="o">)</span>  <span class="c1">// actually this is JsString(&quot;value1&quot;)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// 2-levels path</span>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;key3&quot;</span> <span class="o">\</span> <span class="s">&quot;key33&quot;</span><span class="o">)(</span><span class="n">js</span><span class="o">)</span>
+</span><span class='line'><span class="n">res13</span><span class="k">:</span> <span class="kt">List</span><span class="o">[</span><span class="kt">play.api.libs.json.JsValue</span><span class="o">]</span> <span class="k">=</span> <span class="nc">List</span><span class="o">({</span><span class="s">&quot;key&quot;</span><span class="k">:</span><span class="err">&quot;</span><span class="kt">value2</span><span class="err">&quot;</span><span class="o">,</span><span class="s">&quot;key34&quot;</span><span class="k">:</span><span class="err">&quot;</span><span class="kt">value34</span><span class="err">&quot;</span><span class="o">})</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// indexed path</span>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;key3&quot;</span> <span class="o">\</span> <span class="s">&quot;key32&quot;</span><span class="o">)(</span><span class="mi">2</span><span class="o">)(</span><span class="n">js</span><span class="o">)</span>
+</span><span class='line'><span class="n">res14</span><span class="k">:</span> <span class="kt">List</span><span class="o">[</span><span class="kt">play.api.libs.json.JsValue</span><span class="o">]</span> <span class="k">=</span> <span class="nc">List</span><span class="o">(</span><span class="mf">234.13</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// multiple paths</span>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="o">(</span><span class="nc">__</span> <span class="o">\\</span> <span class="s">&quot;key1&quot;</span><span class="o">)(</span><span class="n">js</span><span class="o">)</span>
+</span><span class='line'><span class="n">res17</span><span class="k">:</span> <span class="kt">List</span><span class="o">[</span><span class="kt">play.api.libs.json.JsValue</span><span class="o">]</span> <span class="k">=</span> <span class="nc">List</span><span class="o">(</span><span class="s">&quot;value1&quot;</span><span class="o">,</span> <span class="s">&quot;value2&quot;</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<br/>
+
+
+<h1><a name="reads">Reads[T] is now a validator</a></h1>
+
+<h2><a name="reads-2_0">Reads in Play2.0.x</a></h2>
+
+<p>Do you remember how you had to write a Json <code>Reads[T]</code> in <code>Play2.0.x</code> ?<br/>
+You had to override the <code>reads</code> function.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">trait</span> <span class="nc">Reads</span><span class="o">[</span><span class="kt">A</span><span class="o">]</span> <span class="o">{</span>
+</span><span class='line'>  <span class="n">self</span> <span class="k">=&gt;</span>
+</span><span class='line'>  <span class="cm">/**</span>
+</span><span class='line'><span class="cm">   * Convert the JsValue into a A</span>
+</span><span class='line'><span class="cm">   */</span>
+</span><span class='line'>  <span class="k">def</span> <span class="n">reads</span><span class="o">(</span><span class="n">json</span><span class="k">:</span> <span class="kt">JsValue</span><span class="o">)</span><span class="k">:</span> <span class="kt">A</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Take the following simple case class that you want to map on JSON structure:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">Creature</span><span class="o">(</span>
+</span><span class='line'>  <span class="n">name</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span>
+</span><span class='line'>  <span class="n">isDead</span><span class="k">:</span> <span class="kt">Boolean</span><span class="o">,</span>
+</span><span class='line'>  <span class="n">weight</span><span class="k">:</span> <span class="kt">Float</span>
+</span><span class='line'><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>In <code>Play2.0.x</code>, you would write your reader as following:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json._</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">implicit</span> <span class="k">val</span> <span class="n">creatureReads</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">Reads</span><span class="o">[</span><span class="kt">Creature</span><span class="o">]</span> <span class="o">{</span>
+</span><span class='line'>  <span class="k">def</span> <span class="n">reads</span><span class="o">(</span><span class="n">js</span><span class="k">:</span> <span class="kt">JsValue</span><span class="o">)</span><span class="k">:</span> <span class="kt">Creature</span> <span class="o">=</span> <span class="o">{</span>
+</span><span class='line'>    <span class="nc">Creature</span><span class="o">(</span>
+</span><span class='line'>      <span class="o">(</span><span class="n">js</span> <span class="o">\</span> <span class="s">&quot;name&quot;</span><span class="o">).</span><span class="n">as</span><span class="o">[</span><span class="kt">String</span><span class="o">],</span>
+</span><span class='line'>      <span class="o">(</span><span class="n">js</span> <span class="o">\</span> <span class="s">&quot;isDead&quot;</span><span class="o">).</span><span class="n">as</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">],</span>
+</span><span class='line'>      <span class="o">(</span><span class="n">js</span> <span class="o">\</span> <span class="s">&quot;weight&quot;</span><span class="o">).</span><span class="n">as</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span>
+</span><span class='line'>    <span class="o">)</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">js</span> <span class="k">=</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span> <span class="s">&quot;name&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;gremlins&quot;</span><span class="o">,</span> <span class="s">&quot;isDead&quot;</span> <span class="o">-&gt;</span> <span class="kc">false</span><span class="o">,</span> <span class="s">&quot;weight&quot;</span> <span class="o">-&gt;</span> <span class="mf">1.0F</span><span class="o">)</span>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">c</span> <span class="k">=</span> <span class="n">js</span><span class="o">.</span><span class="n">as</span><span class="o">[</span><span class="kt">Creature</span><span class="o">]</span>
+</span><span class='line'><span class="n">c</span><span class="k">:</span> <span class="kt">Creature</span><span class="o">(</span><span class="err">&quot;</span><span class="kt">gremlins</span><span class="err">&quot;</span><span class="o">,</span> <span class="kt">false</span><span class="o">,</span> <span class="mf">1.0F</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Easy isn&#8217;t it ?
+So what&#8217;s the problem if it&#8217;s so easy?</p>
+
+<p>Imagine, you pass the following JSON with a missing field:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">js</span> <span class="k">=</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span> <span class="s">&quot;name&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;gremlins&quot;</span><span class="o">,</span> <span class="s">&quot;weight&quot;</span> <span class="o">-&gt;</span> <span class="mf">1.0F</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>What happens?</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">java</span><span class="o">.</span><span class="n">lang</span><span class="o">.</span><span class="nc">RuntimeException</span><span class="k">:</span> <span class="kt">Boolean</span> <span class="kt">expected</span>
+</span><span class='line'>  <span class="n">at</span> <span class="n">play</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">libs</span><span class="o">.</span><span class="n">json</span><span class="o">.</span><span class="nc">DefaultReads$BooleanReads</span><span class="n">$</span><span class="o">.</span><span class="n">reads</span><span class="o">(</span><span class="nc">Reads</span><span class="o">.</span><span class="n">scala</span><span class="k">:</span><span class="err">98</span><span class="o">)</span>
+</span><span class='line'>  <span class="n">at</span> <span class="n">play</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">libs</span><span class="o">.</span><span class="n">json</span><span class="o">.</span><span class="nc">DefaultReads$BooleanReads</span><span class="n">$</span><span class="o">.</span><span class="n">reads</span><span class="o">(</span><span class="nc">Reads</span><span class="o">.</span><span class="n">scala</span><span class="k">:</span><span class="err">95</span><span class="o">)</span>
+</span><span class='line'>  <span class="n">at</span> <span class="n">play</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">libs</span><span class="o">.</span><span class="n">json</span><span class="o">.</span><span class="nc">JsValue$class</span><span class="o">.</span><span class="n">as</span><span class="o">(</span><span class="nc">JsValue</span><span class="o">.</span><span class="n">scala</span><span class="k">:</span><span class="err">56</span><span class="o">)</span>
+</span><span class='line'>  <span class="n">at</span> <span class="n">play</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">libs</span><span class="o">.</span><span class="n">json</span><span class="o">.</span><span class="nc">JsUndefined</span><span class="o">.</span><span class="n">as</span><span class="o">(</span><span class="nc">JsValue</span><span class="o">.</span><span class="n">scala</span><span class="k">:</span><span class="err">70</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><strong>WHATTTTTTT????</strong>
+Yes ugly RuntimeException (not even subtyped) but you can work around it using <code>JsValue.asOpt[T]</code> :)</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">c</span><span class="k">:</span> <span class="kt">Option</span><span class="o">[</span><span class="kt">Creature</span><span class="o">]</span> <span class="k">=</span> <span class="n">js</span><span class="o">.</span><span class="n">asOpt</span><span class="o">[</span><span class="kt">Creature</span><span class="o">]</span>
+</span><span class='line'><span class="n">c</span><span class="k">:</span> <span class="kt">None</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><strong>Cool but you only know that the deserialization <code>Json =&gt; Creature</code> failed but not where or on which field(s)?</strong></p>
+
+<br/>
+
+
+<br/>
+
+
+<h2><a name="reads-2_1">Reads in Play2.1</a></h2>
+
+<p>We couldn&#8217;t keep this imperfect API as is and in <code>Play2.1</code>, the <code>Reads[T]</code> API has changed into :</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">trait</span> <span class="nc">Reads</span><span class="o">[</span><span class="kt">A</span><span class="o">]</span> <span class="o">{</span>
+</span><span class='line'>  <span class="n">self</span> <span class="k">=&gt;</span>
+</span><span class='line'>  <span class="cm">/**</span>
+</span><span class='line'><span class="cm">   * Convert the JsValue into a A</span>
+</span><span class='line'><span class="cm">   */</span>
+</span><span class='line'>  <span class="k">def</span> <span class="n">reads</span><span class="o">(</span><span class="n">json</span><span class="k">:</span> <span class="kt">JsValue</span><span class="o">)</span><span class="k">:</span> <span class="kt">JsResult</span><span class="o">[</span><span class="kt">A</span><span class="o">]</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>Yes you have to refactor all your existing custom Reads but you&#8217;ll see you&#8217;ll get lots of new interesting features…</p></blockquote>
+
+<p>So you remark immediately <code>JsResult[A]</code> which is a very simple structure looking a bit like an Either applied to our specific problem.</p>
+
+<p><strong><code>JsResult[A]</code> can be of 2 types</strong>:</p>
+
+<ul>
+<li><strong><code>JsSuccess[A]</code> when <code>reads</code>succeeds</strong></li>
+</ul>
+
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">JsSuccess</span><span class="o">[</span><span class="kt">A</span><span class="o">](</span>
+</span><span class='line'>  <span class="n">value</span><span class="k">:</span> <span class="kt">T</span><span class="o">,</span> <span class="c1">// the value retrieved when deserialization JsValue =&gt; A worked</span>
+</span><span class='line'>  <span class="n">path</span><span class="k">:</span> <span class="kt">JsPath</span> <span class="o">=</span> <span class="nc">JsPath</span><span class="o">()</span> <span class="c1">// the root JsPath where this A was read in the JsValue (by default, it&#39;s the root of the JsValue)</span>
+</span><span class='line'><span class="o">)</span> <span class="k">extends</span> <span class="nc">JsResult</span><span class="o">[</span><span class="kt">T</span><span class="o">]</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// To create a JsSuccess from a value, simply do:</span>
+</span><span class='line'><span class="k">val</span> <span class="n">success</span> <span class="k">=</span> <span class="nc">JsSuccess</span><span class="o">(</span><span class="nc">Creature</span><span class="o">(</span><span class="s">&quot;gremlins&quot;</span><span class="o">,</span> <span class="kc">false</span><span class="o">,</span> <span class="mf">1.0</span><span class="o">))</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<ul>
+<li><strong><code>JsError[A]</code> when <code>reads</code> fails</strong></li>
+</ul>
+
+
+<blockquote><p>Please note the greatest advantage of JsError is that it&#8217;s a cumulative error which can store several errors discovered in the Json at different JsPath</p></blockquote>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">JsError</span><span class="o">(</span>
+</span><span class='line'>  <span class="n">errors</span><span class="k">:</span> <span class="kt">Seq</span><span class="o">[(</span><span class="kt">JsPath</span>, <span class="kt">Seq</span><span class="o">[</span><span class="kt">ValidationError</span><span class="o">])]</span>
+</span><span class='line'>  <span class="c1">// the errors is a sequence of JsPath locating the path </span>
+</span><span class='line'>  <span class="c1">// where there was an error in the JsValue and validation </span>
+</span><span class='line'>  <span class="c1">// errors for this path</span>
+</span><span class='line'><span class="o">)</span> <span class="k">extends</span> <span class="nc">JsResult</span><span class="o">[</span><span class="kt">Nothing</span><span class="o">]</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// ValidationError is a simple message with arguments (which can be mapped on localized messages)</span>
+</span><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">ValidationError</span><span class="o">(</span><span class="n">message</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">args</span><span class="k">:</span> <span class="kt">Any*</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// To create a JsError, there are a few helpers and for ex:</span>
+</span><span class='line'><span class="k">val</span> <span class="n">errors1</span> <span class="k">=</span> <span class="nc">JsError</span><span class="o">(</span> <span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;isDead</span><span class="o">,</span> <span class="nc">ValidationError</span><span class="o">(</span><span class="s">&quot;validate.error.missing&quot;</span><span class="o">,</span> <span class="s">&quot;isDead&quot;</span><span class="o">)</span> <span class="o">)</span>
+</span><span class='line'><span class="k">val</span> <span class="n">errors2</span> <span class="k">=</span> <span class="nc">JsError</span><span class="o">(</span> <span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;name</span><span class="o">,</span> <span class="nc">ValidationError</span><span class="o">(</span><span class="s">&quot;validate.error.missing&quot;</span><span class="o">,</span> <span class="s">&quot;name&quot;</span><span class="o">)</span> <span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Errors are cumulative which is really interesting</span>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">errors</span> <span class="k">=</span> <span class="n">errors1</span> <span class="o">++</span> <span class="n">errors2</span>
+</span><span class='line'><span class="n">errors</span><span class="k">:</span> <span class="kt">JsError</span><span class="o">(</span><span class="kt">List</span><span class="o">((</span><span class="kt">/isDead</span><span class="o">,</span><span class="kt">List</span><span class="o">(</span><span class="kt">ValidationError</span><span class="o">(</span><span class="kt">validate.error.missing</span><span class="o">,</span><span class="kt">WrappedArray</span><span class="o">(</span><span class="kt">isDead</span><span class="o">)))),</span> <span class="o">(/</span><span class="n">name</span><span class="o">,</span><span class="nc">List</span><span class="o">(</span><span class="nc">ValidationError</span><span class="o">(</span><span class="n">validate</span><span class="o">.</span><span class="n">error</span><span class="o">.</span><span class="n">missing</span><span class="o">,</span><span class="nc">WrappedArray</span><span class="o">(</span><span class="n">name</span><span class="o">))))))</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>So what&#8217;s interesting there is that <code>JsResult[A]</code> is a monadic structure and can be used with classic functions of such structures:</p>
+
+<ul>
+<li><code>flatMap[X](f: A =&gt; JsResult[X]): JsResult[X]</code></li>
+<li><code>fold[X](invalid: Seq[(JsPath, Seq[ValidationError])] =&gt; X, valid: A =&gt; X)</code></li>
+<li><code>map[X](f: A =&gt; X): JsResult[X]</code></li>
+<li><code>filter(p: A =&gt; Boolean)</code></li>
+<li><code>collect[B](otherwise:ValidationError)(p:PartialFunction[A,B]): JsResult[B]</code></li>
+<li><code>get: A</code></li>
+</ul>
+
+
+<p>And some sugar such :</p>
+
+<ul>
+<li><code>asOpt</code></li>
+<li><code>asEither</code></li>
+<li>…</li>
+</ul>
+
+
+<h3>Reads[A] has become a validator</h3>
+
+<p>As you may understand, using the new <code>Reads[A]</code>, you don&#8217;t only deserialize a JsValue into another structure but you really <strong>validate</strong> the JsValue and retrieve all the validation errors.<br/>
+BTW, in <code>JsValue</code>, a new function called <code>validate</code> has appeared:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">trait</span> <span class="nc">JsValue</span> <span class="o">{</span>
+</span><span class='line'><span class="err">…</span>
+</span><span class='line'>  <span class="k">def</span> <span class="n">validate</span><span class="o">[</span><span class="kt">T</span><span class="o">](</span><span class="k">implicit</span> <span class="nc">_reads</span><span class="k">:</span> <span class="kt">Reads</span><span class="o">[</span><span class="kt">T</span><span class="o">])</span><span class="k">:</span> <span class="kt">JsResult</span><span class="o">[</span><span class="kt">T</span><span class="o">]</span> <span class="k">=</span> <span class="nc">_reads</span><span class="o">.</span><span class="n">reads</span><span class="o">(</span><span class="k">this</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// same behavior but it throws a specific RuntimeException JsResultException now</span>
+</span><span class='line'>  <span class="k">def</span> <span class="n">as</span><span class="o">[</span><span class="kt">T</span><span class="o">](</span><span class="k">implicit</span> <span class="n">fjs</span><span class="k">:</span> <span class="kt">Reads</span><span class="o">[</span><span class="kt">T</span><span class="o">])</span><span class="k">:</span> <span class="kt">T</span>
+</span><span class='line'>  <span class="c1">// exactly the same behavior has before</span>
+</span><span class='line'>  <span class="k">def</span> <span class="n">asOpt</span><span class="o">[</span><span class="kt">T</span><span class="o">](</span><span class="k">implicit</span> <span class="n">fjs</span><span class="k">:</span> <span class="kt">Reads</span><span class="o">[</span><span class="kt">T</span><span class="o">])</span><span class="k">:</span> <span class="kt">Option</span><span class="o">[</span><span class="kt">T</span><span class="o">]</span>
+</span><span class='line'><span class="err">…</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// You can now write if you got the right implicit in your scope</span>
+</span><span class='line'><span class="k">val</span> <span class="n">res</span><span class="k">:</span> <span class="kt">JsResult</span><span class="o">[</span><span class="kt">Creature</span><span class="o">]</span> <span class="k">=</span> <span class="n">js</span><span class="o">.</span><span class="n">validate</span><span class="o">[</span><span class="kt">Creature</span><span class="o">])</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<h3>Manipulating a JsResult[A]</h3>
+
+<p>So when manipulating a <code>JsResult</code>, you don&#8217;t access the value directly and it&#8217;s preferable to use <code>map/flatmap/fold</code> to modify the value.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">res</span><span class="k">:</span> <span class="kt">JsResult</span><span class="o">[</span><span class="kt">Creature</span><span class="o">]</span> <span class="k">=</span> <span class="n">js</span><span class="o">.</span><span class="n">validate</span><span class="o">[</span><span class="kt">Creature</span><span class="o">]</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// managing the success/error and potentially return something</span>
+</span><span class='line'><span class="n">res</span><span class="o">.</span><span class="n">fold</span><span class="o">(</span>
+</span><span class='line'>  <span class="n">valid</span> <span class="k">=</span> <span class="o">{</span> <span class="n">c</span> <span class="k">=&gt;</span> <span class="n">println</span><span class="o">(</span> <span class="n">c</span> <span class="o">);</span> <span class="n">c</span><span class="o">.</span><span class="n">name</span> <span class="o">},</span>
+</span><span class='line'>  <span class="n">invalid</span> <span class="k">=</span> <span class="o">{</span> <span class="n">e</span> <span class="k">=&gt;</span> <span class="n">println</span><span class="o">(</span> <span class="n">e</span> <span class="o">);</span> <span class="n">e</span> <span class="o">}</span>
+</span><span class='line'><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// getting the name directly (using the get can throw a NoSuchElementException if it&#39;s a JsError)</span>
+</span><span class='line'><span class="k">val</span> <span class="n">name</span><span class="k">:</span> <span class="kt">JsSuccess</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="k">=</span> <span class="n">res</span><span class="o">.</span><span class="n">map</span><span class="o">(</span> <span class="n">creature</span> <span class="k">=&gt;</span> <span class="n">creature</span><span class="o">.</span><span class="n">name</span> <span class="o">).</span><span class="n">get</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// filtering the result</span>
+</span><span class='line'><span class="k">val</span> <span class="n">name</span><span class="k">:</span> <span class="kt">JsSuccess</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="k">=</span> <span class="n">res</span><span class="o">.</span><span class="n">filter</span><span class="o">(</span> <span class="n">creature</span> <span class="k">=&gt;</span> <span class="n">creature</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s">&quot;gremlins&quot;</span> <span class="o">).</span><span class="n">get</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// a classic Play action</span>
+</span><span class='line'><span class="k">def</span> <span class="n">getNameOnly</span> <span class="k">=</span> <span class="nc">Action</span><span class="o">(</span><span class="n">parse</span><span class="o">.</span><span class="n">json</span><span class="o">)</span> <span class="o">{</span> <span class="n">request</span> <span class="k">=&gt;</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">json</span> <span class="k">=</span> <span class="n">request</span><span class="o">.</span><span class="n">body</span>
+</span><span class='line'>  <span class="n">json</span><span class="o">.</span><span class="n">validate</span><span class="o">[</span><span class="kt">Creature</span><span class="o">].</span><span class="n">fold</span><span class="o">(</span>
+</span><span class='line'>    <span class="n">valid</span> <span class="k">=</span> <span class="o">(</span> <span class="n">res</span> <span class="k">=&gt;</span> <span class="nc">Ok</span><span class="o">(</span><span class="n">res</span><span class="o">.</span><span class="n">name</span><span class="o">)</span> <span class="o">),</span>
+</span><span class='line'>    <span class="n">invalid</span> <span class="k">=</span> <span class="o">(</span> <span class="n">e</span> <span class="k">=&gt;</span> <span class="nc">BadRequest</span><span class="o">(</span><span class="n">e</span><span class="o">.</span><span class="n">toString</span><span class="o">)</span> <span class="o">)</span>
+</span><span class='line'>  <span class="o">)</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>Rewriting the Reads[T] with JsResult[A]</h3>
+
+<p>The <code>Reads[A]</code> API returning a JsResult, you can&#8217;t write your <code>Reads[A]</code> as before as you must return a JsResult gathering all found errors.<br/>
+You could imagine simply compose Reads[T] with flatMap :</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// DO NOT USE, WRONG CODE</span>
+</span><span class='line'><span class="k">implicit</span> <span class="k">val</span> <span class="n">creatureReads</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">Reads</span><span class="o">[</span><span class="kt">Creature</span><span class="o">]</span> <span class="o">{</span>
+</span><span class='line'>  <span class="k">def</span> <span class="n">reads</span><span class="o">(</span><span class="n">js</span><span class="k">:</span> <span class="kt">JsValue</span><span class="o">)</span><span class="k">:</span> <span class="kt">JsResult</span><span class="o">[</span><span class="kt">Creature</span><span class="o">]</span> <span class="k">=</span> <span class="o">{</span>
+</span><span class='line'>    <span class="o">(</span><span class="n">js</span> <span class="o">\</span> <span class="s">&quot;name&quot;</span><span class="o">).</span><span class="n">validate</span><span class="o">[</span><span class="kt">String</span><span class="o">].</span><span class="n">flatMap</span><span class="o">{</span> <span class="n">name</span> <span class="k">=&gt;</span>
+</span><span class='line'>      <span class="o">(</span><span class="n">js</span> <span class="o">\</span> <span class="s">&quot;isDead&quot;</span><span class="o">).</span><span class="n">validate</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">].</span><span class="n">flatMap</span> <span class="o">{</span> <span class="n">isDead</span> <span class="k">=&gt;</span>
+</span><span class='line'>      <span class="o">(</span><span class="n">js</span> <span class="o">\</span> <span class="s">&quot;weight&quot;</span><span class="o">).</span><span class="n">validate</span><span class="o">[</span><span class="kt">Float</span><span class="o">].</span><span class="n">map</span> <span class="o">{</span> <span class="n">weight</span> <span class="k">=&gt;</span>
+</span><span class='line'>        <span class="nc">Creature</span><span class="o">(</span><span class="n">name</span><span class="o">,</span> <span class="n">isDead</span><span class="o">,</span> <span class="n">weight</span><span class="o">)</span>
+</span><span class='line'>      <span class="o">}</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>Remember the main purpose of <code>JsResult</code> is to gather all found errors while validating the JsValue.</p></blockquote>
+
+<p><code>JsResult.flatMap</code> is pure monadic function (if you don&#8217;t know what it is, don&#8217;t care about it, you can understand without it) implying that the function that you pass to <code>flatMap()</code> is called only if the result is a <code>JsSuccess</code> else it just returns the <code>JsError</code>.<br/>
+This means the previous code won&#8217;t aggregate all errors found during validation and will stop at first error which is exactly what we don&#8217;t want.</p>
+
+<p>Actually, Monad pattern is not good in our case because we are not just composing Reads but we expect combining them following the schema:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="nc">Reads</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="nc">AND</span> <span class="nc">Reads</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span> <span class="nc">AND</span> <span class="nc">Reads</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span>
+</span><span class='line'>  <span class="k">=&gt;</span> <span class="nc">Reads</span><span class="o">[(</span><span class="kt">String</span>, <span class="kt">Boolean</span>, <span class="kt">Float</span><span class="o">)]</span>
+</span><span class='line'>     <span class="k">=&gt;</span> <span class="nc">Reads</span><span class="o">[</span><span class="kt">Creature</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>So we need something else to be able to combine our Reads and this is the greatest new feature that <code>Play2.1</code> brings for JSON :<br/>
+<strong>THE READS combinators with JsPath</strong></p></blockquote>
+
+<br/>
+
+
+<blockquote><p>If you want more theoretical aspects about the way it was implemented based on generic functional structures adapted to our needs, you can read this post <a href="http://sadache.tumblr.com/post/30955704987/applicatives-are-too-restrictive-breaking-applicativesfrom">&#8220;Applicatives are too restrictive, breaking Applicatives and introducing Functional Builders&#8221;</a> written by <a href="http://www.github.com/sadache">@sadache</a></p></blockquote>
+
+<h3>Rewriting the Reads[T] with combinators</h3>
+
+<p>Go directly to the example as practice is often the best :</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// IMPORTANT import this to have the required tools in your scope</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json.util._</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">implicit</span> <span class="k">val</span> <span class="n">creatureReads</span> <span class="k">=</span> <span class="o">(</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;name&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="n">and</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;isDead&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span> <span class="n">and</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;weight&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span>
+</span><span class='line'><span class="o">)(</span><span class="nc">Creature</span><span class="o">.</span><span class="n">apply</span> <span class="k">_</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// or in a simpler way as case class has a companion object with an apply function</span>
+</span><span class='line'><span class="k">implicit</span> <span class="k">val</span> <span class="n">creatureReads</span> <span class="k">=</span> <span class="o">(</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;name&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="n">and</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;isDead&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span> <span class="n">and</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;weight&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span>
+</span><span class='line'><span class="o">)(</span><span class="nc">Creature</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// or using the operators inspired by Scala parser combinators for those who know them</span>
+</span><span class='line'><span class="k">implicit</span> <span class="k">val</span> <span class="n">creatureReads</span> <span class="k">=</span> <span class="o">(</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;name&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="o">~</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;isDead&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span> <span class="o">~</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;weight&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span>
+</span><span class='line'><span class="o">)(</span><span class="nc">Creature</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>So there is nothing quite complicated, isn&#8217;t it?</p>
+
+<h5><code>(__ \ "name")</code> is the <code>JsPath</code> where you gonna apply <code>read[String]</code></h5>
+
+<br/>
+
+
+<h5><code>and</code> is just an operator meaning <code>Reads[A] and Reads[B] =&gt; Builder[Reads[A ~ B]]</code></h5>
+
+<ul>
+<li><code>A ~ B</code> just means <code>Combine A and B</code> but it doesn&#8217;t suppose the way it is combined (can be a tuple, an object, whatever…)</li>
+<li><code>Builder</code> is not a real type but I introduce it just to tell that the operator <code>and</code> doesn&#8217;t create directly a <code>Reads[A ~ B]</code> but an intermediate structure that is able to build a <code>Reads[A ~ B]</code> or to combine with another <code>Reads[C]</code></li>
+</ul>
+
+
+<br/>   
+
+
+<h5><code>(…)(Creature)</code> builds a <code>Reads[Creature]</code></h5>
+
+<ul>
+<li><code>(__ \ "name").read[String] and (__ \ "isDead").read[Boolean] and (__ \ "weight").read[Float]</code> builds a <code>Builder[Reads[String ~ Boolean ~ Float])]</code> but you want a <code>Reads[Creature]</code>.</li>
+<li>So you apply the <code>Builder[Reads[String ~ Boolean ~ String])]</code> to the function <code>Creature.apply = (String, Boolean, Float) =&gt; Creature</code> constructor to finally obtain a <code>Reads[Creature]</code></li>
+</ul>
+
+
+<p>Try it:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">js</span> <span class="k">=</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span> <span class="s">&quot;name&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;gremlins&quot;</span><span class="o">,</span> <span class="s">&quot;isDead&quot;</span> <span class="o">-&gt;</span> <span class="kc">false</span><span class="o">,</span> <span class="s">&quot;weight&quot;</span> <span class="o">-&gt;</span> <span class="mf">1.0F</span><span class="o">)</span>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="n">js</span><span class="o">.</span><span class="n">validate</span><span class="o">[</span><span class="kt">Creature</span><span class="o">]</span>
+</span><span class='line'><span class="n">res1</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsResult</span><span class="o">[</span><span class="kt">Creature</span><span class="o">]</span> <span class="k">=</span> <span class="nc">JsSuccess</span><span class="o">(</span><span class="nc">Creature</span><span class="o">(</span><span class="n">gremlins</span><span class="o">,</span><span class="kc">false</span><span class="o">,</span><span class="mf">1.0</span><span class="o">),)</span> <span class="c1">// nothing after last comma because the JsPath is ROOT by default</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Now what happens if you have an error now?</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">js</span> <span class="k">=</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span> <span class="s">&quot;name&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;gremlins&quot;</span><span class="o">,</span> <span class="s">&quot;weight&quot;</span> <span class="o">-&gt;</span> <span class="mf">1.0F</span><span class="o">)</span>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="n">js</span><span class="o">.</span><span class="n">validate</span><span class="o">[</span><span class="kt">Creature</span><span class="o">]</span>
+</span><span class='line'><span class="n">res2</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsResult</span><span class="o">[</span><span class="kt">Creature</span><span class="o">]</span> <span class="k">=</span> <span class="nc">JsError</span><span class="o">(</span><span class="nc">List</span><span class="o">((/</span><span class="n">isDead</span><span class="o">,</span><span class="nc">List</span><span class="o">(</span><span class="nc">ValidationError</span><span class="o">(</span><span class="n">validate</span><span class="o">.</span><span class="n">error</span><span class="o">.</span><span class="n">missing</span><span class="o">-</span><span class="n">path</span><span class="o">,</span><span class="nc">WrappedArray</span><span class="o">())))))</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Explicit, isn&#8217;t it?</p>
+
+<h3>Complexifying the case</h3>
+
+<p>Ok, I see what you think : what about more complex cases where you have several constraints on a field and embedded Json in Json and recursive classes and whatever…</p>
+
+<p>Let&#8217;s imagine our creature:</p>
+
+<ul>
+<li>is a relatively modern creature having an email and hating email addresses having less than 5 characters for a reason only known by the creature itself.</li>
+<li>may have 2 favorites data:
+
+<ul>
+<li>1 String (called &#8220;string&#8221; in JSON) which shall not be &#8220;ni&#8221; (because it loves Monty Python too much to accept this) and then to skip the first 2 chars</li>
+<li>1 Int (called &#8220;number&#8221; in JSON) which can be less than 86 or more than 875 (don&#8217;t ask why, this is creature with a different logic than ours)</li>
+</ul>
+</li>
+<li>may have friend creatures</li>
+<li>may have an optional social account because many creatures are not very social so this is quite mandatory</li>
+</ul>
+
+
+<p>Now the class looks like:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">Creature</span><span class="o">(</span>
+</span><span class='line'>  <span class="n">name</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span>
+</span><span class='line'>  <span class="n">isDead</span><span class="k">:</span> <span class="kt">Boolean</span><span class="o">,</span>
+</span><span class='line'>  <span class="n">weight</span><span class="k">:</span> <span class="kt">Float</span><span class="o">,</span>
+</span><span class='line'>  <span class="n">email</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="c1">// email format and minLength(5)</span>
+</span><span class='line'>  <span class="n">favorites</span><span class="k">:</span> <span class="o">(</span><span class="kt">String</span><span class="o">,</span> <span class="kt">Int</span><span class="o">),</span> <span class="c1">// the stupid favorites</span>
+</span><span class='line'>  <span class="n">friends</span><span class="k">:</span> <span class="kt">List</span><span class="o">[</span><span class="kt">Creature</span><span class="o">]</span> <span class="k">=</span> <span class="nc">Nil</span><span class="o">,</span> <span class="c1">// yes by default it has no friend</span>
+</span><span class='line'>  <span class="n">social</span><span class="k">:</span> <span class="kt">Option</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="k">=</span> <span class="nc">None</span> <span class="c1">// by default, it&#39;s not social</span>
+</span><span class='line'><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>Play2.1</code> provide lots of generic Reads helpers:</p>
+
+<ul>
+<li><code>JsPath.read[A](implicit reads:Reads[A])</code> can be passed a custom <code>Reads[A]</code> which is applied to the JSON content at this JsPath. So with this property, you can compose hierarchically <code>Reads[T]</code> which corresponds to JSON tree structure.</li>
+<li><code>JsPath.readOpt</code> allows <code>Reads[Option[T]]</code></li>
+<li><code>Reads.email</code> which validates the String has email format</li>
+<li><code>Reads.minLength(nb)</code> validates the minimum length of a String</li>
+<li><code>Reads[A] or Reads[A] =&gt; Reads[A]</code> operator is a classic <code>OR</code> logic operator</li>
+<li><code>Reads[A] keepAnd Reads[B] =&gt; Reads[A]</code> is an operator that tries <code>Reads[A]</code> and <code>Reads[B]</code> but only keeps the result of <code>Reads[A]</code> (For those who know Scala parser combinators <code>keepAnd == &lt;~</code> )</li>
+<li><code>Reads[A] andKeep Reads[B] =&gt; Reads[B]</code> is an operator that tries <code>Reads[A]</code> and <code>Reads[B]</code> but only keeps the result of <code>Reads[B]</code> (For those who know Scala parser combinators <code>andKeep == ~&gt;</code> )</li>
+</ul>
+
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// import just Reads helpers in scope</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json.util._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">play.api.libs.json.Reads._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">play.api.data.validation.ValidationError</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// defines a custom reads to be reused</span>
+</span><span class='line'><span class="c1">// a reads that verifies your value is not equal to a give value</span>
+</span><span class='line'><span class="k">def</span> <span class="n">notEqualReads</span><span class="o">[</span><span class="kt">T</span><span class="o">](</span><span class="n">v</span><span class="k">:</span> <span class="kt">T</span><span class="o">)(</span><span class="k">implicit</span> <span class="n">r</span><span class="k">:</span> <span class="kt">Reads</span><span class="o">[</span><span class="kt">T</span><span class="o">])</span><span class="k">:</span> <span class="kt">Reads</span><span class="o">[</span><span class="kt">T</span><span class="o">]</span> <span class="k">=</span> <span class="nc">Reads</span><span class="o">.</span><span class="n">filterNot</span><span class="o">(</span><span class="nc">ValidationError</span><span class="o">(</span><span class="s">&quot;validate.error.unexpected.value&quot;</span><span class="o">,</span> <span class="n">v</span><span class="o">))(</span> <span class="k">_</span> <span class="o">==</span> <span class="n">v</span> <span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">def</span> <span class="n">skipReads</span><span class="o">(</span><span class="k">implicit</span> <span class="n">r</span><span class="k">:</span> <span class="kt">Reads</span><span class="o">[</span><span class="kt">String</span><span class="o">])</span><span class="k">:</span> <span class="kt">Reads</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="k">=</span> <span class="n">r</span><span class="o">.</span><span class="n">map</span><span class="o">(</span> <span class="k">_</span><span class="o">.</span><span class="n">substring</span><span class="o">(</span><span class="mi">2</span><span class="o">)</span> <span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">implicit</span> <span class="k">val</span> <span class="n">creatureReads</span><span class="k">:</span> <span class="kt">Reads</span><span class="o">[</span><span class="kt">Creature</span><span class="o">]</span> <span class="k">=</span> <span class="o">(</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;name&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="n">and</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;isDead&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span> <span class="n">and</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;weight&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span> <span class="n">and</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;email&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">(</span><span class="n">email</span> <span class="n">keepAnd</span> <span class="n">minLength</span><span class="o">[</span><span class="kt">String</span><span class="o">](</span><span class="mi">5</span><span class="o">))</span> <span class="n">and</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;favorites&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">(</span>
+</span><span class='line'>      <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;string&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">](</span> <span class="n">notEqualReads</span><span class="o">(</span><span class="s">&quot;ni&quot;</span><span class="o">)</span> <span class="n">andKeep</span> <span class="n">skipReads</span> <span class="o">)</span> <span class="n">and</span>
+</span><span class='line'>      <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;number&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Int</span><span class="o">](</span> <span class="n">max</span><span class="o">(</span><span class="mi">86</span><span class="o">)</span> <span class="n">or</span> <span class="n">min</span><span class="o">(</span><span class="mi">875</span><span class="o">)</span> <span class="o">)</span>
+</span><span class='line'>      <span class="n">tupled</span>
+</span><span class='line'>  <span class="o">)</span> <span class="n">and</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;friends&quot;</span><span class="o">).</span><span class="n">lazyRead</span><span class="o">(</span> <span class="n">list</span><span class="o">[</span><span class="kt">Creature</span><span class="o">](</span><span class="n">creatureReads</span><span class="o">)</span> <span class="o">)</span> <span class="n">and</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;social&quot;</span><span class="o">).</span><span class="n">readOpt</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span>
+</span><span class='line'><span class="o">)(</span><span class="nc">Creature</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Many things above can be understood very logically but let&#8217;s explain a bit:</p>
+
+<h5><code>(__ \ "email").read(email keepAnd minLength[String](5))</code></h5>
+
+<ul>
+<li>As explained previously, <code>(__ \ "email").read(…)</code> applies the <code>Reads[T]</code> passed in parameter to function <code>read</code> at the given JsPath <code>(__ \ "email")</code></li>
+<li><code>email keepAnd minLength[String](5) =&gt; Reads[String]</code> is a Js validator that verifies JsValue:
+
+<ol>
+<li>is a String : <code>email: Reads[String]</code> so no need to specify type here</li>
+<li>has email format</li>
+<li>has min length of 5 (we precise the type here because minLength is a generic <code>Reads[T]</code>)</li>
+</ol>
+</li>
+<li>Why not <code>email and minLength[String](5)</code>? because, as explained previously, it would generate a <code>Builder[Reads[(String, String)]]</code> whereas you expect a <code>Reads[String]</code>. The <code>keepAnd</code> operator (aka <code>&lt;~</code>) does what we expect: it validates both sides but if succeeded, it keeps only the result on left side.</li>
+</ul>
+
+
+<br/>
+
+
+<h5><code>notEqualReads("ni") andKeep skipReads</code></h5>
+
+<ul>
+<li>No need to write <code>notEqualReads[String]("ni")</code> because <code>String</code> type is inferred from <code>(__ \ "knight").read[String]</code> (the power of Scala typing engine)</li>
+<li><code>skipReads</code> is a customReads that skips the first 2 chars</li>
+<li><code>andKeep</code> operator (aka <code>~&gt;</code>) is simple to undestand : it validates the left and right side and if both succeeds, only keeps the result on right side. In our case, only the result of <code>skipReads</code> is kept and not the result of <code>notEqualReads</code>.</li>
+</ul>
+
+
+<br/>
+
+
+<h5><code>max(86) or min(875)</code></h5>
+
+<ul>
+<li>Nothing to explain there, isn&#8217;t it ? <code>or</code> is the classic <code>OR</code>logic operator, nothing else</li>
+</ul>
+
+
+<br/>
+
+
+<h5><code>(__ \ "favorites").read(…)</code></h5>
+
+<pre><code>(__ \ "string").read[String]( notEqualReads("ni") andKeep notEqualReads("swallow") ) and
+(__ \ "number").read[Int]( max(86) or min(875) )
+tupled
+</code></pre>
+
+<ul>
+<li>Remember that <code>(__ \ "string").read[String](…) and (__ \ "number").read[Int](…) =&gt; Builder[Reads[(String, Int)]]</code></li>
+<li>What means <code>tupled</code> ?
+<code>Builder[Reads[(String, Int)]]</code> can be used with a case class <code>apply</code> function to build the <code>Reads[Creature]</code> for ex. But it provides also <code>tupled</code> which is quite easy to understand : it <em>&#8220;tuplizes&#8221;</em> your Builder: <code>Builder[Reads[(A, B)]].tupled =&gt; Reads[(A, B)]</code></li>
+<li>Finally <code>(__ \ "favorites").read(Reads[(String, Int)]</code> will validate a <code>(String, Int)</code> which is the expected type for field <code>favorites</code></li>
+</ul>
+
+
+<br/>
+
+
+<h5><code>(__ \ "friend").lazyRead( list[Creature](creatureReads) )</code></h5>
+
+<p>This is the most complicated line in this code. But you can understand why: the <code>friend</code> field is recursive on the <code>Creature</code> class itself so it requires a special treatment.</p>
+
+<ul>
+<li><code>list[Creature](…)</code> creates a <code>Reads[List[Creature]]</code></li>
+<li><code>list[Creature](creatureReads)</code> passes explicitly <code>creatureReads</code> as an argument because it&#8217;s recursive and Scala requires that to resolve it. Nothing too complicated…</li>
+<li><code>(__ \ "friend").lazyRead[A](r: =&gt; Reads[A]))</code> : <code>lazyRead</code> expects a <code>Reads[A]</code> value <em>passed by name</em> to allow the type recursive construction. This is the only refinement that you must keep in mind in this very special recursive case.</li>
+</ul>
+
+
+<br/>
+
+
+<h5><code>(__ \ "social").readOpt[String]</code></h5>
+
+<p>Nothing quite complicated to understand: we need to read an option and <code>readOpt</code> helps in doing this.</p>
+
+<p>Now we can use this <code>Reads[Creature]</code></p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">gizmojs</span> <span class="k">=</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span>
+</span><span class='line'>  <span class="s">&quot;name&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;gremlins&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;isDead&quot;</span> <span class="o">-&gt;</span> <span class="kc">false</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;weight&quot;</span> <span class="o">-&gt;</span> <span class="mf">1.0F</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;email&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;gizmo@midnight.com&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;favorites&quot;</span> <span class="o">-&gt;</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span><span class="s">&quot;string&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;alpha&quot;</span><span class="o">,</span> <span class="s">&quot;number&quot;</span> <span class="o">-&gt;</span> <span class="mi">85</span><span class="o">),</span>
+</span><span class='line'>  <span class="s">&quot;friends&quot;</span> <span class="o">-&gt;</span> <span class="nc">Json</span><span class="o">.</span><span class="n">arr</span><span class="o">(),</span>
+</span><span class='line'>  <span class="s">&quot;social&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;@gizmo&quot;</span>
+</span><span class='line'><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">gizmo</span> <span class="k">=</span> <span class="n">gizmojs</span><span class="o">.</span><span class="n">validate</span><span class="o">[</span><span class="kt">Creature</span><span class="o">]</span>
+</span><span class='line'><span class="n">gizmo</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsResult</span><span class="o">[</span><span class="kt">Creature</span><span class="o">]</span> <span class="k">=</span> <span class="nc">JsSuccess</span><span class="o">(</span><span class="nc">Creature</span><span class="o">(</span><span class="n">gremlins</span><span class="o">,</span><span class="kc">false</span><span class="o">,</span><span class="mf">1.0</span><span class="o">,</span><span class="n">gizmo</span><span class="nd">@midnight</span><span class="o">.</span><span class="n">com</span><span class="o">,(</span><span class="n">pha</span><span class="o">,</span><span class="mi">85</span><span class="o">),</span><span class="nc">List</span><span class="o">(),</span><span class="nc">Some</span><span class="o">(</span><span class="nd">@gizmo</span><span class="o">)),)</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">shaunjs</span> <span class="k">=</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span>
+</span><span class='line'>  <span class="s">&quot;name&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;zombie&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;isDead&quot;</span> <span class="o">-&gt;</span> <span class="kc">true</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;weight&quot;</span> <span class="o">-&gt;</span> <span class="mf">100.0F</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;email&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;shaun@dead.com&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;favorites&quot;</span> <span class="o">-&gt;</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span><span class="s">&quot;string&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;brain&quot;</span><span class="o">,</span> <span class="s">&quot;number&quot;</span> <span class="o">-&gt;</span> <span class="mi">2</span><span class="o">),</span>
+</span><span class='line'>  <span class="s">&quot;friends&quot;</span> <span class="o">-&gt;</span> <span class="nc">Json</span><span class="o">.</span><span class="n">arr</span><span class="o">(</span> <span class="n">gizmojs</span><span class="o">))</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="k">val</span> <span class="n">shaun</span> <span class="k">=</span> <span class="n">shaunjs</span><span class="o">.</span><span class="n">validate</span><span class="o">[</span><span class="kt">Creature</span><span class="o">]</span>
+</span><span class='line'><span class="n">shaun</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsResult</span><span class="o">[</span><span class="kt">Creature</span><span class="o">]</span> <span class="k">=</span> <span class="nc">JsSuccess</span><span class="o">(</span><span class="nc">Creature</span><span class="o">(</span><span class="n">zombie</span><span class="o">,</span><span class="kc">true</span><span class="o">,</span><span class="mf">100.0</span><span class="o">,</span><span class="n">shaun</span><span class="nd">@dead</span><span class="o">.</span><span class="n">com</span><span class="o">,(</span><span class="n">ain</span><span class="o">,</span><span class="mi">2</span><span class="o">),</span><span class="nc">List</span><span class="o">(</span><span class="nc">Creature</span><span class="o">(</span><span class="n">gremlins</span><span class="o">,</span><span class="kc">false</span><span class="o">,</span><span class="mf">1.0</span><span class="o">,</span><span class="n">gizmo</span><span class="nd">@midnight</span><span class="o">.</span><span class="n">com</span><span class="o">,(</span><span class="n">alpha</span><span class="o">,</span><span class="mi">85</span><span class="o">),</span><span class="nc">List</span><span class="o">(),</span><span class="nc">Some</span><span class="o">(</span><span class="nd">@gizmo</span><span class="o">))),</span><span class="nc">None</span><span class="o">),)</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">errorjs</span> <span class="k">=</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span>
+</span><span class='line'>  <span class="s">&quot;name&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;gremlins&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;isDead&quot;</span> <span class="o">-&gt;</span> <span class="kc">false</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;weight&quot;</span> <span class="o">-&gt;</span> <span class="mf">1.0F</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;email&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;rrhh&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;favorites&quot;</span> <span class="o">-&gt;</span> <span class="nc">Json</span><span class="o">.</span><span class="n">obj</span><span class="o">(</span><span class="s">&quot;string&quot;</span> <span class="o">-&gt;</span> <span class="s">&quot;ni&quot;</span><span class="o">,</span> <span class="s">&quot;number&quot;</span> <span class="o">-&gt;</span> <span class="mi">500</span><span class="o">),</span>
+</span><span class='line'>  <span class="s">&quot;friends&quot;</span> <span class="o">-&gt;</span> <span class="nc">Json</span><span class="o">.</span><span class="n">arr</span><span class="o">()</span>
+</span><span class='line'><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="n">errorjs</span><span class="o">.</span><span class="n">validate</span><span class="o">[</span><span class="kt">Creature</span><span class="o">]</span>
+</span><span class='line'><span class="n">res0</span><span class="k">:</span> <span class="kt">play.api.libs.json.JsResult</span><span class="o">[</span><span class="kt">Creature</span><span class="o">]</span> <span class="k">=</span> <span class="nc">JsError</span><span class="o">(</span><span class="nc">List</span><span class="o">((/</span><span class="n">favorites</span><span class="o">/</span><span class="n">string</span><span class="o">,</span><span class="nc">List</span><span class="o">(</span><span class="nc">ValidationError</span><span class="o">(</span><span class="n">validate</span><span class="o">.</span><span class="n">error</span><span class="o">.</span><span class="n">unexpected</span><span class="o">.</span><span class="n">value</span><span class="o">,</span><span class="nc">WrappedArray</span><span class="o">(</span><span class="n">ni</span><span class="o">)))),</span> <span class="o">(/</span><span class="n">email</span><span class="o">,</span><span class="nc">List</span><span class="o">(</span><span class="nc">ValidationError</span><span class="o">(</span><span class="n">validate</span><span class="o">.</span><span class="n">error</span><span class="o">.</span><span class="n">email</span><span class="o">,</span><span class="nc">WrappedArray</span><span class="o">()),</span> <span class="nc">ValidationError</span><span class="o">(</span><span class="n">validate</span><span class="o">.</span><span class="n">error</span><span class="o">.</span><span class="n">minlength</span><span class="o">,</span><span class="nc">WrappedArray</span><span class="o">(</span><span class="mi">5</span><span class="o">)))),</span> <span class="o">(/</span><span class="n">favorites</span><span class="o">/</span><span class="n">number</span><span class="o">,</span><span class="nc">List</span><span class="o">(</span><span class="nc">ValidationError</span><span class="o">(</span><span class="n">validate</span><span class="o">.</span><span class="n">error</span><span class="o">.</span><span class="n">max</span><span class="o">,</span><span class="nc">WrappedArray</span><span class="o">(</span><span class="mi">86</span><span class="o">)),</span> <span class="nc">ValidationError</span><span class="o">(</span><span class="n">validate</span><span class="o">.</span><span class="n">error</span><span class="o">.</span><span class="n">min</span><span class="o">,</span><span class="nc">WrappedArray</span><span class="o">(</span><span class="mi">875</span><span class="o">))))))</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<br/>
+
+
+<h2><a name="conclusion">Conclusion &amp; much more…</a></h2>
+
+<p>So here is the end of this 1st part not to make a too long article.
+But there are so many other features to explain and demonstrate and there will other parts very soon!!!</p>
+
+<blockquote><p><code>Reads[T]</code> combinators are cool but you know what? <code>Writes[T]</code> &amp; <code>Format[T]</code> can be combined too!</p></blockquote>
+
+<p>Let&#8217;s tease a bit:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">implicit</span> <span class="k">val</span> <span class="n">creatureWrites</span> <span class="k">=</span> <span class="o">(</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;name&quot;</span><span class="o">).</span><span class="n">write</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="n">and</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;isDead&quot;</span><span class="o">).</span><span class="n">write</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span> <span class="n">and</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;weight&quot;</span><span class="o">).</span><span class="n">write</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span>
+</span><span class='line'><span class="o">)(</span><span class="nc">Creature</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>Next parts about <code>Writes[T]</code> combinators and another intriguing feature that I&#8217;ll name <code>Json Generators</code> ;)</p></blockquote>
+
+<p>Have fun&#8230;</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Pascal Voitot</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-09-08T11:10:00+02:00" pubdate data-updated="true">Sep 8<span>th</span>, 2012</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/applicative/'>applicative</a>, <a class='category' href='/blog/categories/combinators/'>combinators</a>, <a class='category' href='/blog/categories/json/'>json</a>, <a class='category' href='/blog/categories/play2-1/'>play2.1</a>, <a class='category' href='/blog/categories/playframework/'>playframework</a>, <a class='category' href='/blog/categories/serialization/'>serialization</a>, <a class='category' href='/blog/categories/validation/'>validation</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://www.mandubian.com/2012/09/08/unveiling-play-2-dot-1-json-api-part1-jspath-reads-combinators/" data-via="mandubian" data-counturl="http://www.mandubian.com/2012/09/08/unveiling-play-2-dot-1-json-api-part1-jspath-reads-combinators/" >Tweet</a>
+  
+  
+  <div class="g-plusone" data-size="medium"></div>
+  
+  
+</div>
+
+    
+    
+    <section>
+      <h1>Comments</h1>
+      <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+    </section>
+    
+    <ul class="pager">
+      
+      <li class="previous"><a class="basic-alignment left"
+        href="/2012/08/27/understanding-play2-iteratees-for-normal-humans/" title="Previous Post:
+        Understanding Play2 Iteratees for Normal Humans">&laquo; Understanding Play2 Iteratees for Normal Humans</a></li>
+      
+      <li><a href="/blog/archives">Blog Archives</a></li>
+      
+      <li class="next"><a class="basic-alignment right" href="/2012/10/01/unveiling-play-2-dot-1-json-api-part2-writes-format-combinators/"
+        title="Next Post: Unveiling Play 2.1 Json API - Part 2 : Writes/Format combinators">Unveiling Play 2.1 Json API - Part 2 : Writes/Format combinators
+        &raquo;</a></li>
+      
+    </ul>
+  </footer>
+</article>
+
+<aside class="sidebar-nav span3">
+  
+    <section class="well">
+  <ul id="recent_posts" class="nav nav-list">
+    <li class="nav-header">Recent Posts</li>
+    
+      <li class="post">
+        <a href="/2015/04/09/freer/">FreeR - Hybrid Free Monads for Reduced Quadratic Complexity/Observability & Map-Fusion Optimization in Scala</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014/12/21/scaledn/">Scaledn: Promote EDN as a far better alternative to Json in Scala</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014/07/30/hfunctor/">Shapeless HFunctor for Heterogenous Structures (& others)</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014/07/29/hmonoid/">Shapeless HMonoid for Heterogenous Structures (& others)</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014/06/11/daemonad/">Summon Daemonad to macro-snoop into monad stacks</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+<section class="well">
+  <ul id="gh_repos" data-user="mandubian" data-count="5" data-skip="true" class="nav">
+	<li class="nav-header">On GitHub</li>
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+  <a class="github-follow" href="https://github.com/mandubian">Follow @mandubian</a>
+  
+</section>
+
+
+
+<section class="well">
+  <ul id="tweets" class="nav" data-user="mandubian" data-count="4" data-replies="false">
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+    <a href="http://twitter.com/mandubian" class="twitter-follow-button" data-show-count="false">Follow @mandubian</a>
+  
+</section>
+
+
+
+
+
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo" class="page-footer"><hr>
+<p>
+  Copyright &copy; 2015 - Pascal Voitot -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'mandubian';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://www.mandubian.com/2012/09/08/unveiling-play-2-dot-1-json-api-part1-jspath-reads-combinators/';
+        var disqus_url = 'http://www.mandubian.com/2012/09/08/unveiling-play-2-dot-1-json-api-part1-jspath-reads-combinators/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+  <script type="text/javascript">
+    (function() {
+      var script = document.createElement('script'); script.type = 'text/javascript'; script.async = true;
+      script.src = 'https://apis.google.com/js/plusone.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(script, s);
+    })();
+  </script>
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = 'http://platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

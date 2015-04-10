@@ -1,0 +1,835 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Play AutoSource & Datomisca: Proofing the concept on Datomic, a Schema DB - Mandubian Blog</title>
+  <meta name="author" content="Pascal Voitot">
+
+  
+  <meta name="description" content="Play AutoSource & Datomisca: Proofing the Concept on Datomic, a Schema DB
+    
+    
+      
+        
+
+
+
+
+
+
+
+
+  
+
+
+Jul 11th, 2013 &hellip;">
+  <meta name="keywords" content="datasource,rest,crud,scala,play framework,datomic,datomisca,angularjs,async">
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://www.mandubian.com/2013/07/11/play-autosource-datomisca">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/bootstrap/bootstrap.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/stylesheets/bootstrap/responsive.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/stylesheets/syntax/syntax.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/stylesheets/d3d.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <style type="text/css">
+    body {
+      padding-bottom: 40px;
+    }
+    h1 {
+      margin-bottom: 15px;
+    }
+    img {
+      max-width: 100%;
+    }
+    .sharing, .meta, .pager {
+      margin: 20px 0px 20px 0px;
+    }
+    .page-footer p {
+      text-align: center;
+    }
+
+    article {
+      margin-bottom: 50px;
+      border-top: #DDD solid 20px;
+    }
+ 
+  </style>
+  <script src="/javascripts/libs/jquery.js"></script>
+  <script src="/javascripts/libs/modernizr-2.0.js"></script>
+  <script src="/javascripts/libs/bootstrap.js"></script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <link href="/atom.xml" rel="alternate" title="Mandubian Blog" type="application/atom+xml">
+  
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-10417377-11']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   >
+  <nav role="navigation"><div class="navbar">
+  <div class="navbar-inner">
+    <div class="container">
+      <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </a>
+
+      <a class="brand" href="/">Mandubian Blog</a>
+
+      <div class="nav-collapse">
+        <ul class="nav">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+
+        <ul class="nav pull-right" data-subscription="rss">
+          <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+          
+        </ul>
+
+        
+          <form class="pull-right navbar-search" action="http://google.com/search" method="get">
+            <fieldset role="search">
+              <input type="hidden" name="q" value="site:www.mandubian.com" />
+              <input class="search-query" type="text" name="q" results="0" placeholder="Search"/>
+            </fieldset>
+          </form>
+        
+      </div>
+    </div>
+  </div>
+</div>
+</nav>
+  <div class="container">
+    <div class="row-fluid">
+      
+<article class="hentry span9" role="article">
+
+  
+  <header class="page-header">
+    
+      <h1 class="entry-title">Play AutoSource & Datomisca: Proofing the Concept on Datomic, a Schema DB</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-11T18:18:00+02:00" pubdate data-updated="true">Jul 11<span>th</span>, 2013</time>
+        
+         | <a href="#disqus_thread">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><blockquote><p>Now you should use play-autosource 2.0 correcting a few issues &amp; introducing ActionBuilder from play2.2</p></blockquote>
+
+<br/>
+
+
+<p>The code for all autosources &amp; sample apps can be found on Github <a href="https://github.com/mandubian/play-autosource/tree/master/datomisca">here</a></p>
+
+<div class="well">
+  <h3>Brand New Autosources</h3>
+  Play AutoSource now have 2 more implementations : 
+  <ul>
+    <li><b><a href="http://www.datomic.com">Datomic</a> based on <a href="http://pellucidanalytics.github.io/datomisca/">Datomisca</a></b>, the Scala API I developed with Daniel James (<a href="https://twitter.com/dwhjames">@dwhjames</a>) sponsored by Pellucid Analytics & Zenexity which is presented in this article</li>
+    <li><b><a href="http://www.couchbase.com/">CouchBase</a></b> contributed by Mathieu Ancelin <a href="https://twitter.com/TrevorReznik">@TrevorReznik</a></li>
+    <li><b><a href="http://www.typesafe.com/slick">Slick/JDBC</a></b> based on <a href="https://github.com/freekh/play-slick">Play2-Slick</a> contributed by <a href="https://github.com/rcavalcanti">Renato Cavalcanti</a> and <a href="https://github.com/loicdescotte">Loic Descotte</a></li>
+  </ul>
+</div>
+
+
+<blockquote><p>One month ago, I&#8217;ve demo&#8217;ed the concept of Autosource for Play2/Scala with ReactiveMongo in <a href="http://mandubian.com/2013/06/11/play-autosource/">this article</a>. ReactiveMongo was the perfect target for this idea because it accepts Json structures almost natively for both documents manipulation and queries.</p>
+
+<p>But how does the concept behave when applied on a DB for which data are constrained by a schema and for which queries aren&#8217;t Json.</p></blockquote>
+
+<br/>
+
+
+<h2>Using Datomisca-Autosource in your Play project</h2>
+
+<p>Add following lines to your <code>project/Build.scala</code></p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">mandubianRepo</span> <span class="k">=</span> <span class="nc">Seq</span><span class="o">(</span>
+</span><span class='line'>  <span class="s">&quot;Mandubian repository snapshots&quot;</span> <span class="n">at</span> <span class="s">&quot;https://github.com/mandubian/mandubian-mvn/raw/master/snapshots/&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;Mandubian repository releases&quot;</span> <span class="n">at</span> <span class="s">&quot;https://github.com/mandubian/mandubian-mvn/raw/master/releases/&quot;</span>
+</span><span class='line'><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">appDependencies</span> <span class="k">=</span> <span class="nc">Seq</span><span class="o">()</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">main</span> <span class="k">=</span> <span class="n">play</span><span class="o">.</span><span class="nc">Project</span><span class="o">(</span><span class="n">appName</span><span class="o">,</span> <span class="n">appVersion</span><span class="o">,</span> <span class="n">appDependencies</span><span class="o">).</span><span class="n">settings</span><span class="o">(</span>
+</span><span class='line'>  <span class="n">resolvers</span> <span class="o">++=</span> <span class="n">mandubianRepo</span><span class="o">,</span>
+</span><span class='line'>  <span class="n">libraryDependencies</span> <span class="o">++=</span> <span class="nc">Seq</span><span class="o">(</span>
+</span><span class='line'>    <span class="s">&quot;play-autosource&quot;</span>   <span class="o">%%</span> <span class="s">&quot;datomisca&quot;</span>       <span class="o">%</span> <span class="s">&quot;1.0&quot;</span><span class="o">,</span>
+</span><span class='line'>    <span class="o">...</span>
+</span><span class='line'>  <span class="o">)</span>
+</span><span class='line'><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<h2>Create your Model + Schema</h2>
+
+<p>With ReactiveMongo Autosource, you could create a pure blob Autosource using <code>JsObject</code> without any supplementary information. But with Datomic, it&#8217;s not possible because Datomic forces to use a schema for your data.</p>
+
+<p>We could create a schema and manipulate <code>JsObject</code> directly with Datomic and some Json validators. But I&#8217;m going to focus on the static models because this is the way people traditionally interact with a Schema-constrained DB.</p>
+
+<p>Let&#8217;s create our model and schema.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// The Model (with characters pointing on Datomic named entities)</span>
+</span><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">Person</span><span class="o">(</span><span class="n">name</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">age</span><span class="k">:</span> <span class="kt">Long</span><span class="o">,</span> <span class="n">characters</span><span class="k">:</span> <span class="kt">Set</span><span class="o">[</span><span class="kt">DRef</span><span class="o">])</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// The Schema written with Datomisca</span>
+</span><span class='line'><span class="k">object</span> <span class="nc">Person</span> <span class="o">{</span>
+</span><span class='line'>  <span class="c1">// Namespaces</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">person</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">Namespace</span><span class="o">(</span><span class="s">&quot;person&quot;</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>    <span class="k">val</span> <span class="n">characters</span> <span class="k">=</span> <span class="nc">Namespace</span><span class="o">(</span><span class="s">&quot;person.characters&quot;</span><span class="o">)</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// Attributes</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">name</span>       <span class="k">=</span> <span class="nc">Attribute</span><span class="o">(</span><span class="n">person</span> <span class="o">/</span> <span class="s">&quot;name&quot;</span><span class="o">,</span>       <span class="nc">SchemaType</span><span class="o">.</span><span class="n">string</span><span class="o">,</span> <span class="nc">Cardinality</span><span class="o">.</span><span class="n">one</span><span class="o">)</span> <span class="o">.</span><span class="n">withDoc</span><span class="o">(</span><span class="s">&quot;Person&#39;s name&quot;</span><span class="o">)</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">age</span>        <span class="k">=</span> <span class="nc">Attribute</span><span class="o">(</span><span class="n">person</span> <span class="o">/</span> <span class="s">&quot;age&quot;</span><span class="o">,</span>        <span class="nc">SchemaType</span><span class="o">.</span><span class="n">long</span><span class="o">,</span>   <span class="nc">Cardinality</span><span class="o">.</span><span class="n">one</span><span class="o">)</span> <span class="o">.</span><span class="n">withDoc</span><span class="o">(</span><span class="s">&quot;Person&#39;s age&quot;</span><span class="o">)</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">characters</span> <span class="k">=</span> <span class="nc">Attribute</span><span class="o">(</span><span class="n">person</span> <span class="o">/</span> <span class="s">&quot;characters&quot;</span><span class="o">,</span> <span class="nc">SchemaType</span><span class="o">.</span><span class="n">ref</span><span class="o">,</span>    <span class="nc">Cardinality</span><span class="o">.</span><span class="n">many</span><span class="o">).</span><span class="n">withDoc</span><span class="o">(</span><span class="s">&quot;Person&#39;s characterS&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// Characters named entities</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">violent</span> <span class="k">=</span> <span class="nc">AddIdent</span><span class="o">(</span><span class="n">person</span><span class="o">.</span><span class="n">characters</span> <span class="o">/</span> <span class="s">&quot;violent&quot;</span><span class="o">)</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">weak</span>    <span class="k">=</span> <span class="nc">AddIdent</span><span class="o">(</span><span class="n">person</span><span class="o">.</span><span class="n">characters</span> <span class="o">/</span> <span class="s">&quot;weak&quot;</span><span class="o">)</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">clever</span>  <span class="k">=</span> <span class="nc">AddIdent</span><span class="o">(</span><span class="n">person</span><span class="o">.</span><span class="n">characters</span> <span class="o">/</span> <span class="s">&quot;clever&quot;</span><span class="o">)</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">dumb</span>    <span class="k">=</span> <span class="nc">AddIdent</span><span class="o">(</span><span class="n">person</span><span class="o">.</span><span class="n">characters</span> <span class="o">/</span> <span class="s">&quot;dumb&quot;</span><span class="o">)</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">stupid</span>  <span class="k">=</span> <span class="nc">AddIdent</span><span class="o">(</span><span class="n">person</span><span class="o">.</span><span class="n">characters</span> <span class="o">/</span> <span class="s">&quot;stupid&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// Schema</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">schema</span> <span class="k">=</span> <span class="nc">Seq</span><span class="o">(</span>
+</span><span class='line'>    <span class="n">name</span><span class="o">,</span> <span class="n">age</span><span class="o">,</span> <span class="n">characters</span><span class="o">,</span>
+</span><span class='line'>    <span class="n">violent</span><span class="o">,</span> <span class="n">weak</span><span class="o">,</span> <span class="n">clever</span><span class="o">,</span> <span class="n">dumb</span><span class="o">,</span> <span class="n">stupid</span>
+</span><span class='line'>  <span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<h2>Create Datomisca Autosource</h2>
+
+<p>Now that we have our schema, let&#8217;s write the autosource.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">datomisca._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">Datomic._</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">import</span> <span class="nn">play.autosource.datomisca._</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">import</span> <span class="nn">play.modules.datomisca._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">Implicits._</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">import</span> <span class="nn">scala.concurrent.ExecutionContext.Implicits.global</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">play.api.Play.current</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">import</span> <span class="nn">models._</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">Person._</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">object</span> <span class="nc">Persons</span> <span class="k">extends</span> <span class="nc">DatomiscaAutoSourceController</span><span class="o">[</span><span class="kt">Person</span><span class="o">]</span> <span class="o">{</span>
+</span><span class='line'>  <span class="c1">// gets the Datomic URI from application.conf</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">uri</span> <span class="k">=</span> <span class="nc">DatomicPlugin</span><span class="o">.</span><span class="n">uri</span><span class="o">(</span><span class="s">&quot;mem&quot;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// ugly DB initialization ONLY for test purpose</span>
+</span><span class='line'>  <span class="nc">Datomic</span><span class="o">.</span><span class="n">createDatabase</span><span class="o">(</span><span class="n">uri</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// Datomic connection is required</span>
+</span><span class='line'>  <span class="k">override</span> <span class="k">implicit</span> <span class="k">val</span> <span class="n">conn</span> <span class="k">=</span> <span class="nc">Datomic</span><span class="o">.</span><span class="n">connect</span><span class="o">(</span><span class="n">uri</span><span class="o">)</span>
+</span><span class='line'>  <span class="c1">// Datomic partition in which you store your entities</span>
+</span><span class='line'>  <span class="k">override</span> <span class="k">val</span> <span class="n">partition</span> <span class="k">=</span> <span class="nc">Partition</span><span class="o">.</span><span class="nc">USER</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// more than ugly schema provisioning, ONLY for test purpose</span>
+</span><span class='line'>  <span class="nc">Await</span><span class="o">.</span><span class="n">result</span><span class="o">(</span>
+</span><span class='line'>    <span class="nc">Datomic</span><span class="o">.</span><span class="n">transact</span><span class="o">(</span><span class="nc">Person</span><span class="o">.</span><span class="n">schema</span><span class="o">),</span>
+</span><span class='line'>    <span class="nc">Duration</span><span class="o">(</span><span class="s">&quot;10 seconds&quot;</span><span class="o">)</span>
+</span><span class='line'>  <span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>Implementing Json <-> Person <-> Datomic transformers</h2>
+
+<p>If you compile previous code, you should have following error:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">could</span> <span class="n">not</span> <span class="n">find</span> <span class="k">implicit</span> <span class="n">value</span> <span class="k">for</span> <span class="n">parameter</span> <span class="n">datomicReader</span><span class="k">:</span> <span class="kt">datomisca.EntityReader</span><span class="o">[</span><span class="kt">models.Person</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Actually, Datomisca Autosource requires 4 elements to work:</p>
+
+<ul>
+<li><code>Json.Format[Person]</code> to convert <code>Person</code> instances from/to Json (network interface)</li>
+<li><code>EntityReader[Person]</code> to convert <code>Person</code> instances from Datomic entities (Datomic interface)</li>
+<li><code>PartialAddEntityWriter[Person]</code> to convert <code>Person</code> instances to Datomic entities (Datomic interface)</li>
+<li><code>Reads[PartialAddEntity]</code> to convert Json to <code>PartialAddEntity</code> which is actually a simple map of fields/values to partially update an existing entity (one single field for ex).</li>
+</ul>
+
+
+<p>It might seem more complicated than in ReactiveMongo but there is nothing different. The autosource converts <code>Person</code> from/to Json and then converts <code>Person</code> from/to Datomic structure ie <code>PartialAddEntity</code>. In ReactiveMongo, the only difference is that it understands Json so well that static model becomes unnecessary sometimes ;)&#8230;</p>
+
+<p>Let&#8217;s define those elements in <code>Person</code> companion object.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">object</span> <span class="nc">Person</span> <span class="o">{</span>
+</span><span class='line'><span class="o">...</span>
+</span><span class='line'>  <span class="c1">// Classic Play2 Json Reads/Writes</span>
+</span><span class='line'>  <span class="k">implicit</span> <span class="k">val</span> <span class="n">personFormat</span> <span class="k">=</span> <span class="nc">Json</span><span class="o">.</span><span class="n">format</span><span class="o">[</span><span class="kt">Person</span><span class="o">]</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// Partial entity update : Json to PartialAddEntity Reads</span>
+</span><span class='line'>  <span class="k">implicit</span> <span class="k">val</span> <span class="n">partialUpdate</span><span class="k">:</span> <span class="kt">Reads</span><span class="o">[</span><span class="kt">PartialAddEntity</span><span class="o">]</span> <span class="k">=</span> <span class="o">(</span>
+</span><span class='line'>    <span class="o">((</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;name</span><span class="o">).</span><span class="n">read</span><span class="o">(</span><span class="n">readAttr</span><span class="o">[</span><span class="kt">String</span><span class="o">](</span><span class="nc">Person</span><span class="o">.</span><span class="n">name</span><span class="o">))</span> <span class="n">orElse</span> <span class="nc">Reads</span><span class="o">.</span><span class="n">pure</span><span class="o">(</span><span class="nc">PartialAddEntity</span><span class="o">(</span><span class="nc">Map</span><span class="o">.</span><span class="n">empty</span><span class="o">)))</span> <span class="n">and</span>
+</span><span class='line'>    <span class="o">((</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;age</span><span class="o">)</span> <span class="o">.</span><span class="n">read</span><span class="o">(</span><span class="n">readAttr</span><span class="o">[</span><span class="kt">Long</span><span class="o">](</span><span class="nc">Person</span><span class="o">.</span><span class="n">age</span><span class="o">))</span> <span class="n">orElse</span> <span class="nc">Reads</span><span class="o">.</span><span class="n">pure</span><span class="o">(</span><span class="nc">PartialAddEntity</span><span class="o">(</span><span class="nc">Map</span><span class="o">.</span><span class="n">empty</span><span class="o">)))</span>  <span class="n">and</span>
+</span><span class='line'>    <span class="c1">// need to specify type because a ref/many can be a list of dref or entities so need to tell it explicitly</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="-Symbol">&#39;characters</span><span class="o">).</span><span class="n">read</span><span class="o">(</span> <span class="n">readAttr</span><span class="o">[</span><span class="kt">Set</span><span class="o">[</span><span class="kt">DRef</span><span class="o">]](</span><span class="nc">Person</span><span class="o">.</span><span class="n">characters</span><span class="o">)</span> <span class="o">)</span>
+</span><span class='line'>    <span class="n">reduce</span>
+</span><span class='line'>  <span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// Entity Reads (looks like Json combinators but it&#39;s Datomisca combinators)</span>
+</span><span class='line'>  <span class="k">implicit</span> <span class="k">val</span> <span class="n">entity2Person</span><span class="k">:</span> <span class="kt">EntityReader</span><span class="o">[</span><span class="kt">Person</span><span class="o">]</span> <span class="k">=</span> <span class="o">(</span>
+</span><span class='line'>    <span class="n">name</span>      <span class="o">.</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span>   <span class="n">and</span>
+</span><span class='line'>    <span class="n">age</span>       <span class="o">.</span><span class="n">read</span><span class="o">[</span><span class="kt">Long</span><span class="o">]</span>     <span class="n">and</span>
+</span><span class='line'>    <span class="n">characters</span><span class="o">.</span><span class="n">read</span><span class="o">[</span><span class="kt">Set</span><span class="o">[</span><span class="kt">DRef</span><span class="o">]]</span>
+</span><span class='line'>  <span class="o">)(</span><span class="nc">Person</span><span class="o">.</span><span class="n">apply</span> <span class="k">_</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// Entity Writes (looks like Json combinators but it&#39;s Datomisca combinators)</span>
+</span><span class='line'>  <span class="k">implicit</span> <span class="k">val</span> <span class="n">person2Entity</span><span class="k">:</span> <span class="kt">PartialAddEntityWriter</span><span class="o">[</span><span class="kt">Person</span><span class="o">]</span> <span class="k">=</span> <span class="o">(</span>
+</span><span class='line'>    <span class="n">name</span>      <span class="o">.</span><span class="n">write</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span>   <span class="n">and</span>
+</span><span class='line'>    <span class="n">age</span>       <span class="o">.</span><span class="n">write</span><span class="o">[</span><span class="kt">Long</span><span class="o">]</span>     <span class="n">and</span>
+</span><span class='line'>    <span class="n">characters</span><span class="o">.</span><span class="n">write</span><span class="o">[</span><span class="kt">Set</span><span class="o">[</span><span class="kt">DRef</span><span class="o">]]</span>
+</span><span class='line'>  <span class="o">)(</span><span class="nc">DatomicMapping</span><span class="o">.</span><span class="n">unlift</span><span class="o">(</span><span class="nc">Person</span><span class="o">.</span><span class="n">unapply</span><span class="o">))</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">...</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Now we have everything to work except a few configurations.</p>
+
+<h3>Add AutoSource routes at beginning <code>conf/routes</code></h3>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="o">-&gt;</span>      <span class="o">/</span><span class="n">person</span>                     <span class="n">controllers</span><span class="o">.</span><span class="nc">Persons</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>Create <code>conf/play.plugins</code> to initialize Datomisca Plugin</h3>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="mi">400</span><span class="k">:</span><span class="kt">play.modules.datomisca.DatomicPlugin</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>Append to <code>conf/application.conf</code> to initialize MongoDB connection</h3>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">datomisca</span><span class="o">.</span><span class="n">uri</span><span class="o">.</span><span class="n">mem</span><span class="o">=</span><span class="s">&quot;datomic:mem://mem&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>Insert your first 2 persons with Curl</h3>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="o">&gt;</span><span class="n">curl</span> <span class="o">-</span><span class="n">X</span> <span class="nc">POST</span> <span class="o">-</span><span class="n">d</span> <span class="err">&#39;</span><span class="o">{</span> <span class="s">&quot;name&quot;</span><span class="k">:</span><span class="err">&quot;</span><span class="kt">bob</span><span class="err">&quot;</span><span class="o">,</span> <span class="s">&quot;age&quot;</span><span class="k">:</span><span class="err">25</span><span class="o">,</span> <span class="s">&quot;characters&quot;</span><span class="k">:</span> <span class="err">[&quot;</span><span class="kt">person.characters/stupid</span><span class="err">&quot;</span><span class="o">,</span> <span class="s">&quot;person.characters/violent&quot;</span><span class="err">]</span> <span class="o">}</span><span class="err">&#39;</span> <span class="o">--</span><span class="n">header</span> <span class="s">&quot;Content-Type:application/json&quot;</span> <span class="n">http</span><span class="o">://</span><span class="n">localhost</span><span class="k">:</span><span class="err">9000</span><span class="kt">/persons</span> <span class="kt">--include</span>
+</span><span class='line'>
+</span><span class='line'><span class="nc">HTTP</span><span class="o">/</span><span class="mf">1.1</span> <span class="mi">200</span> <span class="nc">OK</span>
+</span><span class='line'><span class="nc">Content</span><span class="o">-</span><span class="nc">Type</span><span class="k">:</span> <span class="kt">application/json</span><span class="o">;</span> <span class="n">charset</span><span class="k">=</span><span class="n">utf</span><span class="o">-</span><span class="mi">8</span>
+</span><span class='line'><span class="nc">Content</span><span class="o">-</span><span class="nc">Length</span><span class="k">:</span> <span class="err">21</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">{</span><span class="err">&quot;</span><span class="kt">id</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">17592186045423</span><span class="o">}</span> <span class="kt">-&gt;</span> <span class="kt">oh</span> <span class="kt">a</span> <span class="kt">Datomic</span> <span class="kt">ID</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&gt;</span><span class="n">curl</span> <span class="o">-</span><span class="n">X</span> <span class="nc">POST</span> <span class="o">-</span><span class="n">d</span> <span class="err">&#39;</span><span class="o">{</span> <span class="s">&quot;name&quot;</span><span class="k">:</span><span class="err">&quot;</span><span class="kt">john</span><span class="err">&quot;</span><span class="o">,</span> <span class="s">&quot;age&quot;</span><span class="k">:</span><span class="err">43</span><span class="o">,</span> <span class="s">&quot;characters&quot;</span><span class="k">:</span> <span class="err">[&quot;</span><span class="kt">person.characters/clever</span><span class="err">&quot;</span><span class="o">,</span> <span class="s">&quot;person.characters/weak&quot;</span><span class="err">]</span> <span class="o">}</span><span class="err">&#39;</span> <span class="o">--</span><span class="n">header</span> <span class="s">&quot;Content-Type:application/json&quot;</span> <span class="n">http</span><span class="o">://</span><span class="n">localhost</span><span class="k">:</span><span class="err">9000</span><span class="kt">/persons</span> <span class="kt">--include</span>
+</span><span class='line'>
+</span><span class='line'><span class="nc">HTTP</span><span class="o">/</span><span class="mf">1.1</span> <span class="mi">200</span> <span class="nc">OK</span>
+</span><span class='line'><span class="nc">Content</span><span class="o">-</span><span class="nc">Type</span><span class="k">:</span> <span class="kt">application/json</span><span class="o">;</span> <span class="n">charset</span><span class="k">=</span><span class="n">utf</span><span class="o">-</span><span class="mi">8</span>
+</span><span class='line'><span class="nc">Content</span><span class="o">-</span><span class="nc">Length</span><span class="k">:</span> <span class="err">21</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">{</span><span class="err">&quot;</span><span class="kt">id</span><span class="err">&quot;</span><span class="kt">:</span><span class="err">17592186045425</span><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>Querying is the biggest difference in Datomic</h3>
+
+<p>In Datomic, you can&#8217;t do a <code>getAll</code> without providing a Datomic Query.</p>
+
+<p>But what is a Datomic query? It&#8217;s inspired by <code>Datalog</code> which uses predicates to express the constraints on the searched entities. You can combine predicates together.</p>
+
+<p>With Datomisca Autosource, you can directly send datalog queries in the query parameter <code>q</code> for GET or in body for POST with one restriction: your query can&#8217;t accept input parameters and must return only the entity ID. For ex:</p>
+
+<p><code>[ :find ?e :where [ ?e :person/name "john"] ] --&gt; OK</code></p>
+
+<p><code>[ :find ?e ?name :where [ ?e :person/name ?name] ] --&gt; KO</code></p>
+
+<p>Let&#8217;s use it by finding all persons.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="o">&gt;</span><span class="n">curl</span> <span class="o">-</span><span class="n">X</span> <span class="nc">POST</span> <span class="o">--</span><span class="n">header</span> <span class="s">&quot;Content-Type:text/plain&quot;</span> <span class="o">-</span><span class="n">d</span> <span class="err">&#39;</span><span class="o">[</span><span class="kt">:find</span> <span class="kt">?e</span> <span class="kt">:where</span> <span class="o">[</span><span class="kt">?e</span> <span class="kt">:person/name</span><span class="o">]]</span><span class="sc">&#39; &#39;</span><span class="n">http</span><span class="o">://</span><span class="n">localhost</span><span class="k">:</span><span class="err">9000</span><span class="kt">/persons/find</span><span class="err">&#39;</span> <span class="kt">--include</span>
+</span><span class='line'>
+</span><span class='line'><span class="nc">HTTP</span><span class="o">/</span><span class="mf">1.1</span> <span class="mi">200</span> <span class="nc">OK</span>
+</span><span class='line'><span class="nc">Content</span><span class="o">-</span><span class="nc">Type</span><span class="k">:</span> <span class="kt">application/json</span><span class="o">;</span> <span class="n">charset</span><span class="k">=</span><span class="n">utf</span><span class="o">-</span><span class="mi">8</span>
+</span><span class='line'><span class="nc">Content</span><span class="o">-</span><span class="nc">Length</span><span class="k">:</span> <span class="err">231</span>
+</span><span class='line'>
+</span><span class='line'><span class="err">[</span>
+</span><span class='line'>    <span class="o">{</span>
+</span><span class='line'>        <span class="err">&quot;</span><span class="kt">name</span><span class="err">&quot;</span><span class="kt">:</span> <span class="err">&quot;</span><span class="kt">bob</span><span class="err">&quot;</span><span class="o">,</span>
+</span><span class='line'>        <span class="err">&quot;</span><span class="kt">age</span><span class="err">&quot;</span><span class="kt">:</span> <span class="err">25</span><span class="o">,</span>
+</span><span class='line'>        <span class="s">&quot;characters&quot;</span><span class="k">:</span> <span class="err">[</span>
+</span><span class='line'>            <span class="err">&quot;</span><span class="kt">:person.characters/violent</span><span class="err">&quot;</span><span class="o">,</span>
+</span><span class='line'>            <span class="s">&quot;:person.characters/stupid&quot;</span>
+</span><span class='line'>        <span class="err">]</span><span class="o">,</span>
+</span><span class='line'>        <span class="s">&quot;id&quot;</span><span class="k">:</span> <span class="err">17592186045423</span>
+</span><span class='line'>    <span class="o">},</span>
+</span><span class='line'>    <span class="o">{</span>
+</span><span class='line'>        <span class="s">&quot;name&quot;</span><span class="k">:</span> <span class="err">&quot;</span><span class="kt">john</span><span class="err">&quot;</span><span class="o">,</span>
+</span><span class='line'>        <span class="s">&quot;age&quot;</span><span class="k">:</span> <span class="err">43</span><span class="o">,</span>
+</span><span class='line'>        <span class="s">&quot;characters&quot;</span><span class="k">:</span> <span class="err">[</span>
+</span><span class='line'>            <span class="err">&quot;</span><span class="kt">:person.characters/clever</span><span class="err">&quot;</span><span class="o">,</span>
+</span><span class='line'>            <span class="s">&quot;:person.characters/weak&quot;</span>
+</span><span class='line'>        <span class="err">]</span><span class="o">,</span>
+</span><span class='line'>        <span class="s">&quot;id&quot;</span><span class="k">:</span> <span class="err">17592186045425</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="err">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>Please note the use of POST here instead of GET because Curl doesn&#8217;t like <code>[]</code> in URL even using <code>-g</code> option</p></blockquote>
+
+<p>Now you can use all other routes provided by Autosource</p>
+
+<h2>Autosource Standard Routes</h2>
+
+<h3>Get / Find / Stream</h3>
+
+<ul>
+<li>GET /persons?&#8230;    -> Find by query</li>
+<li>GET /persons/ID     -> Find by ID</li>
+<li>GET /persons/stream -> Find by query &amp; stream result by page</li>
+</ul>
+
+
+<h3>Insert / Batch / Find</h3>
+
+<ul>
+<li>POST /persons + BODY -> Insert</li>
+<li>POST /persons/find + BODY -> find by query (when query is too complex to be in a GET)</li>
+<li>POST /persons/batch  + BODY -> batch insert (multiple)</li>
+</ul>
+
+
+<h3>Update / batch</h3>
+
+<ul>
+<li>PUT  /persons/ID   + BODY  -> Update by ID</li>
+<li>PUT  /persons/ID/partial   + BODY  -> Update partially by ID</li>
+<li>PUT  /persons/batch   -> batch update (multiple)</li>
+</ul>
+
+
+<h3>Delete / Batch</h3>
+
+<ul>
+<li>DELETE /persons/ID    -> delete by ID</li>
+<li>DELETE /persons/batch + BODY -> batch delete (multiple)</li>
+</ul>
+
+
+<br/>
+
+
+<br/>
+
+
+<h2>Conclusion</h2>
+
+<p>Play-Autosource&#8217;s ambition was to be DB agnostic (as much as possible) and showing that the concept can be applied to schemaless DB (ReactiveMongo &amp; CouchDB) and schema DB (Datomic) is a good sign it can work. Naturally, there are a few more elements to provide for Datomic than in ReactiveMongo but it&#8217;s useful anyway.</p>
+
+<p>Thank to <a href="https://twitter.com/TrevorReznik">@TrevorReznik</a> for his contribution of CouchBase Autosource.</p>
+
+<p>I hope to see soon one for Slick and a few more ;)</p>
+
+<p>Have Autofun!</p>
+
+<br/>
+
+
+<br/>
+
+
+<br/>
+
+
+<br/>
+
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Pascal Voitot</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-11T18:18:00+02:00" pubdate data-updated="true">Jul 11<span>th</span>, 2013</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/angularjs/'>angularjs</a>, <a class='category' href='/blog/categories/async/'>async</a>, <a class='category' href='/blog/categories/crud/'>crud</a>, <a class='category' href='/blog/categories/datasource/'>datasource</a>, <a class='category' href='/blog/categories/datomic/'>datomic</a>, <a class='category' href='/blog/categories/datomisca/'>datomisca</a>, <a class='category' href='/blog/categories/play-framework/'>play framework</a>, <a class='category' href='/blog/categories/rest/'>rest</a>, <a class='category' href='/blog/categories/scala/'>scala</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://www.mandubian.com/2013/07/11/play-autosource-datomisca/" data-via="mandubian" data-counturl="http://www.mandubian.com/2013/07/11/play-autosource-datomisca/" >Tweet</a>
+  
+  
+  <div class="g-plusone" data-size="medium"></div>
+  
+  
+</div>
+
+    
+    
+    <section>
+      <h1>Comments</h1>
+      <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+    </section>
+    
+    <ul class="pager">
+      
+      <li class="previous"><a class="basic-alignment left"
+        href="/2013/07/04/json-interpolation-pattern-matching/" title="Previous Post:
+        Play2 Json Interpolation & Pattern Matching">&laquo; Play2 Json Interpolation & Pattern Matching</a></li>
+      
+      <li><a href="/blog/archives">Blog Archives</a></li>
+      
+      <li class="next"><a class="basic-alignment right" href="/2013/08/21/playztream/"
+        title="Next Post: Scalaz-Stream Plug'n'Play2 Iteratee/WS + Recursive streaming">Scalaz-Stream Plug'n'Play2 Iteratee/WS + Recursive streaming
+        &raquo;</a></li>
+      
+    </ul>
+  </footer>
+</article>
+
+<aside class="sidebar-nav span3">
+  
+    <section class="well">
+  <ul id="recent_posts" class="nav nav-list">
+    <li class="nav-header">Recent Posts</li>
+    
+      <li class="post">
+        <a href="/2015/04/09/freer/">FreeR - Hybrid Free Monads for Reduced Quadratic Complexity/Observability & Map-Fusion Optimization in Scala</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014/12/21/scaledn/">Scaledn: Promote EDN as a far better alternative to Json in Scala</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014/07/30/hfunctor/">Shapeless HFunctor for Heterogenous Structures (& others)</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014/07/29/hmonoid/">Shapeless HMonoid for Heterogenous Structures (& others)</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014/06/11/daemonad/">Summon Daemonad to macro-snoop into monad stacks</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+<section class="well">
+  <ul id="gh_repos" data-user="mandubian" data-count="5" data-skip="true" class="nav">
+	<li class="nav-header">On GitHub</li>
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+  <a class="github-follow" href="https://github.com/mandubian">Follow @mandubian</a>
+  
+</section>
+
+
+
+<section class="well">
+  <ul id="tweets" class="nav" data-user="mandubian" data-count="4" data-replies="false">
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+    <a href="http://twitter.com/mandubian" class="twitter-follow-button" data-show-count="false">Follow @mandubian</a>
+  
+</section>
+
+
+
+
+
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo" class="page-footer"><hr>
+<p>
+  Copyright &copy; 2015 - Pascal Voitot -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'mandubian';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://www.mandubian.com/2013/07/11/play-autosource-datomisca/';
+        var disqus_url = 'http://www.mandubian.com/2013/07/11/play-autosource-datomisca/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+  <script type="text/javascript">
+    (function() {
+      var script = document.createElement('script'); script.type = 'text/javascript'; script.async = true;
+      script.src = 'https://apis.google.com/js/plusone.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(script, s);
+    })();
+  </script>
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = 'http://platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

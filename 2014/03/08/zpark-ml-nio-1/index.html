@@ -1,0 +1,694 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>ZPark-Ztream II (Part 1/3): Fancy Spark Streamed Machine-Learning & new Scalaz-Stream NIO API - Mandubian Blog</title>
+  <meta name="author" content="Pascal Voitot">
+
+  
+  <meta name="description" content="ZPark-Ztream II (Part 1/3): Fancy Spark Streamed Machine-Learning & New Scalaz-Stream NIO API &hellip;">
+  <meta name="keywords" content="scala,spark,scalaz-stream,NIO,machine learning,stream,map reduce,ML,recommendation">
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://www.mandubian.com/2014/03/08/zpark-ml-nio-1">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/bootstrap/bootstrap.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/stylesheets/bootstrap/responsive.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/stylesheets/syntax/syntax.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/stylesheets/d3d.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <style type="text/css">
+    body {
+      padding-bottom: 40px;
+    }
+    h1 {
+      margin-bottom: 15px;
+    }
+    img {
+      max-width: 100%;
+    }
+    .sharing, .meta, .pager {
+      margin: 20px 0px 20px 0px;
+    }
+    .page-footer p {
+      text-align: center;
+    }
+
+    article {
+      margin-bottom: 50px;
+      border-top: #DDD solid 20px;
+    }
+ 
+  </style>
+  <script src="/javascripts/libs/jquery.js"></script>
+  <script src="/javascripts/libs/modernizr-2.0.js"></script>
+  <script src="/javascripts/libs/bootstrap.js"></script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <link href="/atom.xml" rel="alternate" title="Mandubian Blog" type="application/atom+xml">
+  
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-10417377-11']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   >
+  <nav role="navigation"><div class="navbar">
+  <div class="navbar-inner">
+    <div class="container">
+      <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </a>
+
+      <a class="brand" href="/">Mandubian Blog</a>
+
+      <div class="nav-collapse">
+        <ul class="nav">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+
+        <ul class="nav pull-right" data-subscription="rss">
+          <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+          
+        </ul>
+
+        
+          <form class="pull-right navbar-search" action="http://google.com/search" method="get">
+            <fieldset role="search">
+              <input type="hidden" name="q" value="site:www.mandubian.com" />
+              <input class="search-query" type="text" name="q" results="0" placeholder="Search"/>
+            </fieldset>
+          </form>
+        
+      </div>
+    </div>
+  </div>
+</div>
+</nav>
+  <div class="container">
+    <div class="row-fluid">
+      
+<article class="hentry span9" role="article">
+
+  
+  <header class="page-header">
+    
+      <h1 class="entry-title">ZPark-Ztream II (Part 1/3): Fancy Spark Streamed Machine-Learning & New Scalaz-Stream NIO API</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-03-08T19:19:00+01:00" pubdate data-updated="true">Mar 8<span>th</span>, 2014</time>
+        
+         | <a href="#disqus_thread">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><br/>
+
+
+<h2>Synopsis</h2>
+
+<p>The code &amp; sample apps can be found on <a href="https://github.com/mandubian/zpark-ztream">Github</a></p>
+
+<blockquote><p><a href="/2014/02/13/zpark/">Zpark-Zstream I article</a> was a PoC trying to use <a href="https://github.com/scalaz/scalaz-stream">Scalaz-Stream</a> instead of DStream with <a href="https://spark.incubator.apache.org/">Spark-Streaming</a>. I had deliberately decided not to deal with fault-tolerance &amp; stream graph persistence to keep simple but without it, it was quite useless for real application&#8230;</p></blockquote>
+
+<div class="well">
+<p>Here is a tryptic of articles trying to do something <i>concrete</i> with <a href="https://github.com/scalaz/scalaz-stream">Scalaz-Stream</a> and <a href="https://spark.incubator.apache.org/">Spark</a>.</p>
+<p>So, what do I want? I wantttttttt <i>a shrewburyyyyyy</i> and to do the following:</p>
+<ol>
+<li><b>Plug Scalaz-Stream Process[Task, T] on Spark DStream[T] (Part 1)</b></li>
+<li>Build DStream using brand new Scalaz-Stream NIO API (client/server) (Part 2)</li>
+<li>Train Spark-ML <i>recommendation-like</i> model using NIO client/server (Part 3)</li>
+<li>Stream data from multiple NIO clients to the previous trained ML model mixing all together (Part 3)</li>
+</ol>
+</div>
+
+
+<h1>[Part 1/3] From Scalaz-Stream Process to Spark DStream</h1>
+
+<br/>
+
+
+<br/>
+
+
+<h2>Reminders on Process[Task, T]</h2>
+
+<p>Scalaz-stream <code>Process[Task, T]</code> is a stream of <code>T</code> elements that can interleave some <code>Task</code>s (representing an external something doing somewhat). <code>Process[Task, T]</code> is built as a state machine that you need to run to process all <code>Task</code> effects and emit a stream of <code>T</code>. This can manage both continuous or discrete, finite or infinite streams.</p>
+
+<blockquote><p>I restricted to <code>Task</code> for the purpose of this article but it can be any <code>F[_]</code>.</p></blockquote>
+
+<br/>
+
+
+<h2>Reminders on DStream[T]</h2>
+
+<p>Spark <code>DStream[T]</code> is a stream of <code>RDD[T]</code> built by discretizing a continuous stream of <code>T</code>. <code>RDD[T]</code> is a <em>resilient distributed dataset</em> which is the ground data-structure behind Spark for distributing in-memory batch/map/reduce operations to a cluster of nodes with fault-tolerance &amp; persistence.</p>
+
+<p>In a summary, <code>DStream</code> <em>slices</em> a continuous stream of <code>T</code> by windows of time and gathers all <code>T</code>s in the same window into one <code>RDD[T]</code>. So it discretizes the continuous stream into a stream of <code>RDD[T]</code>. Once built, those <code>RDD[T]</code>s are distributed to Spark cluster. Spark allows to perform transform/union/map/reduce/&#8230; operations on <code>RDD[T]</code>s. Therefore <code>DStream[T]</code> takes advantage if the same operations.</p>
+
+<p>Spark-Streaming also persists all operations &amp; relations between <code>DStream</code>s in a graph. Thus, in case of fault in a remote node while performing operations on <code>DStream</code>s, the whole transformation can be replayed (<em>it also means streamed data are also persisted</em>).</p>
+
+<p>Finally, the resulting <code>DStream</code> obtained after map/reduce operations can be <em>output</em> to a file, a console, a DB etc&#8230;</p>
+
+<blockquote><p>Please note that <code>DStream[T]</code> is built with respect to a <code>StreamingContext</code> which manages its distribution in Spark cluster and all operations performed on it. Moreover, <code>DStream</code> map/reduce operations &amp; output must be scheduled before starting the <code>StreamingContext</code>. It could be somewhat compared to a state machine that you build statically and run later.</p></blockquote>
+
+<br/>
+
+
+<h2>From Process[Task, T] to RDD[T]</h2>
+
+<blockquote><p>You may ask why not simply build a <code>RDD[T]</code> from a <code>Process[Task, T]</code> ?</p></blockquote>
+
+<p>Yes sure we can do it:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// Initialize Spark Context</span>
+</span><span class='line'><span class="k">implicit</span> <span class="n">scc</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">SparkContext</span><span class="o">(...)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Build a process</span>
+</span><span class='line'><span class="k">val</span> <span class="n">p</span><span class="k">:</span> <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">T</span><span class="o">]</span> <span class="k">=</span> <span class="o">...</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Run the process using `runLog` to aggregate all results</span>
+</span><span class='line'><span class="c1">// and build a RDD using spark context parallelization</span>
+</span><span class='line'><span class="k">val</span> <span class="n">rdd</span> <span class="k">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">parallelize</span><span class="o">(</span><span class="n">p</span><span class="o">.</span><span class="n">runLog</span><span class="o">.</span><span class="n">run</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This works but what if this <code>Process[Task, T]</code> emits huge quantity of data or is infinite?
+You&#8217;ll end in a <code>OutOfMemoryException</code>&#8230;</p>
+
+<p>So yes you can do it but it&#8217;s not so interesting. <code>DStream</code> seems more natural since it can manage stream of data as long as it can discretize it over time.</p>
+
+<br/>
+
+
+<br/>
+
+
+<h2>From Process[Task, T] to DStream[T]</h2>
+
+<br/>
+
+
+<h3>Pull from <code>Process[Task, T]</code>, Push to <code>DStream[T]</code> with <code>LocalInputDStream</code></h3>
+
+<p>To build a <code>DStream[T]</code> from a <code>Process[Task, T]</code>, the idea is to:</p>
+
+<ul>
+<li>Consume/pull the <code>T</code> emitted by <code>Process[Task, O]</code>,</li>
+<li>Gather emitted <code>T</code> during a window of time &amp; generate a <code>RDD[T]</code> with them,</li>
+<li>Inject <code>RDD[T]</code> into the <code>DStream[T]</code>,</li>
+<li>Go to next window of time&#8230;</li>
+</ul>
+
+
+<p>Spark-Streaming library provides different helpers to create <code>DStream</code> from different sources of data like files (local/HDFS), from sockets&#8230;</p>
+
+<p>The helper that seemed the most appropriate is the <code>NetworkInputDStream</code>:</p>
+
+<ul>
+<li>It provides a <code>NetworkReceiver</code> based on a Akka actor to which we can push streamed data.</li>
+<li><code>NetworkReceiver</code> gathers streamed data over windows of time and builds a <code>BlockRDD[T]</code> for each window.</li>
+<li>Each <code>BlockRDD[T]</code> is registered to the global Spark <code>BlockManager</code> (responsible for data persistence).</li>
+<li><code>BlockRDD[T]</code> is injected into the <code>DStream[T]</code>.</li>
+</ul>
+
+
+<p>So basically, <code>NetworkInputDStream</code> builds a stream of <code>BlockRDD[T]</code>.
+It&#8217;s important to note that <code>NetworkReceiver</code> is also meant to be sent to remote workers so that data can be gathered on several nodes at the same time.</p>
+
+<p>But in my case, the data source <code>Process[Task, T]</code> run on the Spark driver node (at least for now) so instead of <code>NetworkInputDStream</code>, a <code>LocalInputDStream</code> would be better. It would provide a <code>LocalReceiver</code> based on an actor to which we can push the data emitted by the process in an async way.</p>
+
+<blockquote><p><code>LocalInputDStream</code> doesn&#8217;t exist in Spark-Streaming library (or I haven&#8217;t looked well) so I&#8217;ve implemented it as I needed. It does exactly the same as <code>NetworkInputDStream</code> without the remoting aspect. The current code is <a href="https://github.com/mandubian/zpark-ztream/blob/master/src/main/scala/LocalInputDStream.scala">there</a>&#8230;</p></blockquote>
+
+<br/>
+
+
+<h3><code>Process</code> vs <code>DStream</code> ?</h3>
+
+<p>There is a common point between <code>DStream</code> and <code>Process</code>: both are built as state machines that are passive until run.</p>
+
+<ul>
+<li><p>In the case of <code>Process</code>, it is run by playing all the <code>Task</code> effects while gathering emitted values or without taking care of them, in blocking or non-blocking mode etc&#8230;</p></li>
+<li><p>In the case of <code>DStream</code>, it is built and registered in the context of a <code>SparkStreamingContext</code>. Then you must also declare some outputs for the <code>DStream</code> like a simple print, an <code>HDFS</code> file output, etc&#8230; Finally you start the <code>SparkStreamingContext</code> which manages everything for you until you stop it.</p></li>
+</ul>
+
+
+<p>So if we want to adapt a <code>Process[Task, T]</code> to a <code>DStream[T]</code>, we must perform 4 steps  (<em>on the Spark driver node</em>):</p>
+
+<ul>
+<li>build a <code>DStream[T]</code> using <code>LocalInputDStream[T]</code> providing a <code>Receiver</code> in which we&#8217;ll be able to push asynchronously <code>T</code>.</li>
+<li>build a custom scalaz-stream <code>Sink[Task, T, Unit]</code> in charge of consuming all emitted data from <code>Process[Task, T]</code> and pushing them using previous <code>Receiver</code>.</li>
+<li>pipe the <code>Process[Task, T]</code> to this <code>Sink[Task, T, Unit]</code> &amp; when <code>Process[Task, T]</code> has halted, stop previous <code>DStream[T]</code>: the result of this pipe operation is a <code>Process[Task, Unit]</code> which is a pure effectful process responsible for pushing <code>T</code> into the dstream without emitting anything.</li>
+<li>return previous <code>DStream[T]</code> and effectful consumer <code>Process[Task, Unit]</code>.</li>
+</ul>
+
+
+<h3><code>dstreamize</code> implementation</h3>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">def</span> <span class="n">dstreamize</span><span class="o">[</span><span class="kt">T</span> <span class="kt">:</span> <span class="kt">ClassTag</span><span class="o">](</span>
+</span><span class='line'>  <span class="n">p</span><span class="k">:</span> <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">T</span><span class="o">],</span>
+</span><span class='line'>  <span class="n">ssc</span><span class="k">:</span> <span class="kt">StreamingContext</span><span class="o">,</span>
+</span><span class='line'>  <span class="n">storageLevel</span><span class="k">:</span> <span class="kt">StorageLevel</span> <span class="o">=</span> <span class="nc">StorageLevel</span><span class="o">.</span><span class="nc">MEMORY_AND_DISK_SER_2</span>
+</span><span class='line'><span class="o">)</span><span class="k">:</span> <span class="o">(</span><span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">Unit</span><span class="o">],</span> <span class="nc">ZparkInputDStream</span><span class="o">[</span><span class="kt">T</span><span class="o">])</span> <span class="k">=</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// Build a custom LocalInputDStream</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">dstream</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">ZparkInputDStream</span><span class="o">[</span><span class="kt">T</span><span class="o">](</span><span class="n">ssc</span><span class="o">,</span> <span class="n">storageLevel</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// Build a Sink pushing into dstream receiver</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">sink</span> <span class="k">=</span> <span class="n">receiver2Sink</span><span class="o">[</span><span class="kt">T</span><span class="o">](</span><span class="n">dstream</span><span class="o">.</span><span class="n">receiver</span><span class="o">.</span><span class="n">asInstanceOf</span><span class="o">[</span><span class="kt">ZparkReceiver</span><span class="o">[</span><span class="kt">T</span><span class="o">]])</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// Finally pipe the process to the sink and when finished, closes the dstream</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">consumer</span><span class="k">:</span> <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">Unit</span><span class="o">]</span> <span class="k">=</span>
+</span><span class='line'>    <span class="o">(</span><span class="n">p</span> <span class="n">to</span> <span class="n">sink</span><span class="o">)</span>
+</span><span class='line'>    <span class="c1">// when finished, it closes the dstream</span>
+</span><span class='line'>    <span class="o">.</span><span class="n">append</span> <span class="o">(</span> <span class="n">eval</span><span class="o">(</span><span class="nc">Task</span><span class="o">.</span><span class="n">delay</span><span class="o">{</span> <span class="n">dstream</span><span class="o">.</span><span class="n">stop</span><span class="o">()</span> <span class="o">})</span> <span class="o">)</span>
+</span><span class='line'>    <span class="c1">// when error, it closes the dstream</span>
+</span><span class='line'>    <span class="o">.</span><span class="n">handle</span> <span class="o">{</span> <span class="k">case</span> <span class="n">e</span><span class="k">:</span> <span class="kt">Exception</span> <span class="o">=&gt;</span>
+</span><span class='line'>      <span class="n">println</span><span class="o">(</span><span class="s">&quot;Stopping on error &quot;</span><span class="o">+</span><span class="n">e</span><span class="o">.</span><span class="n">getMessage</span><span class="o">)</span>
+</span><span class='line'>      <span class="n">e</span><span class="o">.</span><span class="n">printStackTrace</span><span class="o">()</span>
+</span><span class='line'>      <span class="n">eval</span><span class="o">(</span><span class="nc">Task</span><span class="o">.</span><span class="n">delay</span><span class="o">{</span> <span class="n">dstream</span><span class="o">.</span><span class="n">stop</span><span class="o">()</span> <span class="o">})</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// Return the effectful consumer sink and the DStream</span>
+</span><span class='line'>  <span class="o">(</span><span class="n">consumer</span><span class="o">,</span> <span class="n">dstream</span><span class="o">)</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>Please remark that this builds a <code>Process[Task, Unit]</code> and a <code>DStream[T]</code> but nothing has happened yet in terms of data consumption &amp; streaming. Both need to be run now.</p></blockquote>
+
+<h3>Use it&#8230;</h3>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// First create a streaming context</span>
+</span><span class='line'><span class="k">val</span> <span class="n">ssc</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">StreamingContext</span><span class="o">(</span><span class="n">clusterUrl</span><span class="o">,</span> <span class="s">&quot;SparkStreamStuff&quot;</span><span class="o">,</span> <span class="nc">Seconds</span><span class="o">(</span><span class="mi">1</span><span class="o">))</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Create a data source sample as a process generating a natural every 50ms </span>
+</span><span class='line'><span class="c1">// (take 1000 elements)</span>
+</span><span class='line'><span class="k">val</span> <span class="n">p</span><span class="k">:</span> <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">Int</span><span class="o">]</span> <span class="k">=</span> <span class="n">naturalsEvery</span><span class="o">(</span><span class="mi">50</span> <span class="n">milliseconds</span><span class="o">).</span><span class="n">take</span><span class="o">(</span><span class="mi">1000</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Dstreamize the process in the streaming context</span>
+</span><span class='line'><span class="k">val</span> <span class="o">(</span><span class="n">consumer</span><span class="o">,</span> <span class="n">dstream</span><span class="o">)</span> <span class="k">=</span> <span class="n">dstreamize</span><span class="o">(</span><span class="n">p</span><span class="o">,</span> <span class="n">ssc</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Prepare the dstream operations (count) &amp; output (print)</span>
+</span><span class='line'><span class="n">dstream</span><span class="o">.</span><span class="n">count</span><span class="o">().</span><span class="n">print</span><span class="o">()</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Start the streaming context</span>
+</span><span class='line'><span class="n">ssc</span><span class="o">.</span><span class="n">start</span><span class="o">()</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Run the consumer for its effects (consuming p and pushing into dstream)</span>
+</span><span class='line'><span class="c1">// Note this is blocking but it could be runAsync too</span>
+</span><span class='line'><span class="n">consumer</span><span class="o">.</span><span class="n">run</span><span class="o">.</span><span class="n">run</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// await termination of stream with a timeout</span>
+</span><span class='line'><span class="n">ssc</span><span class="o">.</span><span class="n">awaitTermination</span><span class="o">(</span><span class="mi">1000</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// stops the streaming context</span>
+</span><span class='line'><span class="n">ssc</span><span class="o">.</span><span class="n">stop</span><span class="o">()</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>Please note that you have to:</p>
+
+<ul>
+<li>schedule your dstream operations/output before starting the streaming context.</li>
+<li>start the streaming context before running the consumer.</li>
+</ul>
+</blockquote>
+
+<h3>Run it&#8230;</h3>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="mi">14</span><span class="o">/</span><span class="mi">03</span><span class="o">/</span><span class="mi">11</span> <span class="mi">11</span><span class="k">:</span><span class="err">32</span><span class="kt">:</span><span class="err">09</span> <span class="kt">WARN</span> <span class="kt">util.Utils:</span> <span class="kt">Your</span> <span class="kt">hostname</span><span class="o">,</span> <span class="n">localhost</span><span class="o">.</span><span class="n">paris</span><span class="o">.</span><span class="n">zenexity</span><span class="o">.</span><span class="n">com</span> <span class="n">resolves</span> <span class="n">to</span> <span class="n">a</span> <span class="n">loopback</span> <span class="n">address</span><span class="k">:</span> <span class="err">127</span><span class="kt">.</span><span class="err">0</span><span class="kt">.</span><span class="err">0</span><span class="kt">.</span><span class="err">1</span><span class="o">;</span> <span class="n">using</span> <span class="mf">10.0</span><span class="o">.</span><span class="mf">24.228</span> <span class="n">instead</span> <span class="o">(</span><span class="n">on</span> <span class="n">interface</span> <span class="n">en0</span><span class="o">)</span>
+</span><span class='line'><span class="mi">14</span><span class="o">/</span><span class="mi">03</span><span class="o">/</span><span class="mi">11</span> <span class="mi">11</span><span class="k">:</span><span class="err">32</span><span class="kt">:</span><span class="err">09</span> <span class="kt">WARN</span> <span class="kt">util.Utils:</span> <span class="kt">Set</span> <span class="kt">SPARK_LOCAL_IP</span> <span class="kt">if</span> <span class="kt">you</span> <span class="kt">need</span> <span class="kt">to</span> <span class="kt">bind</span> <span class="kt">to</span> <span class="kt">another</span> <span class="kt">address</span>
+</span><span class='line'><span class="o">-------------------------------------------</span>
+</span><span class='line'><span class="nc">Time</span><span class="k">:</span> <span class="err">1394533933000</span> <span class="kt">ms</span>
+</span><span class='line'><span class="o">-------------------------------------------</span>
+</span><span class='line'><span class="mi">0</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">-------------------------------------------</span>
+</span><span class='line'><span class="nc">Time</span><span class="k">:</span> <span class="err">1394533934000</span> <span class="kt">ms</span>
+</span><span class='line'><span class="o">-------------------------------------------</span>
+</span><span class='line'><span class="mi">14</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">-------------------------------------------</span>
+</span><span class='line'><span class="nc">Time</span><span class="k">:</span> <span class="err">1394533935000</span> <span class="kt">ms</span>
+</span><span class='line'><span class="o">-------------------------------------------</span>
+</span><span class='line'><span class="mi">20</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">-------------------------------------------</span>
+</span><span class='line'><span class="nc">Time</span><span class="k">:</span> <span class="err">1394533936000</span> <span class="kt">ms</span>
+</span><span class='line'><span class="o">-------------------------------------------</span>
+</span><span class='line'><span class="mi">20</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">...</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>Ok cool, we can see a warmup phase at beginning and then windows of 1 sec counting 20 elements which is great since one element every 50ms gives 20 elements in 1sec.</p></blockquote>
+
+<br/>
+
+
+<br/>
+
+
+<h2>Part 1&#8217;s conclusion</h2>
+
+<p>Now we can pipe a <code>Process[Task, T]</code> into a <code>DStream[T]</code>.</p>
+
+<p>Please not that as we run the <code>Process[Task, T]</code> on the Spark driver node, if this node fails, there is no real way to restore lost data. Yet, <code>LocalInputDStream</code> relies on <code>DStreamGraph</code> &amp; <code>BlockRDD</code>s which persist all DStream relations &amp; all received blocks. Moreover, <code>DStream</code> has exactly the same problem with respect to driver node for now.</p>
+
+<p>That was fun but what can we do with that?</p>
+
+<p><strong>In <a href="/2014/03/09/zpark-ml-nio-2/">part2</a>, I propose to have more fun and stream data to <code>DStream</code> using the brand new Scalaz-Stream NIO API to create cool NIO client/server streams&#8230;</strong></p>
+
+<br/>
+
+
+<br/>
+
+
+<blockquote><p>&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;-> <a href="/2014/03/09/zpark-ml-nio-2/">GO TO PART2</a></p></blockquote>
+
+<br/>
+
+
+<br/>
+
+
+<br/>
+
+
+<br/>
+
+
+
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Pascal Voitot</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-03-08T19:19:00+01:00" pubdate data-updated="true">Mar 8<span>th</span>, 2014</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/ml/'>ML</a>, <a class='category' href='/blog/categories/nio/'>NIO</a>, <a class='category' href='/blog/categories/machine-learning/'>machine learning</a>, <a class='category' href='/blog/categories/map-reduce/'>map reduce</a>, <a class='category' href='/blog/categories/recommendation/'>recommendation</a>, <a class='category' href='/blog/categories/scala/'>scala</a>, <a class='category' href='/blog/categories/scalaz-stream/'>scalaz-stream</a>, <a class='category' href='/blog/categories/spark/'>spark</a>, <a class='category' href='/blog/categories/stream/'>stream</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://www.mandubian.com/2014/03/08/zpark-ml-nio-1/" data-via="mandubian" data-counturl="http://www.mandubian.com/2014/03/08/zpark-ml-nio-1/" >Tweet</a>
+  
+  
+  <div class="g-plusone" data-size="medium"></div>
+  
+  
+</div>
+
+    
+    
+    <section>
+      <h1>Comments</h1>
+      <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+    </section>
+    
+    <ul class="pager">
+      
+      <li class="previous"><a class="basic-alignment left"
+        href="/2014/02/13/zpark/" title="Previous Post:
+        ZPark-Ztream: Driving Spark distributed stream with Scalaz-Stream">&laquo; ZPark-Ztream: Driving Spark distributed stream with Scalaz-Stream</a></li>
+      
+      <li><a href="/blog/archives">Blog Archives</a></li>
+      
+      <li class="next"><a class="basic-alignment right" href="/2014/03/09/zpark-ml-nio-2/"
+        title="Next Post: ZPark-Ztream II (Part 2/3): Fancy Spark Streamed Machine-Learning & new Scalaz-Stream NIO API">ZPark-Ztream II (Part 2/3): Fancy Spark Streamed Machine-Learning & new Scalaz-Stream NIO API
+        &raquo;</a></li>
+      
+    </ul>
+  </footer>
+</article>
+
+<aside class="sidebar-nav span3">
+  
+    <section class="well">
+  <ul id="recent_posts" class="nav nav-list">
+    <li class="nav-header">Recent Posts</li>
+    
+      <li class="post">
+        <a href="/2015/04/09/freer/">FreeR - Hybrid Free Monads for Reduced Quadratic Complexity/Observability & Map-Fusion Optimization in Scala</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014/12/21/scaledn/">Scaledn: Promote EDN as a far better alternative to Json in Scala</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014/07/30/hfunctor/">Shapeless HFunctor for Heterogenous Structures (& others)</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014/07/29/hmonoid/">Shapeless HMonoid for Heterogenous Structures (& others)</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014/06/11/daemonad/">Summon Daemonad to macro-snoop into monad stacks</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+<section class="well">
+  <ul id="gh_repos" data-user="mandubian" data-count="5" data-skip="true" class="nav">
+	<li class="nav-header">On GitHub</li>
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+  <a class="github-follow" href="https://github.com/mandubian">Follow @mandubian</a>
+  
+</section>
+
+
+
+<section class="well">
+  <ul id="tweets" class="nav" data-user="mandubian" data-count="4" data-replies="false">
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+    <a href="http://twitter.com/mandubian" class="twitter-follow-button" data-show-count="false">Follow @mandubian</a>
+  
+</section>
+
+
+
+
+
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo" class="page-footer"><hr>
+<p>
+  Copyright &copy; 2015 - Pascal Voitot -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'mandubian';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://www.mandubian.com/2014/03/08/zpark-ml-nio-1/';
+        var disqus_url = 'http://www.mandubian.com/2014/03/08/zpark-ml-nio-1/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+  <script type="text/javascript">
+    (function() {
+      var script = document.createElement('script'); script.type = 'text/javascript'; script.async = true;
+      script.src = 'https://apis.google.com/js/plusone.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(script, s);
+    })();
+  </script>
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = 'http://platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

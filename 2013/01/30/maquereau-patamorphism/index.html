@@ -1,0 +1,937 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Playing the Fool with Scala Macros - Implementing PataMorphism - Mandubian Blog</title>
+  <meta name="author" content="Pascal Voitot">
+
+  
+  <meta name="description" content="Playing the Fool With Scala Macros - Implementing PataMorphism
+    
+    
+      
+        
+
+
+
+
+
+
+
+
+  
+
+
+Jan 30th, 2013 &hellip;">
+  <meta name="keywords" content="scala,scala-macro,functor,morphism,functional programming,pataphysics,uchronic programming">
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://www.mandubian.com/2013/01/30/maquereau-patamorphism">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/bootstrap/bootstrap.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/stylesheets/bootstrap/responsive.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/stylesheets/syntax/syntax.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/stylesheets/d3d.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <style type="text/css">
+    body {
+      padding-bottom: 40px;
+    }
+    h1 {
+      margin-bottom: 15px;
+    }
+    img {
+      max-width: 100%;
+    }
+    .sharing, .meta, .pager {
+      margin: 20px 0px 20px 0px;
+    }
+    .page-footer p {
+      text-align: center;
+    }
+
+    article {
+      margin-bottom: 50px;
+      border-top: #DDD solid 20px;
+    }
+ 
+  </style>
+  <script src="/javascripts/libs/jquery.js"></script>
+  <script src="/javascripts/libs/modernizr-2.0.js"></script>
+  <script src="/javascripts/libs/bootstrap.js"></script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <link href="/atom.xml" rel="alternate" title="Mandubian Blog" type="application/atom+xml">
+  
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-10417377-11']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   >
+  <nav role="navigation"><div class="navbar">
+  <div class="navbar-inner">
+    <div class="container">
+      <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </a>
+
+      <a class="brand" href="/">Mandubian Blog</a>
+
+      <div class="nav-collapse">
+        <ul class="nav">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+
+        <ul class="nav pull-right" data-subscription="rss">
+          <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+          
+        </ul>
+
+        
+          <form class="pull-right navbar-search" action="http://google.com/search" method="get">
+            <fieldset role="search">
+              <input type="hidden" name="q" value="site:www.mandubian.com" />
+              <input class="search-query" type="text" name="q" results="0" placeholder="Search"/>
+            </fieldset>
+          </form>
+        
+      </div>
+    </div>
+  </div>
+</div>
+</nav>
+  <div class="container">
+    <div class="row-fluid">
+      
+<article class="hentry span9" role="article">
+
+  
+  <header class="page-header">
+    
+      <h1 class="entry-title">Playing the Fool With Scala Macros - Implementing PataMorphism</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-01-30T13:13:00+01:00" pubdate data-updated="true">Jan 30<span>th</span>, 2013</time>
+        
+         | <a href="#disqus_thread">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><div class="well">
+You can find the code on my Github code <a href="http://github.com/mandubian/maquereau">Maquereau</a> 
+</div>
+
+
+<h1><a name="maquereau">Maquereau <em>[Scomber Scombrus]</em></a></h1>
+
+<div style="float: right"><img src="/images/mandubian/maquereau_white.jpg" /></div>
+
+
+<blockquote><p><em>[/makʀo/] in french phonetics</em></p></blockquote>
+
+<p>Since I discovered Scala Macros with Scala 2.10, I&#8217;ve been really impressed by their power. But great power means great responsibility as you know. Nevertheless, I don&#8217;t care about responsability as I&#8217;m just experimenting. As if mad scientists couldn&#8217;t experiment freely!</p>
+
+<p>Besides being a very tasty pelagic fish from scombroid family, <a href="http://github.com/mandubian/maquereau">Maquereau</a> is my new sandbox project to experiment eccentric ideas with Scala Macros.</p>
+
+<p>Here is my first experiment which aims at studying the concepts of pataphysics applied to Scala Macros.</p>
+
+<br/>
+
+
+<br/>
+
+
+<h1><a name="pataphysics">Pataphysics applied to Macros</a></h1>
+
+<h3>Programming is math</h3>
+
+<blockquote><p>I&#8217;ve heard people saying that programming is not math.<br/>
+This is really wrong, programming is math.</p></blockquote>
+
+<p>And let&#8217;s be serious, how would you seek attention in urbane cocktails without
+ those cute little words such as functors, monoids, contravariance, monads?</p>
+
+<blockquote><p>She/He> What do you do?<br/>
+You> I&#8217;m coding a list fold.<br/>
+She/He> Ah ok, bye.<br/>
+You> Hey wait…</p></blockquote>
+
+<br/>
+
+
+<blockquote><p>She/He> What do you do?<br/>
+You> I&#8217;m deconstructing my list with a catamorphism based on a F-algebra as underlying functor.<br/>
+She/He> Whahhh this is so exciting! Actually you&#8217;re really sexy!!!<br/>
+You> Yes I known insignificant creature!</p></blockquote>
+
+<br/>
+
+
+<h3>Programming is also a bit of Physics</h3>
+
+<p>Code is static meanwhile your program is launched in a runtime environment which is dynamic and you must take these dynamic aspects into account in your code too (memory, synchronization, blocking calls, resource consumption…). For the purpose of the demo, let&#8217;s accept programming also implies some concepts of physics when dealing with dynamic aspects of a program.</p>
+
+<br/>
+
+
+<h3>Compiling is Programming Metaphysics</h3>
+
+<p>Between code and runtime, there is a weird realm, the compiler runtime which is in charge of converting static code to dynamic program:</p>
+
+<ul>
+<li>The compiler knows things you can&#8217;t imagine.</li>
+<li>The compiler is aware of the fundamental nature of math &amp; physics of programming.</li>
+<li>The compiler is beyond these rules of math &amp; physics, it&#8217;s metaphysics.</li>
+</ul>
+
+
+<br/>
+
+
+<h3>Macro is Pataphysics</h3>
+
+<div style="float: right"><img src="/images/mandubian/ubu.png"/></div>
+
+
+<p>Now we have Scala Macros which are able:</p>
+
+<ul>
+<li>to intercept the compiling process for a given piece of code</li>
+<li>to analyze the compiler AST code and do some computation on it</li>
+<li>to generate another AST and inject it back into the compile-chain</li>
+</ul>
+
+
+<p>When you write a Macro in your own code, you write code which runs in the compiler runtime. Moreover a macro can go even further by asking for compilation from within the compiler: <code>c.universe.reify{ some code }</code>… Isn&#8217;t it great to imagine those recursive compilers?</p>
+
+<p>So Scala macro knows the fundamental rules of the compiler. Given compiler is metaphysics, Scala macro lies beyond metaphysics and the science studying this topic is called pataphysics.</p>
+
+<p>This science provides very interesting concepts and this article is about applying them to the domain of Scala Macros.</p>
+
+<p>I&#8217;ll let you discover pataphysics by yourself on <a href="http://en.wikipedia.org/wiki/'Pataphysics">wikipedia</a></p>
+
+<br/>
+
+
+<blockquote><p>Let&#8217;s explore the realm of pataphysics applied to Scala macro development by implementing the great concept of patamorphism, well-known among pataphysicians.</p></blockquote>
+
+<br/>
+
+
+<br/>
+
+
+<h1><a name="defining-patamorphism">Defining Patamorphism</a></h1>
+
+<p>In 1976, the great pataphysician, Ernst Von Schmurtz defined patamorphism as following:</p>
+
+<blockquote><p>A patamorphism is a patatoid in the category of endopatafunctors…</p></blockquote>
+
+<p>Explaining the theory would be too long with lots of weird formulas. Let&#8217;s just  skip that and go directly to the conclusions.</p>
+
+<h4>First of all, we can consider the realm of pataphysics is the context of Scala Macros.</h4>
+
+<br/>
+
+
+<p>Now, let&#8217;s take point by point and see if Scala Macro can implement a patamorphism.</p>
+
+<h4>A patamorphism should be callable from outside the realm of pataphysics</h4>
+
+<p>A Scala macro is called from your code which is out of the realm of Scala macro.</p>
+
+<h4>A patamorphism can&#8217;t have effect outside the realm of pataphysics after execution</h4>
+
+<p>This means we must implement a Scala Macro that :</p>
+
+<ul>
+<li>has effect only at compile-time</li>
+<li>has NO effect at run-time</li>
+</ul>
+
+
+<p>From outside the compiler, a patamorphism is an identity morphism that could be translated in Scala as:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">def</span> <span class="n">pataMorph</span><span class="o">[</span><span class="kt">T</span><span class="o">](</span><span class="n">t</span><span class="k">:</span> <span class="kt">T</span><span class="o">)</span><span class="k">:</span> <span class="kt">T</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h4>A patamorphism can change the nature of things while being computed</h4>
+
+<p>Even if it has no effect once applied, meanwhile it is computed, it can :</p>
+
+<ul>
+<li>have side-effects on anything</li>
+<li>be blocking</li>
+<li>be mutable</li>
+</ul>
+
+
+<p>Concerning these points, nothing prevents a Scala Macro from respecting those points.</p>
+
+<h4>A patamorphism is a patatoid</h4>
+
+<p>You may know it but patatoid principles require that the morphism should be customisable by a custom abstract seed. In Scala samples, patatoid are generally described as following:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">trait</span> <span class="nc">Patatoid</span> <span class="o">{</span>
+</span><span class='line'>  <span class="c1">// Seed is specific to a Patatoid and is used to configure the sprout mechanism  </span>
+</span><span class='line'>  <span class="k">type</span> <span class="kt">Seed</span>
+</span><span class='line'>  <span class="c1">// sprout is the classic name</span>
+</span><span class='line'>  <span class="k">def</span> <span class="n">sprout</span><span class="o">[</span><span class="kt">T</span><span class="o">](</span><span class="n">t</span><span class="k">:</span> <span class="kt">T</span><span class="o">)(</span><span class="n">seed</span><span class="k">:</span> <span class="kt">Seed</span><span class="o">)</span><span class="k">:</span> <span class="kt">T</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>So a patamorphism could be implemented as :</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">trait</span> <span class="nc">PataMorphism</span> <span class="k">extends</span> <span class="nc">Patatoid</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>A custom patamorphism implemented as a Scala Macro would be written as :</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">object</span> <span class="nc">MyPataMorphism</span> <span class="k">extends</span> <span class="nc">PataMorphism</span> <span class="o">{</span>
+</span><span class='line'>  <span class="k">type</span> <span class="kt">Seed</span> <span class="o">=</span> <span class="nc">MyCustomSeed</span>
+</span><span class='line'>  <span class="k">def</span> <span class="n">sprout</span><span class="o">[</span><span class="kt">T</span><span class="o">](</span><span class="n">t</span><span class="k">:</span> <span class="kt">T</span><span class="o">)(</span><span class="n">seed</span><span class="k">:</span> <span class="kt">Seed</span><span class="o">)</span><span class="k">:</span> <span class="kt">T</span> <span class="o">=</span> <span class="n">macro</span> <span class="n">sproutImpl</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// here is the corresponding macro implementation</span>
+</span><span class='line'>  <span class="k">def</span> <span class="n">sproutImpl</span><span class="o">[</span><span class="kt">T:</span> <span class="kt">c1.WeakTypeTag</span><span class="o">](</span><span class="n">c1</span><span class="k">:</span> <span class="kt">Context</span><span class="o">)(</span><span class="n">t</span><span class="k">:</span> <span class="kt">c1.Expr</span><span class="o">[</span><span class="kt">T</span><span class="o">])(</span><span class="n">seed</span><span class="k">:</span> <span class="kt">c1.Expr</span><span class="o">[</span><span class="kt">Seed</span><span class="o">])</span><span class="k">:</span> <span class="kt">c1.Expr</span><span class="o">[</span><span class="kt">T</span><span class="o">]</span> <span class="k">=</span> <span class="o">{</span> <span class="err">…</span> <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>But in current Scala Macro API, this is not possible for a Scala Macro to override an abstract function so we can&#8217;t write it like that and we need to trick a bit. Here is how we can do simply :</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">trait</span> <span class="nc">Patatoid</span><span class="o">{</span>
+</span><span class='line'>  <span class="c1">// Seed is specific to a Patatoid and is used to configure the sprout mechanism  </span>
+</span><span class='line'>  <span class="k">type</span> <span class="kt">Seed</span>
+</span><span class='line'>  <span class="c1">// we put the signature of the macro implementation in the abstract trait</span>
+</span><span class='line'>  <span class="k">def</span> <span class="n">sproutMacro</span><span class="o">[</span><span class="kt">T:</span> <span class="kt">c1.WeakTypeTag</span><span class="o">](</span><span class="n">c1</span><span class="k">:</span> <span class="kt">Context</span><span class="o">)(</span><span class="n">t</span><span class="k">:</span> <span class="kt">c1.Expr</span><span class="o">[</span><span class="kt">T</span><span class="o">])(</span><span class="n">seed</span><span class="k">:</span> <span class="kt">c1.Expr</span><span class="o">[</span><span class="kt">Seed</span><span class="o">])</span><span class="k">:</span> <span class="kt">c1.Expr</span><span class="o">[</span><span class="kt">T</span><span class="o">]</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="cm">/**</span>
+</span><span class='line'><span class="cm">  * PataMorphism </span>
+</span><span class='line'><span class="cm">  */</span>
+</span><span class='line'><span class="k">trait</span> <span class="nc">PataMorphism</span> <span class="k">extends</span> <span class="nc">Patatoid</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Custom patamorphism</span>
+</span><span class='line'><span class="k">object</span> <span class="nc">MyPataMorphism</span> <span class="k">extends</span> <span class="nc">PataMorphism</span> <span class="o">{</span>
+</span><span class='line'>  <span class="k">type</span> <span class="kt">Seed</span> <span class="o">=</span> <span class="nc">MyCustomSeed</span>
+</span><span class='line'>  <span class="c1">// the real sprout function expected for patatoid</span>
+</span><span class='line'>  <span class="k">def</span> <span class="n">sprout</span><span class="o">[</span><span class="kt">T</span><span class="o">](</span><span class="n">t</span><span class="k">:</span> <span class="kt">T</span><span class="o">)(</span><span class="k">implicit</span> <span class="n">seed</span><span class="k">:</span> <span class="kt">Seed</span><span class="o">)</span><span class="k">:</span> <span class="kt">T</span> <span class="o">=</span> <span class="n">macro</span> <span class="n">sproutMacro</span><span class="o">[</span><span class="kt">T</span><span class="o">]</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// the real implementation of the macro and of the patatoid abstract operation</span>
+</span><span class='line'>  <span class="k">def</span> <span class="n">sproutMacro</span><span class="o">[</span><span class="kt">T:</span> <span class="kt">c1.WeakTypeTag</span><span class="o">](</span><span class="n">c1</span><span class="k">:</span> <span class="kt">Context</span><span class="o">)(</span><span class="n">t</span><span class="k">:</span> <span class="kt">c1.Expr</span><span class="o">[</span><span class="kt">T</span><span class="o">])(</span><span class="n">seed</span><span class="k">:</span> <span class="kt">c1.Expr</span><span class="o">[</span><span class="kt">Seed</span><span class="o">])</span><span class="k">:</span> <span class="kt">c1.Expr</span><span class="o">[</span><span class="kt">T</span><span class="o">]</span> <span class="k">=</span> <span class="o">{</span>
+</span><span class='line'>    <span class="err">…</span>
+</span><span class='line'>    <span class="c1">// Your implementation here</span>
+</span><span class='line'>    <span class="err">…</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<div class="well">
+<h3>Conclusion</h3>
+<p>We have shown that we could implement a patamorphism using a Scala Macro.</p>
+<p>But the most important is the implementation of the macro which shall:
+<ul>
+<li>have effect only at compile-time (with potential side-effect, sync, blocking)</li>
+<li>have NO effect at runtime</li>
+</ul>
+<p>Please note that pataphysics is the science of exceptions so all previous rules are true as long as there are no exception to them.</p>
+</div>
+
+
+<p><strong>Let&#8217;s implement a 1st sample of patamorphism called <code>VerySeriousCompiler</code>.</strong></p>
+
+<br/>
+
+
+<br/>
+
+
+<h1><a name="veryseriouscompiler">Sample #1: VerySeriousCompiler</a></h1>
+
+<h2>What is it?</h2>
+
+<p><code>VerySeriousCompiler</code> is a pure patamorphism which allows to change compiler behavior by :</p>
+
+<ul>
+<li>Choosing how long you want the compilation to last</li>
+<li>Displaying great messages at a given speed while compiling</li>
+<li>Returning the exact same code tree given in input</li>
+</ul>
+
+
+<p><strong><code>VerySeriousCompiler</code> is an identity morphism returning your exact code without leaving any trace in AST after macro execution.</strong></p>
+
+<p><code>VerySeriousCompiler</code> is implemented exactly using previous patamorphic pattern and the compiling phase can be configured using custom Seed:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="cm">/** Seed builder </span>
+</span><span class='line'><span class="cm">  * @param duration the duration of compiling in ms</span>
+</span><span class='line'><span class="cm">  * @param speed the speed between each message display in ms</span>
+</span><span class='line'><span class="cm">  * @param messages the messages to display</span>
+</span><span class='line'><span class="cm">  */</span>
+</span><span class='line'><span class="k">def</span> <span class="n">seed</span><span class="o">(</span><span class="n">duration</span><span class="k">:</span> <span class="kt">Long</span><span class="o">,</span> <span class="n">speed</span><span class="k">:</span> <span class="kt">Long</span><span class="o">,</span> <span class="n">messages</span><span class="k">:</span> <span class="kt">Seq</span><span class="o">[</span><span class="kt">String</span><span class="o">])</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<h2>When to use it?</h2>
+
+<p>VerySeriousCompiler is a useful tool when you want to have a coffee or discuss quietly at work with colleagues and fool your boss making him/her believe you&#8217;re waiting for the end of a very long compiling process.</p>
+
+<p>To use it, you just have to modify your code using :</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="nc">VerySeriousCompiler</span><span class="o">.</span><span class="n">sprout</span><span class="o">{</span>
+</span><span class='line'>  <span class="err">…</span><span class="n">some</span> <span class="n">code</span><span class="err">…</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">//or even </span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">xxx</span> <span class="k">=</span> <span class="nc">VerySeriousCompiler</span><span class="o">.</span><span class="n">sprout</span><span class="o">{</span>
+</span><span class='line'>  <span class="err">…</span><span class="n">some</span> <span class="n">code</span> <span class="n">returning</span> <span class="n">something</span><span class="err">…</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Then you launch compilation for the duration you want, displaying meaningful messages in case your boss looks at your screen. Then, you have an excuse if your boss is not happy about your long pause, tell him/her: &#8220;Look, it&#8217;s compiling&#8221;.</p>
+
+<p>Remember that this PataMorphism doesn&#8217;t pollute your code at runtime at all, it has only effects at compile-time and doesn&#8217;t inject any other code in the AST.</p>
+
+<br/>
+
+
+<br/>
+
+
+<h2>Usage</h2>
+
+<h3>With default seed (5s compiling with msgs each 400ms)</h3>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">import</span> <span class="nn">VerySeriousCompiler._</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Create a class for ex</span>
+</span><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">Toto</span><span class="o">(</span><span class="n">name</span><span class="k">:</span> <span class="kt">String</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// using default seed</span>
+</span><span class='line'><span class="n">sprout</span><span class="o">(</span><span class="nc">Toto</span><span class="o">(</span><span class="s">&quot;toto&quot;</span><span class="o">))</span> <span class="n">must</span> <span class="n">beEqualTo</span><span class="o">(</span><span class="nc">Toto</span><span class="o">(</span><span class="s">&quot;toto&quot;</span><span class="o">))</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>If you compile:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+</pre></td><td class='code'><pre><code class='plain'><span class='line'>[info] Compiling 1 Scala source to /workspace_mandubian/maquereau/target/scala-2.11/classes...
+</span><span class='line'>[info] Compiling 1 Scala source to /workspace_mandubian/maquereau/target/scala-2.11/test-classes...
+</span><span class='line'>Finding ring kernel that rules them all...................
+</span><span class='line'>computing fast fourier transform code optimization....................
+</span><span class='line'>asking why Obiwan Kenobi...................
+</span><span class='line'>resolving implicit typeclass from scope....................
+</span><span class='line'>constructing costate comonad....................
+</span><span class='line'>Do you like gladiator movies?....................
+</span><span class='line'>generating language systemic metafunction....................
+</span><span class='line'>verifying isomorphic behavior....................
+</span><span class='line'>inflating into applicative functor...................
+</span><span class='line'>verifying isomorphic behavior...................
+</span><span class='line'>invoking Nyarlathotep to prevent crawling chaos....................
+</span><span class='line'>Hear me carefully, your eyelids are very heavy, you're a koalaaaaa....................
+</span><span class='line'>resolving implicit typeclass from scope...................
+</span><span class='line'>[info] PataMorphismSpec
+</span><span class='line'>[info] 
+</span><span class='line'>[info] VerySeriousCompiler should
+</span><span class='line'>[info] + sprout with default seed
+</span><span class='line'>[info] Total for specification PataMorphismSpec
+</span><span class='line'>[info] Finished in xx ms
+</span><span class='line'>[info] 1 example, 0 failure, 0 error
+</span><span class='line'>[info] 
+</span><span class='line'>[info] Passed: : Total 1, Failed 0, Errors 0, Passed 1, Skipped 0
+</span><span class='line'>[success] Total time: xx s, completed 3 f?vr. 2013 01:25:42</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<h3>With custom seed (1s compiling with msgs each 200ms)</h3>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// using custom seed</span>
+</span><span class='line'><span class="n">sprout</span><span class="o">{</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">a</span> <span class="k">=</span> <span class="s">&quot;this is&quot;</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">b</span> <span class="k">=</span> <span class="s">&quot;some code&quot;</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">c</span> <span class="k">=</span> <span class="mi">123L</span>
+</span><span class='line'>  <span class="n">s</span><span class="s">&quot;msg $a $b $c&quot;</span>
+</span><span class='line'><span class="o">}(</span>
+</span><span class='line'>  <span class="nc">VerySeriousCompiler</span><span class="o">.</span><span class="n">seed</span><span class="o">(</span>
+</span><span class='line'>    <span class="mi">1000L</span><span class="o">,</span>     <span class="c1">// duration of compiling in ms</span>
+</span><span class='line'>    <span class="mi">200L</span><span class="o">,</span>       <span class="c1">// speed between each message display in ms</span>
+</span><span class='line'>    <span class="nc">Seq</span><span class="o">(</span>        <span class="c1">// the message to display randomly </span>
+</span><span class='line'>      <span class="s">&quot;very interesting message&quot;</span><span class="o">,</span>
+</span><span class='line'>      <span class="s">&quot;cool message&quot;</span>
+</span><span class='line'>    <span class="o">)</span>
+</span><span class='line'>  <span class="o">)</span>
+</span><span class='line'><span class="o">)</span> <span class="n">must</span> <span class="n">beEqualTo</span><span class="o">(</span> <span class="s">&quot;msg this is some code 123&quot;</span> <span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>If you compile:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+</pre></td><td class='code'><pre><code class='plain'><span class='line'>[info] Compiling 1 Scala source to /workspace_mandubian/maquereau/target/scala-2.11/classes...
+</span><span class='line'>[info] Compiling 1 Scala source to /workspace_mandubian/maquereau/target/scala-2.11/test-classes...
+</span><span class='line'>toto..........
+</span><span class='line'>coucou..........
+</span><span class='line'>toto..........
+</span><span class='line'>coucou..........
+</span><span class='line'>[info] PataMorphismSpec
+</span><span class='line'>[info] 
+</span><span class='line'>[info] VerySeriousCompiler should
+</span><span class='line'>[info] + sprout with custom seed
+</span><span class='line'>[info] Total for specification PataMorphismSpec
+</span><span class='line'>[info] Finished in xx ms
+</span><span class='line'>[info] 1 example, 0 failure, 0 error
+</span><span class='line'>[info] 
+</span><span class='line'>[info] Passed: : Total 1, Failed 0, Errors 0, Passed 1, Skipped 0
+</span><span class='line'>[success] Total time: xx s, completed 3 f?vr. 2013 01:25:42</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<br/>
+
+
+<h2>Macro implementation details</h2>
+
+<p>The code can be found on Github <a href="http://github.com/mandubian/maquereau">Maquereau</a>.</p>
+
+<p>Here are the interesting points of the macro implementation.</p>
+
+<h4>Modular macro building</h4>
+
+<p>We use the method described on <a href="http://docs.scala-lang.org/overviews/macros/overview.html#writing_bigger_macros">scalamacros.org/writing bigger macros</a></p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">abstract</span> <span class="k">class</span> <span class="nc">VerySeriousCompilerHelper</span> <span class="o">{</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">c</span><span class="k">:</span> <span class="kt">Context</span>
+</span><span class='line'>  <span class="err">…</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">def</span> <span class="n">sproutMacro</span><span class="o">[</span><span class="kt">T:</span> <span class="kt">c1.WeakTypeTag</span><span class="o">](</span><span class="n">c1</span><span class="k">:</span> <span class="kt">Context</span><span class="o">)(</span><span class="n">t</span><span class="k">:</span> <span class="kt">c1.Expr</span><span class="o">[</span><span class="kt">T</span><span class="o">])(</span><span class="n">seed</span><span class="k">:</span> <span class="kt">c1.Expr</span><span class="o">[</span><span class="kt">Seed</span><span class="o">])</span><span class="k">:</span> <span class="kt">c1.Expr</span><span class="o">[</span><span class="kt">T</span><span class="o">]</span> <span class="k">=</span> <span class="o">{</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">helper</span> <span class="k">=</span> <span class="k">new</span> <span class="o">{</span> <span class="k">val</span> <span class="n">c</span><span class="k">:</span> <span class="kt">c1.</span><span class="k">type</span> <span class="o">=</span> <span class="n">c1</span> <span class="o">}</span> <span class="k">with</span> <span class="nc">VerySeriousCompilerHelper</span>
+</span><span class='line'>  <span class="n">helper</span><span class="o">.</span><span class="n">sprout</span><span class="o">(</span><span class="n">t</span><span class="o">,</span> <span class="n">seed</span><span class="o">)</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<h4>input code evaluation in macro</h4>
+
+<p>The Seed passed to the macro doesn&#8217;t belong to the realm of Scala Macro but to your code. In the macro, we don&#8217;t get the Seed type but the expression Expr[Seed]. So in order to use the seed value in the macro, we must evaluate the expression passed to the macro:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">speed</span> <span class="k">=</span> <span class="n">c</span><span class="o">.</span><span class="n">eval</span><span class="o">(</span><span class="n">c</span><span class="o">.</span><span class="nc">Expr</span><span class="o">[</span><span class="kt">Long</span><span class="o">](</span><span class="n">c</span><span class="o">.</span><span class="n">resetAllAttrs</span><span class="o">(</span><span class="n">speedTree</span><span class="o">.</span><span class="n">duplicate</span><span class="o">)))</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><em>Please note that this code is a work-around because in Scala 2.10, you can&#8217;t evaluate any code as you want due to some compiler limitations when evaluating
+an already typechecked tree in a macro. This is explained in this <a href="https://issues.scala-lang.org/browse/SI-5464">Scala issue</a></em></p>
+
+<br/>
+
+
+<h4>input code re-compiling before returning from macro</h4>
+
+<p>We don&#8217;t return directly the input tree in the macro even if it would be valid with respect to patamorphism contract.
+But to test Macro a bit further, I decided to &#8221;<em>re-compile</em>&#8221; the input code from within the macro. You can do that using following code:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">reify</span><span class="o">(</span><span class="n">a</span><span class="o">.</span><span class="n">splice</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h4>Using macro paradise</h4>
+
+<p>The <code>maquereau</code> project is based on <a href="http://docs.scala-lang.org/overviews/macros/paradise.html">Macro Paradise</a> which is the experimental branch of Scala Macros.
+This implementation of patamorphism doesn&#8217;t use any experimental feature from Macro Paradise but future samples will certainly.</p>
+
+<br/>
+
+
+<br/>
+
+
+<h1><a name="conclusion">Conclusion</a></h1>
+
+<p>This article shows that applying the concepts of pataphysics to Scala Macro is possible and can help creating really useful tools.</p>
+
+<p>The sample is still a bit basic but it shows that a patamorphism can be implemented relatively simply.</p>
+
+<p>I&#8217;ll create other samples and hope you&#8217;ll like them!</p>
+
+<p>Have patafun!</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Pascal Voitot</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-01-30T13:13:00+01:00" pubdate data-updated="true">Jan 30<span>th</span>, 2013</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/functional-programming/'>functional programming</a>, <a class='category' href='/blog/categories/functor/'>functor</a>, <a class='category' href='/blog/categories/morphism/'>morphism</a>, <a class='category' href='/blog/categories/pataphysics/'>pataphysics</a>, <a class='category' href='/blog/categories/scala/'>scala</a>, <a class='category' href='/blog/categories/scala-macro/'>scala-macro</a>, <a class='category' href='/blog/categories/uchronic-programming/'>uchronic programming</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://www.mandubian.com/2013/01/30/maquereau-patamorphism/" data-via="mandubian" data-counturl="http://www.mandubian.com/2013/01/30/maquereau-patamorphism/" >Tweet</a>
+  
+  
+  <div class="g-plusone" data-size="medium"></div>
+  
+  
+</div>
+
+    
+    
+    <section>
+      <h1>Comments</h1>
+      <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+    </section>
+    
+    <ul class="pager">
+      
+      <li class="previous"><a class="basic-alignment left"
+        href="/2013/01/13/JSON-Coast-to-Coast/" title="Previous Post:
+        From Data-Centric approach to JSON Coast-to-Coast design with Play-2.1 & ReactiveMongo">&laquo; From Data-Centric approach to JSON Coast-to-Coast design with Play-2.1 & ReactiveMongo</a></li>
+      
+      <li><a href="/blog/archives">Blog Archives</a></li>
+      
+      <li class="next"><a class="basic-alignment right" href="/2013/02/10/datomisca-query/"
+        title="Next Post: Datomisca Delicatessen - Datomic queries coated in a thin layer of Scala">Datomisca Delicatessen - Datomic queries coated in a thin layer of Scala
+        &raquo;</a></li>
+      
+    </ul>
+  </footer>
+</article>
+
+<aside class="sidebar-nav span3">
+  
+    <section class="well">
+  <ul id="recent_posts" class="nav nav-list">
+    <li class="nav-header">Recent Posts</li>
+    
+      <li class="post">
+        <a href="/2015/04/09/freer/">FreeR - Hybrid Free Monads for Reduced Quadratic Complexity/Observability & Map-Fusion Optimization in Scala</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014/12/21/scaledn/">Scaledn: Promote EDN as a far better alternative to Json in Scala</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014/07/30/hfunctor/">Shapeless HFunctor for Heterogenous Structures (& others)</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014/07/29/hmonoid/">Shapeless HMonoid for Heterogenous Structures (& others)</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014/06/11/daemonad/">Summon Daemonad to macro-snoop into monad stacks</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+<section class="well">
+  <ul id="gh_repos" data-user="mandubian" data-count="5" data-skip="true" class="nav">
+	<li class="nav-header">On GitHub</li>
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+  <a class="github-follow" href="https://github.com/mandubian">Follow @mandubian</a>
+  
+</section>
+
+
+
+<section class="well">
+  <ul id="tweets" class="nav" data-user="mandubian" data-count="4" data-replies="false">
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+    <a href="http://twitter.com/mandubian" class="twitter-follow-button" data-show-count="false">Follow @mandubian</a>
+  
+</section>
+
+
+
+
+
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo" class="page-footer"><hr>
+<p>
+  Copyright &copy; 2015 - Pascal Voitot -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'mandubian';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://www.mandubian.com/2013/01/30/maquereau-patamorphism/';
+        var disqus_url = 'http://www.mandubian.com/2013/01/30/maquereau-patamorphism/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+  <script type="text/javascript">
+    (function() {
+      var script = document.createElement('script'); script.type = 'text/javascript'; script.async = true;
+      script.src = 'https://apis.google.com/js/plusone.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(script, s);
+    })();
+  </script>
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = 'http://platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

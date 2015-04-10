@@ -1,0 +1,1496 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>ZPark-Ztream II (Part 2/3): Fancy Spark Streamed Machine-Learning & new Scalaz-Stream NIO API - Mandubian Blog</title>
+  <meta name="author" content="Pascal Voitot">
+
+  
+  <meta name="description" content="ZPark-Ztream II (Part 2/3): Fancy Spark Streamed Machine-Learning & New Scalaz-Stream NIO API &hellip;">
+  <meta name="keywords" content="scala,spark,scalaz-stream,NIO,machine learning,stream,map reduce,ML,recommendation">
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://www.mandubian.com/2014/03/09/zpark-ml-nio-2">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/bootstrap/bootstrap.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/stylesheets/bootstrap/responsive.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/stylesheets/syntax/syntax.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/stylesheets/d3d.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <style type="text/css">
+    body {
+      padding-bottom: 40px;
+    }
+    h1 {
+      margin-bottom: 15px;
+    }
+    img {
+      max-width: 100%;
+    }
+    .sharing, .meta, .pager {
+      margin: 20px 0px 20px 0px;
+    }
+    .page-footer p {
+      text-align: center;
+    }
+
+    article {
+      margin-bottom: 50px;
+      border-top: #DDD solid 20px;
+    }
+ 
+  </style>
+  <script src="/javascripts/libs/jquery.js"></script>
+  <script src="/javascripts/libs/modernizr-2.0.js"></script>
+  <script src="/javascripts/libs/bootstrap.js"></script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <link href="/atom.xml" rel="alternate" title="Mandubian Blog" type="application/atom+xml">
+  
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-10417377-11']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   >
+  <nav role="navigation"><div class="navbar">
+  <div class="navbar-inner">
+    <div class="container">
+      <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </a>
+
+      <a class="brand" href="/">Mandubian Blog</a>
+
+      <div class="nav-collapse">
+        <ul class="nav">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+
+        <ul class="nav pull-right" data-subscription="rss">
+          <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+          
+        </ul>
+
+        
+          <form class="pull-right navbar-search" action="http://google.com/search" method="get">
+            <fieldset role="search">
+              <input type="hidden" name="q" value="site:www.mandubian.com" />
+              <input class="search-query" type="text" name="q" results="0" placeholder="Search"/>
+            </fieldset>
+          </form>
+        
+      </div>
+    </div>
+  </div>
+</div>
+</nav>
+  <div class="container">
+    <div class="row-fluid">
+      
+<article class="hentry span9" role="article">
+
+  
+  <header class="page-header">
+    
+      <h1 class="entry-title">ZPark-Ztream II (Part 2/3): Fancy Spark Streamed Machine-Learning & New Scalaz-Stream NIO API</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-03-09T19:19:00+01:00" pubdate data-updated="true">Mar 9<span>th</span>, 2014</time>
+        
+         | <a href="#disqus_thread">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><h2>Synopsis</h2>
+
+<p>The code &amp; sample apps can be found on <a href="https://github.com/mandubian/zpark-ztream">Github</a></p>
+
+<blockquote><p><a href="/2014-02-13-zpark">Zpark-Zstream I article</a> was a PoC trying to use <a href="https://github.com/scalaz/scalaz-stream">Scalaz-Stream</a> instead of DStream with <a href="https://spark.incubator.apache.org/">Spark-Streaming</a>. I had deliberately decided not to deal with fault-tolerance &amp; stream graph persistence to keep simple but without it, it was quite useless for real application&#8230;</p></blockquote>
+
+<div class="well">
+<p>Here is a tryptic of articles trying to do something <i>concrete</i> with <a href="https://github.com/scalaz/scalaz-stream">Scalaz-Stream</a> and <a href="https://spark.incubator.apache.org/">Spark</a>.</p>
+<p>So, what do I want? I wantttttttt <i>a shrewburyyyyyy</i> and to do the following:</p>
+<ol>
+<li>Plug Scalaz-Stream Process[Task, T] on Spark DStream[T] (Part 1)</li>
+<li><b>Build DStream using brand new Scalaz-Stream NIO API (client/server) (Part 2)</b></li>
+<li>Train Spark-ML <i>recommendation-like</i> model using NIO client/server (Part 3)</li>
+<li>Stream data from multiple NIO clients to the previous trained ML model mixing all together (Part 3)</li>
+</ol>
+</div>
+
+
+
+
+<br/>
+
+
+<h1>[Part 2/3] From Scalaz-Stream NIO client &amp; server to Spark DStream</h1>
+
+<h2>Scalaz-Stream NIO Client</h2>
+
+<h3>What is a client?</h3>
+
+<ul>
+<li>Something sending some data <code>W</code> <em>(for Write)</em> to a server</li>
+<li>Something reading some data <code>I</code> <em>(for Input)</em> from a server</li>
+</ul>
+
+
+<br/>
+
+
+<h3>Client seen as <code>Process</code></h3>
+
+<p>A client could be represented as:</p>
+
+<ul>
+<li>a <code>Process[Task, I]</code> for input channel (receiving from server)</li>
+<li>a <code>Process[Task, W]</code> for output channel (sending to server)</li>
+</ul>
+
+
+<p>In scalaz-stream, recently a new structure has been added :</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">final</span> <span class="k">case</span> <span class="k">class</span> <span class="nc">Exchange</span><span class="o">[</span><span class="kt">I</span>, <span class="kt">W</span><span class="o">](</span><span class="n">read</span><span class="k">:</span> <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">I</span><span class="o">],</span> <span class="n">write</span><span class="k">:</span> <span class="kt">Sink</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">W</span><span class="o">])</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Precisely what we need!</p>
+
+<p>Now, let&#8217;s consider that we work in NIO mode with everything non-blocking, asynchronous etc&#8230;</p>
+
+<p>In this context, a client can be seen as something generating <em>soon or later one (or more)</em> <code>Exchange[I, W]</code> i.e :</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="nc">Client</span><span class="o">[</span><span class="kt">I</span>, <span class="kt">W</span><span class="o">]</span> <span class="o">===</span> <span class="nc">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">Exchange</span><span class="o">[</span><span class="kt">I</span>, <span class="kt">W</span><span class="o">]]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>In the case of a pure TCP client, <code>I</code> and <code>W</code> are often <code>Bytes</code>.</p></blockquote>
+
+<h3>Creating a client</h3>
+
+<p>Scalaz-Stream now provides a helper to create a TCP binary NIO client:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// the address of the server to connect to</span>
+</span><span class='line'><span class="k">val</span> <span class="n">address</span><span class="k">:</span> <span class="kt">InetSocketAddress</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">InetSocketAddress</span><span class="o">(</span><span class="s">&quot;xxx.yyy.zzz.ttt&quot;</span><span class="o">,</span> <span class="n">port</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// create a client</span>
+</span><span class='line'><span class="k">val</span> <span class="n">client</span><span class="k">:</span> <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">Exchange</span><span class="o">[</span><span class="kt">Bytes</span>, <span class="kt">Bytes</span><span class="o">]]</span> <span class="k">=</span> <span class="n">nio</span><span class="o">.</span><span class="n">connect</span><span class="o">(</span><span class="n">address</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">client</span> <span class="n">map</span> <span class="o">{</span> <span class="n">ex</span><span class="k">:</span> <span class="kt">Exchange</span><span class="o">[</span><span class="kt">Bytes</span>, <span class="kt">Bytes</span><span class="o">]</span> <span class="k">=&gt;</span>
+</span><span class='line'>  <span class="c1">// read data sent by server in ex.read</span>
+</span><span class='line'>  <span class="o">???</span>
+</span><span class='line'>  <span class="c1">// write data to the server with ex.write</span>
+</span><span class='line'>  <span class="o">???</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<h3>Plug your own data source on <code>Exchange</code></h3>
+
+<p>To plug your own data source to write to server, Scalaz-Stream provides 1 more API:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">Exchange</span><span class="o">[</span><span class="kt">I</span>, <span class="kt">W</span><span class="o">](</span><span class="n">read</span><span class="k">:</span> <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">I</span><span class="o">],</span> <span class="n">write</span><span class="k">:</span> <span class="kt">Sink</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">W</span><span class="o">])</span> <span class="o">{</span>
+</span><span class='line'>  <span class="cm">/**</span>
+</span><span class='line'><span class="cm">   * Runs supplied Process of `W` values by sending them to remote system.</span>
+</span><span class='line'><span class="cm">   * Any replies from remote system are received as `I` values of the resulting process.</span>
+</span><span class='line'><span class="cm">   */</span>
+</span><span class='line'>  <span class="k">def</span> <span class="n">run</span><span class="o">(</span><span class="n">p</span><span class="k">:</span><span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>,<span class="kt">W</span><span class="o">])</span><span class="k">:</span> <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>,<span class="kt">I</span><span class="o">]</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// the W are sent to the server and we retrieve only the received data</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>With this API, we can write data to the client and output received data.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// some data to be sent by client</span>
+</span><span class='line'><span class="k">val</span> <span class="n">data</span><span class="k">:</span> <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">W</span><span class="o">]</span> <span class="k">=</span> <span class="o">...</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// send data and retrieve only responses received by client</span>
+</span><span class='line'><span class="k">val</span> <span class="n">output</span><span class="k">:</span> <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">I</span><span class="o">]</span> <span class="k">=</span> <span class="n">client</span> <span class="n">flatMap</span> <span class="o">{</span> <span class="n">ex</span> <span class="k">=&gt;</span>
+</span><span class='line'>  <span class="n">ex</span><span class="o">.</span><span class="n">run</span><span class="o">(</span><span class="n">data</span><span class="o">)</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">receivedData</span><span class="k">:</span> <span class="kt">Seq</span><span class="o">[</span><span class="kt">Bytes</span><span class="o">]</span> <span class="k">=</span> <span class="n">output</span><span class="o">.</span><span class="n">runLog</span><span class="o">.</span><span class="n">run</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Yet, in general, we need to:</p>
+
+<ul>
+<li>send custom data to the server</li>
+<li>expect its response</li>
+<li>do some business logic</li>
+<li>send more data</li>
+<li>etc&#8230;</li>
+</ul>
+
+
+<p>So we need to be able to gather in the same piece of code received &amp; emitted data.</p>
+
+<br/>
+
+
+<h3>Managing client/server business logic with <code>Wye</code></h3>
+
+<p>Scalaz-stream can help us with the following API:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">Exchange</span><span class="o">[</span><span class="kt">I</span>, <span class="kt">W</span><span class="o">](</span><span class="n">read</span><span class="k">:</span> <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">I</span><span class="o">],</span> <span class="n">write</span><span class="k">:</span> <span class="kt">Sink</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">W</span><span class="o">])</span> <span class="o">{</span>
+</span><span class='line'><span class="o">...</span>
+</span><span class='line'>  <span class="cm">/**</span>
+</span><span class='line'><span class="cm">   * Transform this Exchange to another Exchange where queueing, and transformation of this `I` and `W`</span>
+</span><span class='line'><span class="cm">   * is controlled by supplied WyeW.</span>
+</span><span class='line'><span class="cm">   */</span>
+</span><span class='line'>  <span class="k">def</span> <span class="n">wye</span><span class="o">(</span><span class="n">w</span><span class="k">:</span> <span class="kt">Wye</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">I</span>, <span class="kt">W2</span>, <span class="kt">W</span> <span class="kt">\/</span> <span class="kt">I2</span><span class="o">])</span><span class="k">:</span> <span class="kt">Exchange</span><span class="o">[</span><span class="kt">I2</span>, <span class="kt">W2</span><span class="o">]</span>
+</span><span class='line'><span class="o">...</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// It transforms the original Exchange[I, W] into a Exchange[I2, W2]</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>Whoaaaaa complex isn&#8217;t it? Actually not so much&#8230;</p></blockquote>
+
+<p><code>Wye</code> is a fantastic tool that can:</p>
+
+<ul>
+<li>read from a left and/or right branch (in a non-deterministic way: left or right or left+right),</li>
+<li>perform computation on left/right received data,</li>
+<li>emit data in output.</li>
+</ul>
+
+
+<p>I love ASCII art schema:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="o">&gt;</span> <span class="nc">Wye</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">I</span>, <span class="kt">I2</span>, <span class="kt">W</span><span class="o">]</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">I</span><span class="o">(</span><span class="n">left</span><span class="o">)</span>       <span class="n">I2</span><span class="o">(</span><span class="n">right</span><span class="o">)</span>
+</span><span class='line'>          <span class="n">v</span>       <span class="n">v</span>
+</span><span class='line'>          <span class="o">|</span>       <span class="o">|</span>
+</span><span class='line'>          <span class="o">---------</span>
+</span><span class='line'>              <span class="o">|</span>
+</span><span class='line'> <span class="o">---------------------------</span>
+</span><span class='line'><span class="o">|</span>    <span class="nc">Wye</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">I</span>, <span class="kt">I2</span>, <span class="kt">W</span><span class="o">]</span>    <span class="o">|</span>
+</span><span class='line'> <span class="o">---------------------------</span>
+</span><span class='line'>              <span class="o">|</span>
+</span><span class='line'>              <span class="n">v</span>
+</span><span class='line'>              <span class="n">W</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>\/</code> is ScalaZ disjunction also called `Either in the Scala world.</p>
+
+<p>So <code>Wye[Task, I, W2, W \/ I2]</code> can be seen as:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="o">&gt;</span> <span class="nc">Wye</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">I</span>, <span class="kt">W2</span>, <span class="kt">W</span> <span class="kt">\/</span> <span class="kt">I2</span><span class="o">]</span>
+</span><span class='line'>
+</span><span class='line'>          <span class="n">I</span>       <span class="n">W2</span>
+</span><span class='line'>          <span class="n">v</span>       <span class="n">v</span>
+</span><span class='line'>          <span class="o">|</span>       <span class="o">|</span>
+</span><span class='line'>          <span class="o">---------</span>
+</span><span class='line'>              <span class="o">|</span>
+</span><span class='line'> <span class="o">---------------------------</span>
+</span><span class='line'><span class="o">|</span> <span class="nc">Wye</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">I</span>, <span class="kt">W2</span>, <span class="kt">W</span> <span class="kt">\/</span> <span class="kt">I2</span><span class="o">]</span> <span class="o">|</span>
+</span><span class='line'> <span class="o">---------------------------</span>
+</span><span class='line'>              <span class="o">|</span>
+</span><span class='line'>          <span class="o">---------</span>
+</span><span class='line'>          <span class="o">|</span>       <span class="o">|</span>
+</span><span class='line'>          <span class="n">v</span>       <span class="n">v</span>
+</span><span class='line'>          <span class="n">W</span>       <span class="n">I2</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h4>So what does this <code>Exchange.wye</code> API do?</h4>
+
+<ul>
+<li>It plugs the original <code>Exchange.write: Sink[Task, W]</code> to the <code>W</code> output of the <code>Wye[Task, I, W2, W \/ I2]</code> for sending data to the server.</li>
+<li>It plugs the <code>Exchange.read: Process[Task, I]</code> receiving data from server to the left input of the <code>Wye[Task, I, W2, W]</code>.</li>
+<li>The right intput <code>W2</code> branch provides a plug for an external source of data in the shape of <code>Process[Task, W2]</code>.</li>
+<li>The right output <code>I2</code> can be used to pipe data from the client to an external local process (like streaming out data received from the server).</li>
+<li>Finally it returns an <code>Exchange[I2, W2]</code>.</li>
+</ul>
+
+
+<p>In a summary:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="o">&gt;</span> <span class="o">(</span><span class="n">ex</span><span class="k">:</span><span class="kt">Exchange</span><span class="o">[</span><span class="kt">I</span>, <span class="kt">W</span><span class="o">]).</span><span class="n">wye</span><span class="o">(</span> <span class="n">w</span><span class="k">:</span><span class="kt">Wye</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">I</span>, <span class="kt">W2</span>, <span class="kt">W</span> <span class="kt">\/</span> <span class="kt">I2</span><span class="o">]</span> <span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">ex</span><span class="o">.</span><span class="n">read</span>
+</span><span class='line'>          <span class="o">|</span>
+</span><span class='line'>          <span class="n">v</span>
+</span><span class='line'>          <span class="n">I</span>       <span class="n">W2</span>
+</span><span class='line'>          <span class="n">v</span>       <span class="n">v</span>
+</span><span class='line'>          <span class="o">|</span>       <span class="o">|</span>
+</span><span class='line'>          <span class="o">---------</span>
+</span><span class='line'>              <span class="o">|</span>
+</span><span class='line'> <span class="o">-----------------------------</span>
+</span><span class='line'><span class="o">|</span> <span class="n">w</span><span class="k">:</span><span class="kt">Wye</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">I</span>, <span class="kt">W2</span>, <span class="kt">W</span> <span class="kt">\/</span> <span class="kt">I2</span><span class="o">]</span> <span class="o">|</span>
+</span><span class='line'> <span class="o">-----------------------------</span>
+</span><span class='line'>              <span class="o">|</span>
+</span><span class='line'>          <span class="o">---------</span>
+</span><span class='line'>          <span class="o">|</span>       <span class="o">|</span>
+</span><span class='line'>          <span class="n">v</span>       <span class="n">v</span>
+</span><span class='line'>          <span class="n">W</span>       <span class="n">I2</span>
+</span><span class='line'>          <span class="o">|</span>
+</span><span class='line'>          <span class="n">v</span>
+</span><span class='line'>      <span class="n">ex</span><span class="o">.</span><span class="n">write</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">======&gt;</span> <span class="nc">Returns</span> <span class="nc">Exchange</span><span class="o">[</span><span class="kt">I2</span>, <span class="kt">W2</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>As a conclusion, <code>Exchange.wye</code> <em>combines</em> the original <code>Exchange[I, W]</code> with your custom <code>Wye[Task, I, W2, W \/ I2]</code> which <strong>represents the business logic of data exchange between client &amp; server</strong> and finally returns a <code>Exchange[I2, W2]</code> on which you can plug your own data source and retrieve output data.</p></blockquote>
+
+<br/>
+
+
+<h4>Implement the client with <code>wye/run</code></h4>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// The source of data to send to server</span>
+</span><span class='line'><span class="k">val</span> <span class="n">data2Send</span><span class="k">:</span> <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">Bytes</span><span class="o">]</span> <span class="k">=</span> <span class="o">...</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// The logic of your exchange between client &amp; server</span>
+</span><span class='line'><span class="k">val</span> <span class="n">clientWye</span><span class="k">:</span> <span class="kt">Wye</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">Bytes</span>, <span class="kt">Bytes</span>, <span class="kt">Bytes</span> <span class="kt">\/</span> <span class="kt">Bytes</span><span class="o">])</span><span class="k">=</span> <span class="o">...</span>
+</span><span class='line'><span class="c1">// Scary, there are so many Bytes</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">clientReceived</span><span class="k">:</span> <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">Bytes</span><span class="o">]</span> <span class="k">=</span> <span class="k">for</span> <span class="o">{</span>
+</span><span class='line'>  <span class="c1">// client connects to the server &amp; returns Exchange</span>
+</span><span class='line'>  <span class="n">ex</span>   <span class="k">&lt;-</span> <span class="n">nio</span><span class="o">.</span><span class="n">connect</span><span class="o">(</span><span class="n">address</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// Exchange is customized with clientWye</span>
+</span><span class='line'>  <span class="c1">// Data are injected in it with run</span>
+</span><span class='line'>  <span class="n">output</span> <span class="k">&lt;-</span> <span class="n">ex</span><span class="o">.</span><span class="n">wye</span><span class="o">(</span><span class="n">clientWye</span><span class="o">).</span><span class="n">run</span><span class="o">(</span><span class="n">data2Send</span><span class="o">)</span>
+</span><span class='line'><span class="o">}</span> <span class="k">yield</span> <span class="o">(</span><span class="n">output</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<h4>Implement simple client/server business logic?</h4>
+
+<blockquote><p>Please note, I simply reuse the basic <code>echo</code> example provided in scalaz-stream ;)</p></blockquote>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">def</span> <span class="n">clientEcho</span><span class="o">(</span><span class="n">address</span><span class="k">:</span> <span class="kt">InetSocketAddress</span><span class="o">,</span> <span class="n">data</span><span class="k">:</span> <span class="kt">Bytes</span><span class="o">)</span><span class="k">:</span> <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">Bytes</span><span class="o">]</span> <span class="k">=</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// the custom Wye managing business logic</span>
+</span><span class='line'>  <span class="k">def</span> <span class="n">echoLogic</span><span class="k">:</span> <span class="kt">Wye</span><span class="o">[</span><span class="kt">Bytes</span>, <span class="kt">Bytes</span>, <span class="kt">Bytes</span>, <span class="kt">Byte</span> <span class="kt">\/</span> <span class="kt">Bytes</span><span class="o">]</span> <span class="k">=</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">def</span> <span class="n">go</span><span class="o">(</span><span class="n">collected</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)</span><span class="k">:</span> <span class="kt">WyeW</span><span class="o">[</span><span class="kt">Bytes</span>, <span class="kt">Bytes</span>, <span class="kt">Bytes</span>, <span class="kt">Bytes</span><span class="o">]</span> <span class="k">=</span> <span class="o">{</span>
+</span><span class='line'>      <span class="c1">// Create a Wye that can receive on both sides</span>
+</span><span class='line'>      <span class="n">receiveBoth</span> <span class="o">{</span>
+</span><span class='line'>        <span class="c1">// Receive on left == receive from server</span>
+</span><span class='line'>        <span class="k">case</span> <span class="nc">ReceiveL</span><span class="o">(</span><span class="n">rcvd</span><span class="o">)</span> <span class="k">=&gt;</span>
+</span><span class='line'>          <span class="c1">// `emitO` outputs on `I2` branch and then...</span>
+</span><span class='line'>          <span class="n">emitO</span><span class="o">(</span><span class="n">rcvd</span><span class="o">)</span> <span class="n">fby</span>
+</span><span class='line'>            <span class="c1">// if we have received everything sent, halt</span>
+</span><span class='line'>            <span class="o">(</span><span class="k">if</span> <span class="o">(</span><span class="n">collected</span> <span class="o">+</span> <span class="n">rcvd</span><span class="o">.</span><span class="n">size</span> <span class="o">&gt;=</span> <span class="n">data</span><span class="o">.</span><span class="n">size</span><span class="o">)</span> <span class="n">halt</span>
+</span><span class='line'>            <span class="c1">// else go on collecting</span>
+</span><span class='line'>            <span class="k">else</span> <span class="n">go</span><span class="o">(</span><span class="n">collected</span> <span class="o">+</span> <span class="n">rcvd</span><span class="o">.</span><span class="n">size</span><span class="o">))</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="c1">// Receive on right == receive on `W2` branch == your external data source</span>
+</span><span class='line'>        <span class="k">case</span> <span class="nc">ReceiveR</span><span class="o">(</span><span class="n">data</span><span class="o">)</span> <span class="k">=&gt;</span>
+</span><span class='line'>          <span class="c1">// `emitW` outputs on `W` branch == sending to server</span>
+</span><span class='line'>          <span class="c1">// and loops</span>
+</span><span class='line'>          <span class="n">emitW</span><span class="o">(</span><span class="n">data</span><span class="o">)</span> <span class="n">fby</span> <span class="n">go</span><span class="o">(</span><span class="n">collected</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="c1">// When server closes</span>
+</span><span class='line'>        <span class="k">case</span> <span class="nc">HaltL</span><span class="o">(</span><span class="n">rsn</span><span class="o">)</span>     <span class="k">=&gt;</span> <span class="nc">Halt</span><span class="o">(</span><span class="n">rsn</span><span class="o">)</span>
+</span><span class='line'>        <span class="c1">// When client closes, we go on collecting echoes</span>
+</span><span class='line'>        <span class="k">case</span> <span class="nc">HaltR</span><span class="o">(</span><span class="k">_</span><span class="o">)</span>       <span class="k">=&gt;</span> <span class="n">go</span><span class="o">(</span><span class="n">collected</span><span class="o">)</span>
+</span><span class='line'>      <span class="o">}</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="c1">// Init</span>
+</span><span class='line'>    <span class="n">go</span><span class="o">(</span><span class="mi">0</span><span class="o">)</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// Finally wiring all...</span>
+</span><span class='line'>  <span class="k">for</span> <span class="o">{</span>
+</span><span class='line'>    <span class="n">ex</span>   <span class="k">&lt;-</span> <span class="n">nio</span><span class="o">.</span><span class="n">connect</span><span class="o">(</span><span class="n">address</span><span class="o">)</span>
+</span><span class='line'>    <span class="n">rslt</span> <span class="k">&lt;-</span> <span class="n">ex</span><span class="o">.</span><span class="n">wye</span><span class="o">(</span><span class="n">echoSent</span><span class="o">).</span><span class="n">run</span><span class="o">(</span><span class="n">emit</span><span class="o">(</span><span class="n">data</span><span class="o">))</span>
+</span><span class='line'>  <span class="o">}</span> <span class="k">yield</span> <span class="o">{</span>
+</span><span class='line'>    <span class="n">rslt</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>This might seem hard to catch to some people because of scalaz-stream notations and wye <code>Left/Right/Both</code> or <code>wye.emitO/emitW</code>. But actually, you&#8217;ll get used to it quite quickly as soon as you understand <code>wye</code>. Keep in mind that this code uses low-level scalaz-stream API without anything else and it remains pretty simple and straighforward.</p></blockquote>
+
+<br/>
+
+
+<h4>Run the client for its output</h4>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// create a client that sends 1024 random bytes</span>
+</span><span class='line'><span class="k">val</span> <span class="n">dataArray</span> <span class="k">=</span> <span class="nc">Array</span><span class="o">.</span><span class="n">fill</span><span class="o">[</span><span class="kt">Byte</span><span class="o">](</span><span class="mi">1024</span><span class="o">)(</span><span class="mi">1</span><span class="o">)</span>
+</span><span class='line'><span class="n">scala</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="nc">Random</span><span class="o">.</span><span class="n">nextBytes</span><span class="o">(</span><span class="n">dataArray</span><span class="o">)</span>
+</span><span class='line'><span class="k">val</span> <span class="n">clientOutput</span> <span class="k">=</span> <span class="n">clientEcho</span><span class="o">(</span><span class="n">addr</span><span class="o">,</span> <span class="nc">Bytes</span><span class="o">.</span><span class="n">of</span><span class="o">(</span><span class="n">dataArray</span><span class="o">))</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// consumes all received data... (it should contain dataArray)</span>
+</span><span class='line'><span class="k">val</span> <span class="n">result</span> <span class="k">=</span> <span class="n">clientOutput</span><span class="o">.</span><span class="n">runLog</span><span class="o">.</span><span class="n">run</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">println</span><span class="o">(</span><span class="s">&quot;Client received:&quot;</span><span class="o">+</span><span class="n">result</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>It would give something like:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="nc">Client</span> <span class="n">received</span><span class="k">:</span><span class="kt">Vector</span><span class="o">(</span><span class="kt">Bytes1:</span> <span class="kt">pos</span><span class="o">=</span><span class="err">0</span><span class="o">,</span> <span class="n">length</span><span class="k">=</span><span class="mi">1024</span><span class="o">,</span> <span class="n">src</span><span class="k">:</span> <span class="o">(</span><span class="kt">-</span><span class="err">12</span><span class="o">,</span><span class="err">28</span><span class="o">,</span><span class="mi">55</span><span class="o">,-</span><span class="mi">124</span><span class="o">,</span><span class="mi">3</span><span class="o">,-</span><span class="mi">54</span><span class="o">,-</span><span class="mi">53</span><span class="o">,</span><span class="mi">66</span><span class="o">,-</span><span class="mi">115</span><span class="o">,</span><span class="mf">17.</span><span class="o">..)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<blockquote><p>Now, you know about scalaz-stream clients, what about servers???</p></blockquote>
+
+<br/>
+
+
+<br/>
+
+
+<h2>Scalaz-stream NIO Server</h2>
+
+<p>Let&#8217;s start again :D</p>
+
+<h3>What is a server?</h3>
+
+<ul>
+<li>Something listening for client(s) connection</li>
+<li>When there is a client connected, the server can :
+
+<ul>
+<li>Receive data <code>I</code> <em>(for Input)</em> from the client</li>
+<li>Send data <code>W</code> <em>(for Write)</em> to the client</li>
+</ul>
+</li>
+<li>A server can manage multiple clients in parallel</li>
+</ul>
+
+
+<br/>
+
+
+<h3>Server seen as <code>Process</code></h3>
+
+<p>Remember that a client was defined above as:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="nc">Client</span> <span class="o">===</span> <span class="nc">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">Exchange</span><span class="o">[</span><span class="kt">I</span>, <span class="kt">W</span><span class="o">]]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>In our NIO, non-blocking, streaming world, a server can be considered as a stream of clients right?</p>
+
+<p>So finally, we can model a server as :</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="nc">Server</span> <span class="o">===</span> <span class="nc">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">Client</span><span class="o">[</span><span class="kt">I</span>, <span class="kt">W</span><span class="o">]]</span>
+</span><span class='line'>       <span class="o">===</span> <span class="nc">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">Exchange</span><span class="o">[</span><span class="kt">I</span>, <span class="kt">W</span><span class="o">]]]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>Whoooohoooo, a server is just a stream of streams!!!!</p></blockquote>
+
+<br/>
+
+
+<h3>Writing a server</h3>
+
+<p>Scalaz-Stream now provides a helper to create a TCP binary NIO server:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// the address of the server</span>
+</span><span class='line'><span class="k">val</span> <span class="n">address</span><span class="k">:</span> <span class="kt">InetSocketAddress</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">InetSocketAddress</span><span class="o">(</span><span class="s">&quot;xxx.yyy.zzz.ttt&quot;</span><span class="o">,</span> <span class="n">port</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// create a server</span>
+</span><span class='line'><span class="k">val</span> <span class="n">server</span><span class="k">:</span> <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">Exchange</span><span class="o">[</span><span class="kt">Bytes</span>, <span class="kt">Bytes</span><span class="o">]]]</span> <span class="k">=</span>
+</span><span class='line'>  <span class="n">nio</span><span class="o">.</span><span class="n">server</span><span class="o">(</span><span class="n">address</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">server</span> <span class="n">map</span> <span class="o">{</span> <span class="n">client</span> <span class="k">=&gt;</span>
+</span><span class='line'>  <span class="c1">// for each client</span>
+</span><span class='line'>  <span class="n">client</span> <span class="n">flatMap</span> <span class="o">{</span> <span class="n">ex</span><span class="k">:</span> <span class="kt">Exchange</span><span class="o">[</span><span class="kt">Bytes</span>, <span class="kt">Bytes</span><span class="o">]</span> <span class="k">=&gt;</span>
+</span><span class='line'>    <span class="c1">// read data sent by client in ex.read</span>
+</span><span class='line'>    <span class="o">???</span>
+</span><span class='line'>    <span class="c1">// write data to the client with ex.write</span>
+</span><span class='line'>    <span class="o">???</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>Don&#8217;t you find that quite elegant? ;)</p></blockquote>
+
+<br/>
+
+
+<h3>Managing client/server interaction business logic</h3>
+
+<p>There we simply re-use the <code>Exchange</code> described above so you can use exactly the same API than the ones for client. Here is another API that can be useful:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">type</span> <span class="kt">Writes1</span><span class="o">[</span><span class="kt">W</span>, <span class="kt">I</span>, <span class="kt">I2</span><span class="o">]</span> <span class="k">=</span> <span class="nc">Process</span><span class="o">[</span><span class="kt">I</span>, <span class="kt">W</span> <span class="kt">\/</span> <span class="kt">I2</span><span class="o">]</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">Exchange</span><span class="o">[</span><span class="kt">I</span>, <span class="kt">W</span><span class="o">](</span><span class="n">read</span><span class="k">:</span> <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">I</span><span class="o">],</span> <span class="n">write</span><span class="k">:</span> <span class="kt">Sink</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">W</span><span class="o">])</span> <span class="o">{</span>
+</span><span class='line'><span class="o">...</span>
+</span><span class='line'>  <span class="cm">/**</span>
+</span><span class='line'><span class="cm">   * Transforms this exchange to another exchange, that for every received `I` will consult supplied Writer1</span>
+</span><span class='line'><span class="cm">   * and eventually transforms `I` to `I2` or to `W` that is sent to remote system.</span>
+</span><span class='line'><span class="cm">   */</span>
+</span><span class='line'>  <span class="k">def</span> <span class="n">readThrough</span><span class="o">[</span><span class="kt">I2</span><span class="o">](</span><span class="n">w</span><span class="k">:</span> <span class="kt">Writer1</span><span class="o">[</span><span class="kt">W</span>, <span class="kt">I</span>, <span class="kt">I2</span><span class="o">])(</span><span class="k">implicit</span> <span class="n">S</span><span class="k">:</span> <span class="kt">Strategy</span> <span class="o">=</span> <span class="nc">Strategy</span><span class="o">.</span><span class="nc">DefaultStrategy</span><span class="o">)</span> <span class="k">:</span> <span class="kt">Exchange</span><span class="o">[</span><span class="kt">I2</span>,<span class="kt">W</span><span class="o">]</span>
+</span><span class='line'><span class="o">...</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// A small schema?</span>
+</span><span class='line'>            <span class="n">ex</span><span class="o">.</span><span class="n">read</span>
+</span><span class='line'>              <span class="o">|</span>
+</span><span class='line'>              <span class="n">v</span>
+</span><span class='line'>              <span class="n">I</span>
+</span><span class='line'>              <span class="o">|</span>
+</span><span class='line'> <span class="o">---------------------------</span>
+</span><span class='line'><span class="o">|</span>    <span class="nc">Writer1</span><span class="o">[</span><span class="kt">W</span>, <span class="kt">I</span>, <span class="kt">I2</span><span class="o">]</span>      <span class="o">|</span>
+</span><span class='line'> <span class="o">---------------------------</span>
+</span><span class='line'>              <span class="o">|</span>
+</span><span class='line'>          <span class="o">---------</span>
+</span><span class='line'>          <span class="o">|</span>       <span class="o">|</span>
+</span><span class='line'>          <span class="n">v</span>       <span class="n">v</span>
+</span><span class='line'>          <span class="n">W</span>       <span class="n">I2</span>
+</span><span class='line'>          <span class="o">|</span>
+</span><span class='line'>          <span class="n">v</span>
+</span><span class='line'>       <span class="n">ex</span><span class="o">.</span><span class="n">write</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">======&gt;</span> <span class="nc">Returns</span> <span class="nc">Exchange</span><span class="o">[</span><span class="kt">I2</span>, <span class="kt">W</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>With this API, you can compute some business logic on the received data from client.</p>
+
+<p>Let&#8217;s write the echo server corresponding to the previous client (<em>you can find this sample in scalaz-stream too</em>):</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">def</span> <span class="n">serverEcho</span><span class="o">(</span><span class="n">address</span><span class="k">:</span> <span class="kt">InetSocketAddress</span><span class="o">)</span><span class="k">:</span> <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">Bytes</span><span class="o">]]</span> <span class="k">=</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// This is a Writer1 that echoes everything it receives to the client and emits it locally</span>
+</span><span class='line'>  <span class="k">def</span> <span class="n">echoAll</span><span class="k">:</span> <span class="kt">Writer1</span><span class="o">[</span><span class="kt">Bytes</span>, <span class="kt">Bytes</span>, <span class="kt">Bytes</span><span class="o">]</span> <span class="k">=</span>
+</span><span class='line'>    <span class="n">receive1</span><span class="o">[</span><span class="kt">Bytes</span>, <span class="kt">Bytes</span> <span class="kt">\/</span> <span class="kt">Bytes</span><span class="o">]</span> <span class="o">{</span> <span class="n">i</span> <span class="k">=&gt;</span>
+</span><span class='line'>      <span class="c1">// echoes on left, emits on right and then loop (fby = followed by)</span>
+</span><span class='line'>      <span class="n">emitSeq</span><span class="o">(</span> <span class="nc">Seq</span><span class="o">(\/-(</span><span class="n">i</span><span class="o">),</span> <span class="o">-\/(</span><span class="n">i</span><span class="o">))</span> <span class="o">)</span> <span class="n">fby</span> <span class="n">echoAll</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// The server that echoes everything</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">receivedData</span><span class="k">:</span> <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">Bytes</span><span class="o">]]</span> <span class="k">=</span>
+</span><span class='line'>    <span class="k">for</span> <span class="o">{</span>
+</span><span class='line'>      <span class="n">client</span> <span class="k">&lt;-</span> <span class="n">nio</span><span class="o">.</span><span class="n">server</span><span class="o">(</span><span class="n">address</span><span class="o">)</span>
+</span><span class='line'>      <span class="n">rcv</span>    <span class="k">&lt;-</span> <span class="n">ex</span><span class="o">.</span><span class="n">readThrough</span><span class="o">(</span><span class="n">echoAll</span><span class="o">).</span><span class="n">run</span><span class="o">()</span>
+</span><span class='line'>    <span class="o">}</span> <span class="k">yield</span> <span class="n">rcv</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="n">receivedData</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>receivedData</code> is <code>Process[Task, Process[Task, Bytes]]</code> which is not so practical: we would prefer to gather all data received by clients in 1 single <code>Process[Task, Bytes]</code> to stream it to another module.</p>
+
+<p>Scalaz-Stream has the solution again:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">package</span> <span class="nn">object</span> <span class="n">merge</span> <span class="o">{</span>
+</span><span class='line'>  <span class="cm">/**</span>
+</span><span class='line'><span class="cm">   * Merges non-deterministically processes that are output of the `source` process.</span>
+</span><span class='line'><span class="cm">   */</span>
+</span><span class='line'>  <span class="k">def</span> <span class="n">mergeN</span><span class="o">[</span><span class="kt">A</span><span class="o">](</span><span class="n">source</span><span class="k">:</span> <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">A</span><span class="o">]])</span>
+</span><span class='line'>    <span class="o">(</span><span class="k">implicit</span> <span class="n">S</span><span class="k">:</span> <span class="kt">Strategy</span> <span class="o">=</span> <span class="nc">Strategy</span><span class="o">.</span><span class="nc">DefaultStrategy</span><span class="o">)</span><span class="k">:</span> <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">A</span><span class="o">]</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>Please note the Strategy which corresponds to the way Tasks will be executed and that can be compared to Scala <code>ExecutionContext</code>.</p></blockquote>
+
+<p>Fantastic, let&#8217;s plug it on our server:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// The server that echoes everything</span>
+</span><span class='line'><span class="k">def</span> <span class="n">serverEcho</span><span class="o">(</span><span class="n">address</span><span class="k">:</span> <span class="kt">InetSocketAddress</span><span class="o">)</span><span class="k">:</span> <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">Bytes</span><span class="o">]</span> <span class="k">=</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// This is a Writer1 that echoes everything it receives to the client and emits it locally</span>
+</span><span class='line'>  <span class="k">def</span> <span class="n">echoAll</span><span class="k">:</span> <span class="kt">Writer1</span><span class="o">[</span><span class="kt">Bytes</span>, <span class="kt">Bytes</span>, <span class="kt">Bytes</span><span class="o">]</span> <span class="k">=</span>
+</span><span class='line'>    <span class="n">receive1</span><span class="o">[</span><span class="kt">Bytes</span>, <span class="kt">Bytes</span> <span class="kt">\/</span> <span class="kt">Bytes</span><span class="o">]</span> <span class="o">{</span> <span class="n">i</span> <span class="k">=&gt;</span>
+</span><span class='line'>      <span class="c1">// echoes on left, emits on right and then loop (fby = followed by)</span>
+</span><span class='line'>      <span class="n">emitSeq</span><span class="o">(</span> <span class="nc">Seq</span><span class="o">(\/-(</span><span class="n">i</span><span class="o">),</span> <span class="o">-\/(</span><span class="n">i</span><span class="o">))</span> <span class="o">)</span> <span class="n">fby</span> <span class="n">echoAll</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// The server that echoes everything</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">receivedData</span><span class="k">:</span> <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">Bytes</span><span class="o">]]</span> <span class="k">=</span>
+</span><span class='line'>    <span class="k">for</span> <span class="o">{</span>
+</span><span class='line'>      <span class="n">client</span> <span class="k">&lt;-</span> <span class="n">nio</span><span class="o">.</span><span class="n">server</span><span class="o">(</span><span class="n">address</span><span class="o">)</span>
+</span><span class='line'>      <span class="n">rcv</span>    <span class="k">&lt;-</span> <span class="n">ex</span><span class="o">.</span><span class="n">readThrough</span><span class="o">(</span><span class="n">echoAll</span><span class="o">).</span><span class="n">run</span><span class="o">()</span>
+</span><span class='line'>    <span class="o">}</span> <span class="k">yield</span> <span class="n">rcv</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// Merges all client streams</span>
+</span><span class='line'>  <span class="n">merge</span><span class="o">.</span><span class="n">mergeN</span><span class="o">(</span><span class="n">receivedData</span><span class="o">)</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>Finally, we have a server and a client!!!!!</p>
+
+<p>Let&#8217;s plug them all together</p></blockquote>
+
+<h2>Run a server</h2>
+
+<p>First of all, we need to create a server that can be stopped when required.</p>
+
+<p>Let&#8217;s do in the scalaz-stream way using:</p>
+
+<ul>
+<li><code>wye.interrupt</code> :</li>
+</ul>
+
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="cm">/**</span>
+</span><span class='line'><span class="cm">   * Let through the right branch as long as the left branch is `false`,</span>
+</span><span class='line'><span class="cm">   * listening asynchronously for the left branch to become `true`.</span>
+</span><span class='line'><span class="cm">   * This halts as soon as the right branch halts.</span>
+</span><span class='line'><span class="cm">   */</span>
+</span><span class='line'>  <span class="k">def</span> <span class="n">interrupt</span><span class="o">[</span><span class="kt">I</span><span class="o">]</span><span class="k">:</span> <span class="kt">Wye</span><span class="o">[</span><span class="kt">Boolean</span>, <span class="kt">I</span>, <span class="kt">I</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<ul>
+<li><code>async.signal</code> which is a value that can be changed asynchronously based on 2 APIs:</li>
+</ul>
+
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="cm">/**</span>
+</span><span class='line'><span class="cm">   * Sets the value of this `Signal`. </span>
+</span><span class='line'><span class="cm">   */</span>
+</span><span class='line'>  <span class="k">def</span> <span class="n">set</span><span class="o">(</span><span class="n">a</span><span class="k">:</span> <span class="kt">A</span><span class="o">)</span><span class="k">:</span> <span class="kt">Task</span><span class="o">[</span><span class="kt">Unit</span><span class="o">]</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="cm">/**</span>
+</span><span class='line'><span class="cm">   * Returns the discrete version of this signal, updated only when `value`</span>
+</span><span class='line'><span class="cm">   * is changed ...</span>
+</span><span class='line'><span class="cm">   */</span>
+</span><span class='line'>  <span class="k">def</span> <span class="n">discrete</span><span class="k">:</span> <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">A</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Without lots of imagination, we can use a <code>Signal[Boolean].discrete</code> to obtain a <code>Process[Task, Boolean]</code> and wye it with previous server process using <code>wye.interrupt</code>. Then, to stop server, you just have to call:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">signal</span><span class="o">.</span><span class="n">set</span><span class="o">(</span><span class="kc">true</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Here is the full code:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// local bind address</span>
+</span><span class='line'><span class="k">val</span> <span class="n">addr</span> <span class="k">=</span> <span class="n">localAddress</span><span class="o">(</span><span class="mi">12345</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// The stop signal initialized to false</span>
+</span><span class='line'><span class="k">val</span> <span class="n">stop</span> <span class="k">=</span> <span class="n">async</span><span class="o">.</span><span class="n">signal</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span>
+</span><span class='line'><span class="n">stop</span><span class="o">.</span><span class="n">set</span><span class="o">(</span><span class="kc">false</span><span class="o">).</span><span class="n">run</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Create the server controlled by the previous signal</span>
+</span><span class='line'><span class="k">val</span> <span class="n">stoppableServer</span> <span class="k">=</span> <span class="o">(</span><span class="n">stop</span><span class="o">.</span><span class="n">discrete</span> <span class="n">wye</span> <span class="n">echoServer</span><span class="o">(</span><span class="n">addr</span><span class="o">))(</span><span class="n">wye</span><span class="o">.</span><span class="n">interrupt</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Run server in async without taking care of output data</span>
+</span><span class='line'><span class="n">stopServer</span><span class="o">.</span><span class="n">runLog</span><span class="o">.</span><span class="n">runAsync</span><span class="o">(</span> <span class="k">_</span> <span class="k">=&gt;</span> <span class="o">())</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// DO OTHER THINGS</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// stop server</span>
+</span><span class='line'><span class="n">stop</span><span class="o">.</span><span class="n">set</span><span class="o">(</span><span class="kc">true</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>Run server &amp; client in the same code</h2>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// local bind address</span>
+</span><span class='line'><span class="k">val</span> <span class="n">addr</span> <span class="k">=</span> <span class="n">localAddress</span><span class="o">(</span><span class="mi">12345</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// the stop signal initialized to false</span>
+</span><span class='line'><span class="k">val</span> <span class="n">stop</span> <span class="k">=</span> <span class="n">async</span><span class="o">.</span><span class="n">signal</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span>
+</span><span class='line'><span class="n">stop</span><span class="o">.</span><span class="n">set</span><span class="o">(</span><span class="kc">false</span><span class="o">).</span><span class="n">run</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Create the server controlled by the previous signal</span>
+</span><span class='line'><span class="k">val</span> <span class="n">stoppableServer</span> <span class="k">=</span> <span class="o">(</span><span class="n">stop</span><span class="o">.</span><span class="n">discrete</span> <span class="n">wye</span> <span class="n">serverEcho</span><span class="o">(</span><span class="n">addr</span><span class="o">))(</span><span class="n">wye</span><span class="o">.</span><span class="n">interrupt</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Run server in async without taking care of output data</span>
+</span><span class='line'><span class="n">stoppableServer</span><span class="o">.</span><span class="n">runLog</span><span class="o">.</span><span class="n">runAsync</span><span class="o">(</span> <span class="k">_</span> <span class="k">=&gt;</span> <span class="o">())</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// create a client that sends 1024 random bytes</span>
+</span><span class='line'><span class="k">val</span> <span class="n">dataArray</span> <span class="k">=</span> <span class="nc">Array</span><span class="o">.</span><span class="n">fill</span><span class="o">[</span><span class="kt">Byte</span><span class="o">](</span><span class="mi">1024</span><span class="o">)(</span><span class="mi">1</span><span class="o">)</span>
+</span><span class='line'><span class="n">scala</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="nc">Random</span><span class="o">.</span><span class="n">nextBytes</span><span class="o">(</span><span class="n">dataArray</span><span class="o">)</span>
+</span><span class='line'><span class="k">val</span> <span class="n">clientOutput</span> <span class="k">=</span> <span class="n">clientEcho</span><span class="o">(</span><span class="n">addr</span><span class="o">,</span> <span class="nc">Bytes</span><span class="o">.</span><span class="n">of</span><span class="o">(</span><span class="n">dataArray</span><span class="o">))</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Consume all received data in a blocking way...</span>
+</span><span class='line'><span class="k">val</span> <span class="n">result</span> <span class="k">=</span> <span class="n">clientOutput</span><span class="o">.</span><span class="n">runLog</span><span class="o">.</span><span class="n">run</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// stop server</span>
+</span><span class='line'><span class="n">stop</span><span class="o">.</span><span class="n">set</span><span class="o">(</span><span class="kc">true</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>Naturally you rarely run the client &amp; server in the same code but this is funny to see our easily you can do that with scalaz-stream as you just manipulate <code>Process</code> run on provided <code>Strategy</code></p></blockquote>
+
+<br/>
+
+
+<blockquote><p>Finally, we can go back to our subject: <strong>feeding a <code>DStream</code> using a scalaz-stream NIO client/server</strong></p></blockquote>
+
+<h2>Pipe server output to DStream</h2>
+
+<p><code>clientEcho/serverEcho</code> are simple samples but not very useful.</p>
+
+<p>Now we are going to use a custom client/server I&#8217;ve written for this article:</p>
+
+<ul>
+<li><code>NioClient.sendAndCheckSize</code> is a client streaming all emitted data of a <code>Process[Task, Bytes]</code> to the server and checking that the global size has been ack&#8217;ed by server.</li>
+<li><code>NioServer.ackSize</code> is a server acknowledging all received packets by their size (as a 4-bytes Int)</li>
+</ul>
+
+
+<p>Now let&#8217;s write a client/server dstreamizing data to Spark:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// First create a streaming context</span>
+</span><span class='line'><span class="k">val</span> <span class="n">ssc</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">StreamingContext</span><span class="o">(</span><span class="n">clusterUrl</span><span class="o">,</span> <span class="s">&quot;SparkStreamStuff&quot;</span><span class="o">,</span> <span class="nc">Seconds</span><span class="o">(</span><span class="mi">1</span><span class="o">))</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Local bind address</span>
+</span><span class='line'><span class="k">val</span> <span class="n">addr</span> <span class="k">=</span> <span class="n">localAddress</span><span class="o">(</span><span class="mi">12345</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// The stop signal initialized to false</span>
+</span><span class='line'><span class="k">val</span> <span class="n">stop</span> <span class="k">=</span> <span class="n">async</span><span class="o">.</span><span class="n">signal</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span>
+</span><span class='line'><span class="n">stop</span><span class="o">.</span><span class="n">set</span><span class="o">(</span><span class="kc">false</span><span class="o">).</span><span class="n">run</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Create the server controlled by the previous signal</span>
+</span><span class='line'><span class="k">val</span> <span class="n">stoppableServer</span> <span class="k">=</span> <span class="o">(</span><span class="n">stop</span><span class="o">.</span><span class="n">discrete</span> <span class="n">wye</span> <span class="nc">NioServer</span><span class="o">.</span><span class="n">ackSize</span><span class="o">(</span><span class="n">addr</span><span class="o">))(</span><span class="n">wye</span><span class="o">.</span><span class="n">interrupt</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Create a client that sends a natural integer every 50ms as a string (until reaching 100)</span>
+</span><span class='line'><span class="k">val</span> <span class="n">clientData</span><span class="k">:</span> <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">Bytes</span><span class="o">]</span> <span class="k">=</span> <span class="n">naturalsEvery</span><span class="o">(</span><span class="mi">50</span> <span class="n">milliseconds</span><span class="o">).</span><span class="n">take</span><span class="o">(</span><span class="mi">100</span><span class="o">).</span><span class="n">map</span><span class="o">(</span><span class="n">i</span> <span class="k">=&gt;</span> <span class="nc">Bytes</span><span class="o">.</span><span class="n">of</span><span class="o">(</span><span class="n">i</span><span class="o">.</span><span class="n">toString</span><span class="o">.</span><span class="n">getBytes</span><span class="o">))</span>
+</span><span class='line'><span class="k">val</span> <span class="n">clientOutput</span> <span class="k">=</span> <span class="nc">NioClient</span><span class="o">.</span><span class="n">sendAndCheckSize</span><span class="o">(</span><span class="n">addr</span><span class="o">,</span> <span class="n">clientData</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Dstreamize the server into the streaming context</span>
+</span><span class='line'><span class="k">val</span> <span class="o">(</span><span class="n">consumer</span><span class="o">,</span> <span class="n">dstream</span><span class="o">)</span> <span class="k">=</span> <span class="n">dstreamize</span><span class="o">(</span><span class="n">stoppableServer</span><span class="o">,</span> <span class="n">ssc</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Prepare dstream output</span>
+</span><span class='line'><span class="n">dstream</span><span class="o">.</span><span class="n">map</span><span class="o">(</span> <span class="n">bytes</span> <span class="k">=&gt;</span> <span class="k">new</span> <span class="nc">String</span><span class="o">(</span><span class="n">bytes</span><span class="o">.</span><span class="n">toArray</span><span class="o">)</span> <span class="o">).</span><span class="n">print</span><span class="o">()</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Start the streaming context</span>
+</span><span class='line'><span class="n">ssc</span><span class="o">.</span><span class="n">start</span><span class="o">()</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Run the server just for its effects</span>
+</span><span class='line'><span class="n">consumer</span><span class="o">.</span><span class="n">run</span><span class="o">.</span><span class="n">runAsync</span><span class="o">(</span> <span class="k">_</span> <span class="k">=&gt;</span> <span class="o">()</span> <span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Run the client in a blocking way</span>
+</span><span class='line'><span class="n">clientOutput</span><span class="o">.</span><span class="n">runLog</span><span class="o">.</span><span class="n">run</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Await SSC termination a bit</span>
+</span><span class='line'><span class="n">ssc</span><span class="o">.</span><span class="n">awaitTermination</span><span class="o">(</span><span class="mi">1000</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// stop server</span>
+</span><span class='line'><span class="n">stop</span><span class="o">.</span><span class="n">set</span><span class="o">(</span><span class="kc">true</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// stop the streaming context</span>
+</span><span class='line'><span class="n">ssc</span><span class="o">.</span><span class="n">stop</span><span class="o">()</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>When run, it prints :</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="o">-------------------------------------------</span>
+</span><span class='line'><span class="nc">Time</span><span class="k">:</span> <span class="err">1395049304000</span> <span class="kt">ms</span>
+</span><span class='line'><span class="o">-------------------------------------------</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">-------------------------------------------</span>
+</span><span class='line'><span class="nc">Time</span><span class="k">:</span> <span class="err">1395049305000</span> <span class="kt">ms</span>
+</span><span class='line'><span class="o">-------------------------------------------</span>
+</span><span class='line'><span class="mi">0</span>
+</span><span class='line'><span class="mi">1</span>
+</span><span class='line'><span class="mi">2</span>
+</span><span class='line'><span class="mi">3</span>
+</span><span class='line'><span class="mi">4</span>
+</span><span class='line'><span class="mi">5</span>
+</span><span class='line'><span class="mi">6</span>
+</span><span class='line'><span class="mi">7</span>
+</span><span class='line'><span class="mi">8</span>
+</span><span class='line'><span class="mi">9</span>
+</span><span class='line'><span class="o">...</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">-------------------------------------------</span>
+</span><span class='line'><span class="nc">Time</span><span class="k">:</span> <span class="err">1395049306000</span> <span class="kt">ms</span>
+</span><span class='line'><span class="o">-------------------------------------------</span>
+</span><span class='line'><span class="mi">20</span>
+</span><span class='line'><span class="mi">21</span>
+</span><span class='line'><span class="mi">22</span>
+</span><span class='line'><span class="mi">23</span>
+</span><span class='line'><span class="mi">24</span>
+</span><span class='line'><span class="mi">25</span>
+</span><span class='line'><span class="mi">26</span>
+</span><span class='line'><span class="mi">27</span>
+</span><span class='line'><span class="mi">28</span>
+</span><span class='line'><span class="mi">29</span>
+</span><span class='line'><span class="o">...</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Until 100&#8230;</p>
+
+<br/>
+
+
+<br/>
+
+
+<h2>Part2&#8217;s conclusion</h2>
+
+<p>I spent this second part of my tryptic mainly explaining a few concepts of the new scalaz-stream brand new NIO API. With it, a client becomes just a stream of exchanges <code>Process[Task, Exchange[I, W]]</code> and a server becomes a stream of stream of exchanges <code>Process[Task, Process[Task, Exchange[I, W]]]</code>.</p>
+
+<p>As soon as you manipulate <code>Process</code>, you can then use the <code>dstreamize</code> API exposed in <a href="/2014/03/08/zpark-ml-nio-1/">Part 1</a> to pipe streamed data into Spark.</p>
+
+<p><strong>Let&#8217;s go to <a href="/2014/03/10/zpark-ml-nio-3/">Part 3</a> now in which we&#8217;re going to do some fancy Machine Learning training with these new tools.</strong></p>
+
+<br/>
+
+
+<br/>
+
+
+<blockquote><p><a href="/2014/03/08/zpark-ml-nio-1/">GO TO PART1</a> &lt; &#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8211;> <a href="/2014/03/10/zpark-ml-nio-3/">GO TO PART3</a></p></blockquote>
+
+<br/>
+
+
+<br/>
+
+
+<br/>
+
+
+<br/>
+
+
+
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Pascal Voitot</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-03-09T19:19:00+01:00" pubdate data-updated="true">Mar 9<span>th</span>, 2014</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/ml/'>ML</a>, <a class='category' href='/blog/categories/nio/'>NIO</a>, <a class='category' href='/blog/categories/machine-learning/'>machine learning</a>, <a class='category' href='/blog/categories/map-reduce/'>map reduce</a>, <a class='category' href='/blog/categories/recommendation/'>recommendation</a>, <a class='category' href='/blog/categories/scala/'>scala</a>, <a class='category' href='/blog/categories/scalaz-stream/'>scalaz-stream</a>, <a class='category' href='/blog/categories/spark/'>spark</a>, <a class='category' href='/blog/categories/stream/'>stream</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://www.mandubian.com/2014/03/09/zpark-ml-nio-2/" data-via="mandubian" data-counturl="http://www.mandubian.com/2014/03/09/zpark-ml-nio-2/" >Tweet</a>
+  
+  
+  <div class="g-plusone" data-size="medium"></div>
+  
+  
+</div>
+
+    
+    
+    <section>
+      <h1>Comments</h1>
+      <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+    </section>
+    
+    <ul class="pager">
+      
+      <li class="previous"><a class="basic-alignment left"
+        href="/2014/03/08/zpark-ml-nio-1/" title="Previous Post:
+        ZPark-Ztream II (Part 1/3): Fancy Spark Streamed Machine-Learning & new Scalaz-Stream NIO API">&laquo; ZPark-Ztream II (Part 1/3): Fancy Spark Streamed Machine-Learning & new Scalaz-Stream NIO API</a></li>
+      
+      <li><a href="/blog/archives">Blog Archives</a></li>
+      
+      <li class="next"><a class="basic-alignment right" href="/2014/03/10/zpark-ml-nio-3/"
+        title="Next Post: ZPark-Ztream II (Part 3/3): Fancy Spark Streamed Machine-Learning & new Scalaz-Stream NIO API">ZPark-Ztream II (Part 3/3): Fancy Spark Streamed Machine-Learning & new Scalaz-Stream NIO API
+        &raquo;</a></li>
+      
+    </ul>
+  </footer>
+</article>
+
+<aside class="sidebar-nav span3">
+  
+    <section class="well">
+  <ul id="recent_posts" class="nav nav-list">
+    <li class="nav-header">Recent Posts</li>
+    
+      <li class="post">
+        <a href="/2015/04/09/freer/">FreeR - Hybrid Free Monads for Reduced Quadratic Complexity/Observability & Map-Fusion Optimization in Scala</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014/12/21/scaledn/">Scaledn: Promote EDN as a far better alternative to Json in Scala</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014/07/30/hfunctor/">Shapeless HFunctor for Heterogenous Structures (& others)</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014/07/29/hmonoid/">Shapeless HMonoid for Heterogenous Structures (& others)</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014/06/11/daemonad/">Summon Daemonad to macro-snoop into monad stacks</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+<section class="well">
+  <ul id="gh_repos" data-user="mandubian" data-count="5" data-skip="true" class="nav">
+	<li class="nav-header">On GitHub</li>
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+  <a class="github-follow" href="https://github.com/mandubian">Follow @mandubian</a>
+  
+</section>
+
+
+
+<section class="well">
+  <ul id="tweets" class="nav" data-user="mandubian" data-count="4" data-replies="false">
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+    <a href="http://twitter.com/mandubian" class="twitter-follow-button" data-show-count="false">Follow @mandubian</a>
+  
+</section>
+
+
+
+
+
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo" class="page-footer"><hr>
+<p>
+  Copyright &copy; 2015 - Pascal Voitot -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'mandubian';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://www.mandubian.com/2014/03/09/zpark-ml-nio-2/';
+        var disqus_url = 'http://www.mandubian.com/2014/03/09/zpark-ml-nio-2/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+  <script type="text/javascript">
+    (function() {
+      var script = document.createElement('script'); script.type = 'text/javascript'; script.async = true;
+      script.src = 'https://apis.google.com/js/plusone.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(script, s);
+    })();
+  </script>
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = 'http://platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

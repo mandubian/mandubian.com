@@ -1,0 +1,1185 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>New Play 2.3 Validation API : breaking the 22 limits with Shapeless - Mandubian Blog</title>
+  <meta name="author" content="Pascal Voitot">
+
+  
+  <meta name="description" content="New Play 2.3 Validation API : Breaking the 22 Limits With Shapeless
+    
+    
+      
+        
+
+
+
+
+
+
+
+
+  
+
+
+Jan 31st, 2014 &hellip;">
+  <meta name="keywords" content="scala,play framework,shapeless,validation,json,functional programming,typesafe">
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://www.mandubian.com/2014/01/31/play-rules-shapeless">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/bootstrap/bootstrap.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/stylesheets/bootstrap/responsive.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/stylesheets/syntax/syntax.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/stylesheets/d3d.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <style type="text/css">
+    body {
+      padding-bottom: 40px;
+    }
+    h1 {
+      margin-bottom: 15px;
+    }
+    img {
+      max-width: 100%;
+    }
+    .sharing, .meta, .pager {
+      margin: 20px 0px 20px 0px;
+    }
+    .page-footer p {
+      text-align: center;
+    }
+
+    article {
+      margin-bottom: 50px;
+      border-top: #DDD solid 20px;
+    }
+ 
+  </style>
+  <script src="/javascripts/libs/jquery.js"></script>
+  <script src="/javascripts/libs/modernizr-2.0.js"></script>
+  <script src="/javascripts/libs/bootstrap.js"></script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <link href="/atom.xml" rel="alternate" title="Mandubian Blog" type="application/atom+xml">
+  
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-10417377-11']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   >
+  <nav role="navigation"><div class="navbar">
+  <div class="navbar-inner">
+    <div class="container">
+      <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </a>
+
+      <a class="brand" href="/">Mandubian Blog</a>
+
+      <div class="nav-collapse">
+        <ul class="nav">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+
+        <ul class="nav pull-right" data-subscription="rss">
+          <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+          
+        </ul>
+
+        
+          <form class="pull-right navbar-search" action="http://google.com/search" method="get">
+            <fieldset role="search">
+              <input type="hidden" name="q" value="site:www.mandubian.com" />
+              <input class="search-query" type="text" name="q" results="0" placeholder="Search"/>
+            </fieldset>
+          </form>
+        
+      </div>
+    </div>
+  </div>
+</div>
+</nav>
+  <div class="container">
+    <div class="row-fluid">
+      
+<article class="hentry span9" role="article">
+
+  
+  <header class="page-header">
+    
+      <h1 class="entry-title">New Play 2.3 Validation API : Breaking the 22 Limits With Shapeless</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-01-31T08:08:00+01:00" pubdate data-updated="true">Jan 31<span>st</span>, 2014</time>
+        
+         | <a href="#disqus_thread">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>The code &amp; sample apps can be found on <a href="https://github.com/mandubian/shapeless-rules">Github</a></p>
+
+<p>After 5 months studying theories deeper &amp; deeper on my free-time and preparing 3 talks for <a href="http://www.scala.io">scala.io</a> &amp; <a href="http://www.ping-conf.com">ping-conf</a> with my friend <a href="http://www.twitter.com/skaalf">Julien Tournay aka @skaalf</a>, I&#8217;m back blogging and I&#8217;ve got a few more ideas of articles to come&#8230;</p>
+
+<blockquote><p>If you&#8217;re interested in those talks, you can find pingconf videos here:</p>
+
+<ul>
+<li><a href="http://www.ustream.tv/recorded/42778238">Entropic history &amp; Play2.3 new validation API</a></li>
+<li><a href="http://www.ustream.tv/recorded/42802705">Play2, scalaz-stream &amp; SciFi</a></li>
+</ul>
+</blockquote>
+
+<p>Let&#8217;s go back to our today&#8217;s subject : <strong>Incoming Play2.3/Scala generic validation API &amp; more</strong>.</p>
+
+<p><a href="http://www.twitter.com/skaalf">Julien Tournay aka @skaalf</a> has been working a lot for a few months developing this new API and has just published an article previewing <a href="http://jto.github.io/articles/play_new_validation_api/">Play 2.3 generic validation API</a>.</p>
+
+<p>This new API is just the logical extension of play2/Scala Json API (that I&#8217;ve been working &amp; promoting those 2 last years) pushing its principles far further by allowing validation on any data types.</p>
+
+<p>This new API is a real step further as it will progressively propose a common API for all validations in Play2/Scala (Form/Json/XML/&#8230;). It proposes an even more robust design relying on very strong theoretical ground making it very reliable &amp; typesafe.</p>
+
+<p>Julien has written his <a href="http://jto.github.io/articles/play_new_validation_api/">article</a> presenting the new API basics and he also found time to write great documentation for this new validation API. I must confess Json API doc was quite messy but I&#8217;ve never found freetime (and courage) to do better. So I&#8217;m not going to spend time on basic features of this new API and I&#8217;m going to target advanced features to open your minds about the power of this new API.</p>
+
+<blockquote><p>Let&#8217;s have fun with this new APi &amp; <a href="https://github.com/milessabin/shapeless">Shapeless</a>, this fantastic tool for higher-rank polymorphism &amp; type-safety!</p></blockquote>
+
+<br/>
+
+
+<h2>Warm-up with Higher-kind Zipping of Rules</h2>
+
+<p>A really cool &amp; new feature of Play2.3 generic validation API is its ability to compose validation Rules in chains like:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">rule1</span><span class="k">:</span> <span class="kt">Rule</span><span class="o">[</span><span class="kt">A</span>, <span class="kt">B</span><span class="o">]</span> <span class="k">=</span> <span class="o">...</span>
+</span><span class='line'><span class="k">val</span> <span class="n">rule2</span><span class="k">:</span> <span class="kt">Rule</span><span class="o">[</span><span class="kt">B</span>, <span class="kt">C</span><span class="o">]</span> <span class="k">=</span> <span class="o">...</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">rule3</span><span class="k">:</span> <span class="kt">Rule</span><span class="o">[</span><span class="kt">A</span>, <span class="kt">C</span><span class="o">]</span> <span class="k">=</span> <span class="n">rule1</span> <span class="n">compose</span> <span class="n">rule2</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><em>In Play2.1 Json API, you couldn&#8217;t do that (you could only map on Reads).</em></p>
+
+<p>Moreover, with new validation API, as in Json API, you can use macros to create basic validators from case-classes.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">FooBar</span><span class="o">(</span><span class="n">foo</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">bar</span><span class="k">:</span> <span class="kt">Int</span><span class="o">,</span> <span class="n">foo2</span><span class="k">:</span> <span class="kt">Long</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">rule</span> <span class="k">=</span> <span class="nc">Rule</span><span class="o">.</span><span class="n">gen</span><span class="o">[</span><span class="kt">JsValue</span>, <span class="kt">FooBar</span><span class="o">]</span>
+</span><span class='line'>
+</span><span class='line'><span class="cm">/** Action to validate Json:</span>
+</span><span class='line'><span class="cm">  * { foo: &quot;toto&quot;, bar: 5, foo2: 2 }</span>
+</span><span class='line'><span class="cm">  */</span>
+</span><span class='line'><span class="k">def</span> <span class="n">action</span> <span class="k">=</span> <span class="nc">Action</span><span class="o">(</span><span class="n">parse</span><span class="o">.</span><span class="n">json</span><span class="o">)</span> <span class="o">{</span> <span class="n">request</span> <span class="k">=&gt;</span>
+</span><span class='line'>  <span class="n">rule</span><span class="o">.</span><span class="n">validate</span><span class="o">(</span><span class="n">request</span><span class="o">.</span><span class="n">body</span><span class="o">)</span> <span class="n">map</span> <span class="o">{</span> <span class="n">foobar</span> <span class="k">=&gt;</span>
+</span><span class='line'>    <span class="nc">Ok</span><span class="o">(</span><span class="n">foobar</span><span class="o">.</span><span class="n">toString</span><span class="o">)</span>
+</span><span class='line'>  <span class="o">}</span> <span class="n">recoverTotal</span> <span class="o">{</span> <span class="n">errors</span> <span class="k">=&gt;</span>
+</span><span class='line'>    <span class="nc">BadRequest</span><span class="o">(</span><span class="n">errors</span><span class="o">.</span><span class="n">toString</span><span class="o">)</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Great but sometimes not enough as you would like to add custom validations on your class.
+For example, you want to verify :</p>
+
+<ul>
+<li><code>foo</code> isn&#8217;t empty</li>
+<li><code>bar</code> is >5</li>
+<li><code>foo2</code> is &lt;10</li>
+</ul>
+
+
+<p>For that you can&#8217;t use the macro and must write your caseclass Rule yourself.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">FooBar</span><span class="o">(</span><span class="n">foo</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">bar</span><span class="k">:</span> <span class="kt">Int</span><span class="o">,</span> <span class="n">foo2</span><span class="k">:</span> <span class="kt">Long</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">import</span> <span class="nn">play.api.data.mapping.json.Rules</span>
+</span><span class='line'><span class="k">import</span> <span class="nn">Rules._</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">val</span> <span class="n">rule</span> <span class="k">=</span> <span class="nc">From</span><span class="o">[</span><span class="kt">JsValue</span><span class="o">]</span> <span class="o">{</span> <span class="nc">__</span> <span class="k">=&gt;</span>
+</span><span class='line'>  <span class="o">(</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;foo&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">](</span><span class="n">notEmpty</span><span class="o">)</span> <span class="o">~</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;bar&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Int</span><span class="o">](</span><span class="n">min</span><span class="o">(</span><span class="mi">5</span><span class="o">))</span> <span class="o">~</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span> <span class="o">\</span> <span class="s">&quot;foo2&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Long</span><span class="o">](</span><span class="n">max</span><span class="o">(</span><span class="mi">10</span><span class="o">))</span>
+</span><span class='line'>  <span class="o">)(</span><span class="nc">FooBar</span><span class="o">.</span><span class="n">apply</span> <span class="k">_</span><span class="o">)</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><em>Please note the new <code>From[JsValue]</code>: if it were Xml, it would be <code>From[Xml]</code>, genericity requires some more info.</em></p>
+
+<p>Ok that&#8217;s not too hard but sometimes you would like to use first the macro and after those primary type validations, you want to refine with custom validations. Something like:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="nc">Rule</span><span class="o">.</span><span class="n">gen</span><span class="o">[</span><span class="kt">JsValue</span>, <span class="kt">FooBar</span><span class="o">]</span> <span class="o">+?+?+</span> <span class="o">(</span> <span class="o">(</span><span class="n">notEmpty</span><span class="k">:</span><span class="kt">Rule</span><span class="o">[</span><span class="kt">String</span>, <span class="kt">String</span><span class="o">])</span> <span class="o">+:</span> <span class="o">(</span><span class="n">min</span><span class="o">(</span><span class="mi">5</span><span class="o">)</span><span class="k">:</span><span class="kt">Rule</span><span class="o">[</span><span class="kt">Int</span>, <span class="kt">Int</span><span class="o">])</span> <span class="o">+:</span> <span class="o">(</span><span class="n">min</span><span class="o">(</span><span class="mi">10L</span><span class="o">)</span><span class="k">:</span><span class="kt">Rule</span><span class="o">[</span><span class="kt">Long</span>,<span class="kt">Long</span><span class="o">])</span> <span class="o">)</span>
+</span><span class='line'><span class="c1">// +?+?+ is a non-existing operator meaning &quot;compose&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>As you may know, you can&#8217;t do use this <code>+:</code> from Scala <code>Sequence[T]</code> as this list of Rules is typed heterogenously and <code>Rule[I, O]</code> is invariant.</p>
+
+<p>So we are going to use Shapeless heterogenous Hlist for that:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">customRules</span> <span class="k">=</span>
+</span><span class='line'>  <span class="o">(</span><span class="n">notEmpty</span><span class="k">:</span><span class="kt">Rule</span><span class="o">[</span><span class="kt">String</span>, <span class="kt">String</span><span class="o">])</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="n">min</span><span class="o">(</span><span class="mi">5</span><span class="o">)</span><span class="k">:</span><span class="kt">Rule</span><span class="o">[</span><span class="kt">Int</span>, <span class="kt">Int</span><span class="o">])</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="n">min</span><span class="o">(</span><span class="mi">10L</span><span class="o">)</span><span class="k">:</span><span class="kt">Rule</span><span class="o">[</span><span class="kt">Long</span>,<span class="kt">Long</span><span class="o">])</span> <span class="o">::</span>
+</span><span class='line'>  <span class="nc">HNil</span>
+</span><span class='line'><span class="c1">// customRules is inferred Rule[String, String]) :: Rule[Int, Int] :: Rule[Long,Long]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<br/>
+
+
+<br/>
+
+
+<h4>How to compose <code>Rule[JsValue, FooBar]</code> with <code>Rule[String, String]) :: Rule[Int, Int] :: Rule[Long,Long]</code> ?</h4>
+
+<br/>
+
+
+<p>We need to convert <code>Rule[JsValue, FooBar]</code> to something like <code>Rule[JsValue, T &lt;: HList]</code>.</p>
+
+<p>Based on Shapeless <code>Generic[T]</code>, we can provide a nice little new conversion API <code>.hlisted</code>:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">rule</span><span class="k">:</span> <span class="kt">Rule</span><span class="o">[</span><span class="kt">JsValue</span>, <span class="kt">String</span> <span class="kt">::</span> <span class="kt">Int</span> <span class="kt">::</span> <span class="kt">Long</span> <span class="kt">::</span> <span class="kt">HNil</span><span class="o">]</span> <span class="k">=</span> <span class="nc">Rule</span><span class="o">.</span><span class="n">gen</span><span class="o">[</span><span class="kt">JsValue</span>, <span class="kt">FooBar</span><span class="o">].</span><span class="n">hlisted</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>Generic[T]</code> is able to convert any caseclass from Scala from/to Shapeless HList (&amp; CoProduct).</p>
+
+<p>So we can validate a case class with the macro and get a <code>Rule[JsValue, T &lt;: HList]</code> from it.</p>
+
+<br/>
+
+
+<br/>
+
+
+<h4>How to compose <code>Rule[JsValue, String :: Int :: Long :: HNil]</code> with <code>Rule[String, String]) :: Rule[Int, Int] :: Rule[Long,Long]</code>?</h4>
+
+<br/>
+
+
+<p>Again, using Shapeless Polymorphic and HList RightFolder, we can implement a function :</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="nc">Rule</span><span class="o">[</span><span class="kt">String</span>, <span class="kt">String</span><span class="o">])</span> <span class="o">::</span> <span class="nc">Rule</span><span class="o">[</span><span class="kt">Int</span>, <span class="kt">Int</span><span class="o">]</span> <span class="o">::</span> <span class="nc">Rule</span><span class="o">[</span><span class="kt">Long</span>,<span class="kt">Long</span><span class="o">]</span> <span class="o">::</span> <span class="nc">HNil</span><span class="o">)</span> <span class="k">=&gt;</span>
+</span><span class='line'>    <span class="nc">Rule</span><span class="o">[</span><span class="kt">String</span> <span class="kt">::</span> <span class="kt">Int</span> <span class="kt">::</span> <span class="kt">Long</span> <span class="kt">::</span> <span class="kt">HNil</span>, <span class="kt">String</span> <span class="kt">::</span> <span class="kt">Int</span> <span class="kt">::</span> <span class="kt">Long</span> <span class="kt">::</span> <span class="kt">HNil</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>This looks like some higher-kind zip function, let&#8217;s call it <code>HZIP</code>.</p></blockquote>
+
+<br/>
+
+
+<br/>
+
+
+<h4>Now, we can compose them&#8230;</h4>
+
+<br/>
+
+
+
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">ruleZip</span> <span class="k">=</span> <span class="nc">Rule</span><span class="o">.</span><span class="n">gen</span><span class="o">[</span><span class="kt">JsValue</span>, <span class="kt">FooBar</span><span class="o">].</span><span class="n">hlisted</span> <span class="n">compose</span> <span class="n">hzip</span><span class="o">(</span>
+</span><span class='line'>  <span class="o">(</span><span class="n">notEmpty</span><span class="k">:</span><span class="kt">Rule</span><span class="o">[</span><span class="kt">String</span>, <span class="kt">String</span><span class="o">])</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="n">min</span><span class="o">(</span><span class="mi">5</span><span class="o">)</span><span class="k">:</span><span class="kt">Rule</span><span class="o">[</span><span class="kt">Int</span>, <span class="kt">Int</span><span class="o">])</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="n">min</span><span class="o">(</span><span class="mi">10L</span><span class="o">)</span><span class="k">:</span><span class="kt">Rule</span><span class="o">[</span><span class="kt">Long</span>,<span class="kt">Long</span><span class="o">])</span> <span class="o">::</span>
+</span><span class='line'>  <span class="nc">HNil</span>
+</span><span class='line'><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h4>Finally, let&#8217;s wire all together in a Play action:</h4>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">def</span> <span class="n">hzipper</span> <span class="k">=</span> <span class="nc">Action</span><span class="o">(</span><span class="n">parse</span><span class="o">.</span><span class="n">json</span><span class="o">)</span> <span class="o">{</span> <span class="n">request</span> <span class="k">=&gt;</span>
+</span><span class='line'>  <span class="n">ruleZip</span><span class="o">.</span><span class="n">validate</span><span class="o">(</span><span class="n">request</span><span class="o">.</span><span class="n">body</span><span class="o">)</span> <span class="n">map</span> <span class="o">{</span> <span class="n">foobar</span> <span class="k">=&gt;</span>
+</span><span class='line'>    <span class="nc">Ok</span><span class="o">(</span><span class="n">foobar</span><span class="o">.</span><span class="n">toString</span><span class="o">)</span>
+</span><span class='line'>  <span class="o">}</span> <span class="n">recoverTotal</span> <span class="o">{</span> <span class="n">errors</span> <span class="k">=&gt;</span>
+</span><span class='line'>    <span class="nc">BadRequest</span><span class="o">(</span><span class="n">errors</span><span class="o">.</span><span class="n">toString</span><span class="o">)</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// OK case</span>
+</span><span class='line'><span class="o">{</span>
+</span><span class='line'>  <span class="s">&quot;foo&quot;</span> <span class="k">:</span> <span class="err">&quot;</span><span class="kt">toto</span><span class="err">&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;bar&quot;</span> <span class="k">:</span> <span class="err">5</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo2&quot;</span> <span class="k">:</span> <span class="err">5</span>
+</span><span class='line'><span class="o">}</span> <span class="k">=&gt;</span> <span class="n">toto</span> <span class="o">::</span> <span class="mi">5</span> <span class="o">::</span> <span class="mi">8</span> <span class="o">::</span> <span class="nc">HNil</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// KO case</span>
+</span><span class='line'><span class="o">{</span>
+</span><span class='line'>  <span class="s">&quot;foo&quot;</span> <span class="k">:</span> <span class="err">&quot;&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;bar&quot;</span> <span class="k">:</span> <span class="err">2</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo2&quot;</span> <span class="k">:</span> <span class="err">12</span>
+</span><span class='line'><span class="o">}</span> <span class="k">=&gt;</span> <span class="nc">Failure</span><span class="o">(</span><span class="nc">List</span><span class="o">(</span>
+</span><span class='line'>  <span class="o">([</span><span class="err">0</span><span class="o">],</span><span class="nc">List</span><span class="o">(</span><span class="nc">ValidationError</span><span class="o">(</span><span class="n">error</span><span class="o">.</span><span class="n">max</span><span class="o">,</span><span class="nc">WrappedArray</span><span class="o">(</span><span class="mi">10</span><span class="o">)))),</span>
+</span><span class='line'>  <span class="o">([</span><span class="err">1</span><span class="o">],</span><span class="nc">List</span><span class="o">(</span><span class="nc">ValidationError</span><span class="o">(</span><span class="n">error</span><span class="o">.</span><span class="n">min</span><span class="o">,</span><span class="nc">WrappedArray</span><span class="o">(</span><span class="mi">5</span><span class="o">)))),</span>
+</span><span class='line'>  <span class="o">([</span><span class="err">2</span><span class="o">],</span><span class="nc">List</span><span class="o">(</span><span class="nc">ValidationError</span><span class="o">(</span><span class="n">error</span><span class="o">.</span><span class="n">required</span><span class="o">,</span><span class="nc">WrappedArray</span><span class="o">())))</span>
+</span><span class='line'><span class="o">))</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>As you can see, the problem in this approach is that we lose the path of Json.
+Anyway, this can give you a few ideas!
+Now let&#8217;s do something really useful&#8230;</p></blockquote>
+
+<br/>
+
+
+<br/>
+
+
+<h2>Higher-kind Fold of Rules to break the 22 limits</h2>
+
+<p>As in Play2.1 Json API, the new validation API provides an applicative builder which allows the following:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="o">(</span><span class="nc">Rule</span><span class="o">[</span><span class="kt">I</span>, <span class="kt">A</span><span class="o">]</span> <span class="o">~</span> <span class="nc">Rule</span><span class="o">[</span><span class="kt">I</span>, <span class="kt">B</span><span class="o">]</span> <span class="o">~</span> <span class="nc">Rule</span><span class="o">[</span><span class="kt">I</span>, <span class="kt">C</span><span class="o">]).</span><span class="n">tupled</span> <span class="k">=&gt;</span> <span class="nc">Rule</span><span class="o">[</span><span class="kt">I</span>, <span class="o">(</span><span class="kt">A</span>, <span class="kt">B</span>, <span class="kt">C</span><span class="o">)]</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">(</span><span class="nc">Rule</span><span class="o">[</span><span class="kt">I</span>, <span class="kt">A</span><span class="o">]</span> <span class="o">~</span> <span class="nc">Rule</span><span class="o">[</span><span class="kt">I</span>, <span class="kt">B</span><span class="o">]</span> <span class="o">~</span> <span class="nc">Rule</span><span class="o">[</span><span class="kt">I</span>, <span class="kt">C</span><span class="o">])(</span><span class="nc">MyClass</span><span class="o">.</span><span class="n">apply</span> <span class="k">_</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="nc">Rule</span><span class="o">[</span><span class="kt">I</span>, <span class="kt">MyClass</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>But, in Play2.1 Json API and also in new validation API, all functional combinators are limited by the famous Scala 22 limits.</p>
+
+<p>In Scala, you <strong>CAN&#8217;T</strong> write :</p>
+
+<ul>
+<li>a case-class with >22 fields</li>
+<li>a <code>Tuple23</code></li>
+</ul>
+
+
+<p><strong>So you can&#8217;t do <code>Rule[JsValue, A] ~ Rule[JsValue, B] ~ ...</code> more than 22 times.</strong></p>
+
+<p>Nevertheless, sometimes you receive huge JSON with much more than 22 fields in it. Then you have to build more complex models like case-classes embedding case-classes&#8230; Shameful, isn&#8217;t it&#8230;</p>
+
+<p>Let&#8217;s be shameless with Shapeless HList which enables to have unlimited heterogenously typed lists!</p>
+
+<p>So, with HList, we can write :</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+<span class='line-number'>49</span>
+<span class='line-number'>50</span>
+<span class='line-number'>51</span>
+<span class='line-number'>52</span>
+<span class='line-number'>53</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">bigRule</span> <span class="k">=</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo1&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo2&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo3&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo4&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo5&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo6&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo7&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo8&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo9&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo10&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo11&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo12&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo13&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo14&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo15&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo16&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo17&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo18&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo19&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo20&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo21&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo22&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo23&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo25&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo26&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo27&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo28&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo29&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo30&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo31&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo32&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo33&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo34&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo35&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo36&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo37&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo38&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo39&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo40&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">List</span><span class="o">[</span><span class="kt">Long</span><span class="o">]]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo41&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">List</span><span class="o">[</span><span class="kt">Long</span><span class="o">]]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo42&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">List</span><span class="o">[</span><span class="kt">Long</span><span class="o">]]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo43&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">List</span><span class="o">[</span><span class="kt">Long</span><span class="o">]]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo44&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">List</span><span class="o">[</span><span class="kt">Long</span><span class="o">]]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo45&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">List</span><span class="o">[</span><span class="kt">Long</span><span class="o">]]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo46&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">List</span><span class="o">[</span><span class="kt">Long</span><span class="o">]]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo47&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">List</span><span class="o">[</span><span class="kt">Long</span><span class="o">]]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo48&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">List</span><span class="o">[</span><span class="kt">Long</span><span class="o">]]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo49&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">List</span><span class="o">[</span><span class="kt">Long</span><span class="o">]]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo50&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">JsNull.</span><span class="k">type</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>  <span class="nc">HNil</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// inferred as Rule[JsValue, String] :: Rule[JsValue, String] :: ... :: Rule[JsValue, List[Long]] :: HNil</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>That&#8217;s cool but we want the <code>::</code> operator to have the same <code>applicative builder behavior as the</code>~/and` operator:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="nc">Rule</span><span class="o">[</span><span class="kt">JsValue</span>, <span class="kt">String</span><span class="o">]</span> <span class="o">::</span> <span class="nc">Rule</span><span class="o">[</span><span class="kt">JsValue</span>, <span class="kt">Long</span><span class="o">]</span> <span class="o">::</span> <span class="nc">Rule</span><span class="o">[</span><span class="kt">JsValue</span>, <span class="kt">Float</span><span class="o">]</span> <span class="o">::</span> <span class="nc">HNil</span> <span class="k">=&gt;</span>
+</span><span class='line'>  <span class="nc">Rule</span><span class="o">[</span><span class="kt">JsValue</span>, <span class="kt">String</span> <span class="kt">::</span> <span class="kt">Long</span> <span class="kt">::</span> <span class="kt">Float</span> <span class="kt">::</span> <span class="kt">HNil</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>This looks like a higher-kind fold so let&#8217;s call that <code>HFOLD</code>.</p></blockquote>
+
+<p>We can build this <code>hfold</code> using Shapeless polymorphic functions &amp; RighFolder.</p>
+
+<p><em>In a next article, I may write about coding such shapeless feature. Meanwhile, you&#8217;ll have to discover the code on <a href="https://github.com/mandubian/shapeless-rules">Github</a> as it&#8217;s a bit hairy but very interesting ;)</em></p>
+
+<p>Gathering everything, we obtain the following:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+<span class='line-number'>49</span>
+<span class='line-number'>50</span>
+<span class='line-number'>51</span>
+<span class='line-number'>52</span>
+<span class='line-number'>53</span>
+<span class='line-number'>54</span>
+<span class='line-number'>55</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="cm">/* Rules Folding */</span>
+</span><span class='line'><span class="k">val</span> <span class="n">ruleFold</span> <span class="k">=</span> <span class="nc">From</span><span class="o">[</span><span class="kt">JsValue</span><span class="o">]{</span> <span class="nc">__</span> <span class="k">=&gt;</span>
+</span><span class='line'>  <span class="n">hfold</span><span class="o">[</span><span class="kt">JsValue</span><span class="o">](</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo1&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo2&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo3&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo4&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo5&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo6&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo7&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo8&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo9&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo10&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo11&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo12&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo13&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo14&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo15&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo16&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo17&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo18&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo19&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo20&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo21&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo22&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo23&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo25&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo26&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo27&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo28&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo29&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo30&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo31&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo32&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo33&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo34&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo35&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo36&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo37&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo38&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo39&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">Float</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo40&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">List</span><span class="o">[</span><span class="kt">Long</span><span class="o">]]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo41&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">List</span><span class="o">[</span><span class="kt">Long</span><span class="o">]]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo42&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">List</span><span class="o">[</span><span class="kt">Long</span><span class="o">]]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo43&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">List</span><span class="o">[</span><span class="kt">Long</span><span class="o">]]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo44&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">List</span><span class="o">[</span><span class="kt">Long</span><span class="o">]]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo45&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">List</span><span class="o">[</span><span class="kt">Long</span><span class="o">]]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo46&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">List</span><span class="o">[</span><span class="kt">Long</span><span class="o">]]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo47&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">List</span><span class="o">[</span><span class="kt">Long</span><span class="o">]]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo48&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">List</span><span class="o">[</span><span class="kt">Long</span><span class="o">]]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo49&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">List</span><span class="o">[</span><span class="kt">Long</span><span class="o">]]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="o">(</span><span class="nc">__</span>  <span class="o">\</span> <span class="s">&quot;foo50&quot;</span><span class="o">).</span><span class="n">read</span><span class="o">[</span><span class="kt">JsNull.</span><span class="k">type</span><span class="o">]</span> <span class="o">::</span>
+</span><span class='line'>    <span class="nc">HNil</span>
+</span><span class='line'>  <span class="o">)</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Let&#8217;s write a play action using this rule:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+<span class='line-number'>49</span>
+<span class='line-number'>50</span>
+<span class='line-number'>51</span>
+<span class='line-number'>52</span>
+<span class='line-number'>53</span>
+<span class='line-number'>54</span>
+<span class='line-number'>55</span>
+<span class='line-number'>56</span>
+<span class='line-number'>57</span>
+<span class='line-number'>58</span>
+<span class='line-number'>59</span>
+<span class='line-number'>60</span>
+<span class='line-number'>61</span>
+<span class='line-number'>62</span>
+<span class='line-number'>63</span>
+<span class='line-number'>64</span>
+<span class='line-number'>65</span>
+<span class='line-number'>66</span>
+<span class='line-number'>67</span>
+<span class='line-number'>68</span>
+<span class='line-number'>69</span>
+<span class='line-number'>70</span>
+<span class='line-number'>71</span>
+<span class='line-number'>72</span>
+<span class='line-number'>73</span>
+<span class='line-number'>74</span>
+<span class='line-number'>75</span>
+<span class='line-number'>76</span>
+<span class='line-number'>77</span>
+<span class='line-number'>78</span>
+<span class='line-number'>79</span>
+<span class='line-number'>80</span>
+<span class='line-number'>81</span>
+<span class='line-number'>82</span>
+<span class='line-number'>83</span>
+<span class='line-number'>84</span>
+<span class='line-number'>85</span>
+<span class='line-number'>86</span>
+<span class='line-number'>87</span>
+<span class='line-number'>88</span>
+<span class='line-number'>89</span>
+<span class='line-number'>90</span>
+<span class='line-number'>91</span>
+<span class='line-number'>92</span>
+<span class='line-number'>93</span>
+<span class='line-number'>94</span>
+<span class='line-number'>95</span>
+<span class='line-number'>96</span>
+<span class='line-number'>97</span>
+<span class='line-number'>98</span>
+<span class='line-number'>99</span>
+<span class='line-number'>100</span>
+<span class='line-number'>101</span>
+<span class='line-number'>102</span>
+<span class='line-number'>103</span>
+<span class='line-number'>104</span>
+<span class='line-number'>105</span>
+<span class='line-number'>106</span>
+<span class='line-number'>107</span>
+<span class='line-number'>108</span>
+<span class='line-number'>109</span>
+<span class='line-number'>110</span>
+<span class='line-number'>111</span>
+<span class='line-number'>112</span>
+<span class='line-number'>113</span>
+<span class='line-number'>114</span>
+<span class='line-number'>115</span>
+<span class='line-number'>116</span>
+<span class='line-number'>117</span>
+<span class='line-number'>118</span>
+<span class='line-number'>119</span>
+<span class='line-number'>120</span>
+<span class='line-number'>121</span>
+<span class='line-number'>122</span>
+<span class='line-number'>123</span>
+<span class='line-number'>124</span>
+<span class='line-number'>125</span>
+<span class='line-number'>126</span>
+<span class='line-number'>127</span>
+<span class='line-number'>128</span>
+<span class='line-number'>129</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">def</span> <span class="n">hfolder</span> <span class="k">=</span> <span class="nc">Action</span><span class="o">(</span><span class="n">parse</span><span class="o">.</span><span class="n">json</span><span class="o">)</span> <span class="o">{</span> <span class="n">request</span> <span class="k">=&gt;</span>
+</span><span class='line'>  <span class="n">ruleFold</span><span class="o">.</span><span class="n">validate</span><span class="o">(</span><span class="n">request</span><span class="o">.</span><span class="n">body</span><span class="o">)</span> <span class="n">map</span> <span class="o">{</span> <span class="n">hl</span> <span class="k">=&gt;</span>
+</span><span class='line'>    <span class="nc">Ok</span><span class="o">(</span><span class="n">hl</span><span class="o">.</span><span class="n">toString</span><span class="o">)</span>
+</span><span class='line'>  <span class="o">}</span> <span class="n">recoverTotal</span> <span class="o">{</span> <span class="n">errors</span> <span class="k">=&gt;</span>
+</span><span class='line'>    <span class="nc">BadRequest</span><span class="o">(</span><span class="n">errors</span><span class="o">.</span><span class="n">toString</span><span class="o">)</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// OK</span>
+</span><span class='line'><span class="o">{</span>
+</span><span class='line'>  <span class="s">&quot;foo1&quot;</span> <span class="k">:</span> <span class="err">&quot;</span><span class="kt">toto1</span><span class="err">&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo2&quot;</span> <span class="k">:</span> <span class="err">&quot;</span><span class="kt">toto2</span><span class="err">&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo3&quot;</span> <span class="k">:</span> <span class="err">&quot;</span><span class="kt">toto3</span><span class="err">&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo4&quot;</span> <span class="k">:</span> <span class="err">&quot;</span><span class="kt">toto4</span><span class="err">&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo5&quot;</span> <span class="k">:</span> <span class="err">&quot;</span><span class="kt">toto5</span><span class="err">&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo6&quot;</span> <span class="k">:</span> <span class="err">&quot;</span><span class="kt">toto6</span><span class="err">&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo7&quot;</span> <span class="k">:</span> <span class="err">&quot;</span><span class="kt">toto7</span><span class="err">&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo8&quot;</span> <span class="k">:</span> <span class="err">&quot;</span><span class="kt">toto8</span><span class="err">&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo9&quot;</span> <span class="k">:</span> <span class="err">&quot;</span><span class="kt">toto9</span><span class="err">&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo10&quot;</span> <span class="k">:</span> <span class="err">10</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo11&quot;</span> <span class="k">:</span> <span class="err">11</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo12&quot;</span> <span class="k">:</span> <span class="err">12</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo13&quot;</span> <span class="k">:</span> <span class="err">13</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo14&quot;</span> <span class="k">:</span> <span class="err">14</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo15&quot;</span> <span class="k">:</span> <span class="err">15</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo16&quot;</span> <span class="k">:</span> <span class="err">16</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo17&quot;</span> <span class="k">:</span> <span class="err">17</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo18&quot;</span> <span class="k">:</span> <span class="err">18</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo19&quot;</span> <span class="k">:</span> <span class="err">19</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo20&quot;</span> <span class="k">:</span> <span class="kt">true</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo21&quot;</span> <span class="k">:</span> <span class="kt">false</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo22&quot;</span> <span class="k">:</span> <span class="kt">true</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo23&quot;</span> <span class="k">:</span> <span class="kt">false</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo24&quot;</span> <span class="k">:</span> <span class="kt">true</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo25&quot;</span> <span class="k">:</span> <span class="kt">false</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo26&quot;</span> <span class="k">:</span> <span class="kt">true</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo27&quot;</span> <span class="k">:</span> <span class="kt">false</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo28&quot;</span> <span class="k">:</span> <span class="kt">true</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo29&quot;</span> <span class="k">:</span> <span class="kt">false</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo30&quot;</span> <span class="k">:</span> <span class="err">3</span><span class="kt">.</span><span class="err">0</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo31&quot;</span> <span class="k">:</span> <span class="err">3</span><span class="kt">.</span><span class="err">1</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo32&quot;</span> <span class="k">:</span> <span class="err">3</span><span class="kt">.</span><span class="err">2</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo33&quot;</span> <span class="k">:</span> <span class="err">3</span><span class="kt">.</span><span class="err">3</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo34&quot;</span> <span class="k">:</span> <span class="err">3</span><span class="kt">.</span><span class="err">4</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo35&quot;</span> <span class="k">:</span> <span class="err">3</span><span class="kt">.</span><span class="err">5</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo36&quot;</span> <span class="k">:</span> <span class="err">3</span><span class="kt">.</span><span class="err">6</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo37&quot;</span> <span class="k">:</span> <span class="err">3</span><span class="kt">.</span><span class="err">7</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo38&quot;</span> <span class="k">:</span> <span class="err">3</span><span class="kt">.</span><span class="err">8</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo39&quot;</span> <span class="k">:</span> <span class="err">3</span><span class="kt">.</span><span class="err">9</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo40&quot;</span> <span class="k">:</span> <span class="err">[1</span><span class="o">,</span><span class="mi">2</span><span class="o">,</span><span class="mi">3</span><span class="err">]</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo41&quot;</span> <span class="k">:</span> <span class="err">[11</span><span class="o">,</span><span class="mi">21</span><span class="o">,</span><span class="mi">31</span><span class="err">]</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo42&quot;</span> <span class="k">:</span> <span class="err">[12</span><span class="o">,</span><span class="mi">22</span><span class="o">,</span><span class="mi">32</span><span class="err">]</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo43&quot;</span> <span class="k">:</span> <span class="err">[13</span><span class="o">,</span><span class="mi">23</span><span class="o">,</span><span class="mi">33</span><span class="err">]</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo44&quot;</span> <span class="k">:</span> <span class="err">[14</span><span class="o">,</span><span class="mi">24</span><span class="o">,</span><span class="mi">34</span><span class="err">]</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo45&quot;</span> <span class="k">:</span> <span class="err">[15</span><span class="o">,</span><span class="mi">25</span><span class="o">,</span><span class="mi">35</span><span class="err">]</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo46&quot;</span> <span class="k">:</span> <span class="err">[16</span><span class="o">,</span><span class="mi">26</span><span class="o">,</span><span class="mi">36</span><span class="err">]</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo47&quot;</span> <span class="k">:</span> <span class="err">[17</span><span class="o">,</span><span class="mi">27</span><span class="o">,</span><span class="mi">37</span><span class="err">]</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo48&quot;</span> <span class="k">:</span> <span class="err">[18</span><span class="o">,</span><span class="mi">28</span><span class="o">,</span><span class="mi">38</span><span class="err">]</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo49&quot;</span> <span class="k">:</span> <span class="err">[19</span><span class="o">,</span><span class="mi">29</span><span class="o">,</span><span class="mi">39</span><span class="err">]</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo50&quot;</span> <span class="k">:</span> <span class="kt">null</span>
+</span><span class='line'><span class="o">}</span> <span class="k">=&gt;</span> <span class="n">toto1</span> <span class="o">::</span> <span class="n">toto2</span> <span class="o">::</span> <span class="n">toto3</span> <span class="o">::</span> <span class="n">toto4</span> <span class="o">::</span> <span class="n">toto5</span> <span class="o">::</span> <span class="n">toto6</span> <span class="o">::</span> <span class="n">toto7</span> <span class="o">::</span> <span class="n">toto8</span> <span class="o">::</span> <span class="n">toto9</span> <span class="o">::</span>
+</span><span class='line'>  <span class="mi">10</span> <span class="o">::</span> <span class="mi">11</span> <span class="o">::</span> <span class="mi">12</span> <span class="o">::</span> <span class="mi">13</span> <span class="o">::</span> <span class="mi">14</span> <span class="o">::</span> <span class="mi">15</span> <span class="o">::</span> <span class="mi">16</span> <span class="o">::</span> <span class="mi">17</span> <span class="o">::</span> <span class="mi">18</span> <span class="o">::</span> <span class="mi">19</span> <span class="o">::</span>
+</span><span class='line'>  <span class="kc">true</span> <span class="o">::</span> <span class="kc">false</span> <span class="o">::</span> <span class="kc">true</span> <span class="o">::</span> <span class="kc">false</span> <span class="o">::</span> <span class="kc">false</span> <span class="o">::</span> <span class="kc">true</span> <span class="o">::</span> <span class="kc">false</span> <span class="o">::</span> <span class="kc">true</span> <span class="o">::</span> <span class="kc">false</span> <span class="o">::</span>
+</span><span class='line'>  <span class="mf">3.0</span> <span class="o">::</span> <span class="mf">3.1</span> <span class="o">::</span> <span class="mf">3.2</span> <span class="o">::</span> <span class="mf">3.3</span> <span class="o">::</span> <span class="mf">3.4</span> <span class="o">::</span> <span class="mf">3.5</span> <span class="o">::</span> <span class="mf">3.6</span> <span class="o">::</span> <span class="mf">3.7</span> <span class="o">::</span> <span class="mf">3.8</span> <span class="o">::</span> <span class="mf">3.9</span> <span class="o">::</span>
+</span><span class='line'>  <span class="nc">List</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span> <span class="mi">2</span><span class="o">,</span> <span class="mi">3</span><span class="o">)</span> <span class="o">::</span> <span class="nc">List</span><span class="o">(</span><span class="mi">11</span><span class="o">,</span> <span class="mi">21</span><span class="o">,</span> <span class="mi">31</span><span class="o">)</span> <span class="o">::</span> <span class="nc">List</span><span class="o">(</span><span class="mi">12</span><span class="o">,</span> <span class="mi">22</span><span class="o">,</span> <span class="mi">32</span><span class="o">)</span> <span class="o">::</span> <span class="nc">List</span><span class="o">(</span><span class="mi">13</span><span class="o">,</span> <span class="mi">23</span><span class="o">,</span> <span class="mi">33</span><span class="o">)</span> <span class="o">::</span>
+</span><span class='line'>  <span class="nc">List</span><span class="o">(</span><span class="mi">14</span><span class="o">,</span> <span class="mi">24</span><span class="o">,</span> <span class="mi">34</span><span class="o">)</span> <span class="o">::</span> <span class="nc">List</span><span class="o">(</span><span class="mi">15</span><span class="o">,</span> <span class="mi">25</span><span class="o">,</span> <span class="mi">35</span><span class="o">)</span> <span class="o">::</span> <span class="nc">List</span><span class="o">(</span><span class="mi">16</span><span class="o">,</span> <span class="mi">26</span><span class="o">,</span> <span class="mi">36</span><span class="o">)</span> <span class="o">::</span> <span class="nc">List</span><span class="o">(</span><span class="mi">17</span><span class="o">,</span> <span class="mi">27</span><span class="o">,</span> <span class="mi">37</span><span class="o">)</span> <span class="o">::</span>
+</span><span class='line'>  <span class="nc">List</span><span class="o">(</span><span class="mi">18</span><span class="o">,</span> <span class="mi">28</span><span class="o">,</span> <span class="mi">38</span><span class="o">)</span> <span class="o">::</span> <span class="nc">List</span><span class="o">(</span><span class="mi">19</span><span class="o">,</span> <span class="mi">29</span><span class="o">,</span> <span class="mi">39</span><span class="o">)</span> <span class="o">::</span> <span class="kc">null</span> <span class="o">::</span>
+</span><span class='line'>  <span class="nc">HNil</span>
+</span><span class='line'>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// KO</span>
+</span><span class='line'><span class="o">{</span>
+</span><span class='line'>  <span class="s">&quot;foo1&quot;</span> <span class="k">:</span> <span class="err">&quot;</span><span class="kt">toto1</span><span class="err">&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo2&quot;</span> <span class="k">:</span> <span class="err">&quot;</span><span class="kt">toto2</span><span class="err">&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo3&quot;</span> <span class="k">:</span> <span class="err">&quot;</span><span class="kt">toto3</span><span class="err">&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo4&quot;</span> <span class="k">:</span> <span class="err">&quot;</span><span class="kt">toto4</span><span class="err">&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo5&quot;</span> <span class="k">:</span> <span class="err">&quot;</span><span class="kt">toto5</span><span class="err">&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo6&quot;</span> <span class="k">:</span> <span class="err">&quot;</span><span class="kt">toto6</span><span class="err">&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo7&quot;</span> <span class="k">:</span> <span class="err">50</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo8&quot;</span> <span class="k">:</span> <span class="err">&quot;</span><span class="kt">toto8</span><span class="err">&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo9&quot;</span> <span class="k">:</span> <span class="err">&quot;</span><span class="kt">toto9</span><span class="err">&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo10&quot;</span> <span class="k">:</span> <span class="err">10</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo11&quot;</span> <span class="k">:</span> <span class="err">11</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo12&quot;</span> <span class="k">:</span> <span class="err">12</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo13&quot;</span> <span class="k">:</span> <span class="err">13</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo14&quot;</span> <span class="k">:</span> <span class="err">14</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo15&quot;</span> <span class="k">:</span> <span class="kt">true</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo16&quot;</span> <span class="k">:</span> <span class="err">16</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo17&quot;</span> <span class="k">:</span> <span class="err">17</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo18&quot;</span> <span class="k">:</span> <span class="err">18</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo19&quot;</span> <span class="k">:</span> <span class="err">19</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo20&quot;</span> <span class="k">:</span> <span class="kt">true</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo21&quot;</span> <span class="k">:</span> <span class="kt">false</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo22&quot;</span> <span class="k">:</span> <span class="kt">true</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo23&quot;</span> <span class="k">:</span> <span class="kt">false</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo24&quot;</span> <span class="k">:</span> <span class="kt">true</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo25&quot;</span> <span class="k">:</span> <span class="kt">false</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo26&quot;</span> <span class="k">:</span> <span class="kt">true</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo27&quot;</span> <span class="k">:</span> <span class="err">&quot;</span><span class="kt">chboing</span><span class="err">&quot;</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo28&quot;</span> <span class="k">:</span> <span class="kt">true</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo29&quot;</span> <span class="k">:</span> <span class="kt">false</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo30&quot;</span> <span class="k">:</span> <span class="err">3</span><span class="kt">.</span><span class="err">0</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo31&quot;</span> <span class="k">:</span> <span class="err">3</span><span class="kt">.</span><span class="err">1</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo32&quot;</span> <span class="k">:</span> <span class="err">3</span><span class="kt">.</span><span class="err">2</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo33&quot;</span> <span class="k">:</span> <span class="err">3</span><span class="kt">.</span><span class="err">3</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo34&quot;</span> <span class="k">:</span> <span class="err">3</span><span class="kt">.</span><span class="err">4</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo35&quot;</span> <span class="k">:</span> <span class="err">3</span><span class="kt">.</span><span class="err">5</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo36&quot;</span> <span class="k">:</span> <span class="err">3</span><span class="kt">.</span><span class="err">6</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo37&quot;</span> <span class="k">:</span> <span class="err">3</span><span class="kt">.</span><span class="err">7</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo38&quot;</span> <span class="k">:</span> <span class="err">3</span><span class="kt">.</span><span class="err">8</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo39&quot;</span> <span class="k">:</span> <span class="err">3</span><span class="kt">.</span><span class="err">9</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo40&quot;</span> <span class="k">:</span> <span class="err">[1</span><span class="o">,</span><span class="mi">2</span><span class="o">,</span><span class="mi">3</span><span class="err">]</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo41&quot;</span> <span class="k">:</span> <span class="err">[11</span><span class="o">,</span><span class="mi">21</span><span class="o">,</span><span class="mi">31</span><span class="err">]</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo42&quot;</span> <span class="k">:</span> <span class="err">[12</span><span class="o">,</span><span class="mi">22</span><span class="o">,</span><span class="mi">32</span><span class="err">]</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo43&quot;</span> <span class="k">:</span> <span class="err">[13</span><span class="o">,</span><span class="mi">23</span><span class="o">,</span><span class="mi">33</span><span class="err">]</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo44&quot;</span> <span class="k">:</span> <span class="err">[14</span><span class="o">,</span><span class="mi">24</span><span class="o">,</span><span class="mi">34</span><span class="err">]</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo45&quot;</span> <span class="k">:</span> <span class="err">[15</span><span class="o">,</span><span class="mi">25</span><span class="o">,</span><span class="mi">35</span><span class="err">]</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo46&quot;</span> <span class="k">:</span> <span class="err">[16</span><span class="o">,</span><span class="mi">26</span><span class="o">,</span><span class="s">&quot;blabla&quot;</span><span class="err">]</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo47&quot;</span> <span class="k">:</span> <span class="err">[17</span><span class="o">,</span><span class="mi">27</span><span class="o">,</span><span class="mi">37</span><span class="err">]</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo48&quot;</span> <span class="k">:</span> <span class="err">[18</span><span class="o">,</span><span class="mi">28</span><span class="o">,</span><span class="mi">38</span><span class="err">]</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo49&quot;</span> <span class="k">:</span> <span class="err">[19</span><span class="o">,</span><span class="mi">29</span><span class="o">,</span><span class="mi">39</span><span class="err">]</span><span class="o">,</span>
+</span><span class='line'>  <span class="s">&quot;foo50&quot;</span> <span class="k">:</span> <span class="err">&quot;</span><span class="kt">toto</span><span class="err">&quot;</span>
+</span><span class='line'><span class="o">}</span> <span class="k">=&gt;</span> <span class="nc">Failure</span><span class="o">(</span><span class="nc">List</span><span class="o">(</span>
+</span><span class='line'>  <span class="o">(/</span><span class="n">foo50</span><span class="o">,</span><span class="nc">List</span><span class="o">(</span><span class="nc">ValidationError</span><span class="o">(</span><span class="n">error</span><span class="o">.</span><span class="n">invalid</span><span class="o">,</span><span class="nc">WrappedArray</span><span class="o">(</span><span class="kc">null</span><span class="o">)))),</span>
+</span><span class='line'>  <span class="o">(/</span><span class="n">foo46</span><span class="o">[</span><span class="err">2</span><span class="o">],</span><span class="nc">List</span><span class="o">(</span><span class="nc">ValidationError</span><span class="o">(</span><span class="n">error</span><span class="o">.</span><span class="n">number</span><span class="o">,</span><span class="nc">WrappedArray</span><span class="o">(</span><span class="nc">Long</span><span class="o">)))),</span>
+</span><span class='line'>  <span class="o">(/</span><span class="n">foo27</span><span class="o">,</span><span class="nc">List</span><span class="o">(</span><span class="nc">ValidationError</span><span class="o">(</span><span class="n">error</span><span class="o">.</span><span class="n">invalid</span><span class="o">,</span><span class="nc">WrappedArray</span><span class="o">(</span><span class="nc">Boolean</span><span class="o">)))),</span>
+</span><span class='line'>  <span class="o">(/</span><span class="n">foo15</span><span class="o">,</span><span class="nc">List</span><span class="o">(</span><span class="nc">ValidationError</span><span class="o">(</span><span class="n">error</span><span class="o">.</span><span class="n">number</span><span class="o">,</span><span class="nc">WrappedArray</span><span class="o">(</span><span class="nc">Int</span><span class="o">)))),</span>
+</span><span class='line'>  <span class="o">(/</span><span class="n">foo7</span><span class="o">,</span><span class="nc">List</span><span class="o">(</span><span class="nc">ValidationError</span><span class="o">(</span><span class="n">error</span><span class="o">.</span><span class="n">invalid</span><span class="o">,</span><span class="nc">WrappedArray</span><span class="o">(</span><span class="nc">String</span><span class="o">))</span>
+</span><span class='line'><span class="o">))))</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Awesome&#8230; now, nobody can say 22 limits is still a problem ;)</p>
+
+<p>Have a look at the code on <a href="https://github.com/mandubian/shapeless-rules">Github</a>.</p>
+
+<p>Have fun x 50!</p>
+
+<br/>
+
+
+<br/>
+
+
+<br/>
+
+
+<br/>
+
+
+
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Pascal Voitot</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-01-31T08:08:00+01:00" pubdate data-updated="true">Jan 31<span>st</span>, 2014</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/functional-programming/'>functional programming</a>, <a class='category' href='/blog/categories/json/'>json</a>, <a class='category' href='/blog/categories/play-framework/'>play framework</a>, <a class='category' href='/blog/categories/scala/'>scala</a>, <a class='category' href='/blog/categories/shapeless/'>shapeless</a>, <a class='category' href='/blog/categories/typesafe/'>typesafe</a>, <a class='category' href='/blog/categories/validation/'>validation</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://www.mandubian.com/2014/01/31/play-rules-shapeless/" data-via="mandubian" data-counturl="http://www.mandubian.com/2014/01/31/play-rules-shapeless/" >Tweet</a>
+  
+  
+  <div class="g-plusone" data-size="medium"></div>
+  
+  
+</div>
+
+    
+    
+    <section>
+      <h1>Comments</h1>
+      <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+    </section>
+    
+    <ul class="pager">
+      
+      <li class="previous"><a class="basic-alignment left"
+        href="/2013/09/22/play-actor-room/" title="Previous Post:
+        Play 2.2 Actor Room: websocket (&more) room manager only with actors">&laquo; Play 2.2 Actor Room: websocket (&more) room manager only with actors</a></li>
+      
+      <li><a href="/blog/archives">Blog Archives</a></li>
+      
+      <li class="next"><a class="basic-alignment right" href="/2014/02/13/zpark/"
+        title="Next Post: ZPark-Ztream: Driving Spark distributed stream with Scalaz-Stream">ZPark-Ztream: Driving Spark distributed stream with Scalaz-Stream
+        &raquo;</a></li>
+      
+    </ul>
+  </footer>
+</article>
+
+<aside class="sidebar-nav span3">
+  
+    <section class="well">
+  <ul id="recent_posts" class="nav nav-list">
+    <li class="nav-header">Recent Posts</li>
+    
+      <li class="post">
+        <a href="/2015/04/09/freer/">FreeR - Hybrid Free Monads for Reduced Quadratic Complexity/Observability & Map-Fusion Optimization in Scala</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014/12/21/scaledn/">Scaledn: Promote EDN as a far better alternative to Json in Scala</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014/07/30/hfunctor/">Shapeless HFunctor for Heterogenous Structures (& others)</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014/07/29/hmonoid/">Shapeless HMonoid for Heterogenous Structures (& others)</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014/06/11/daemonad/">Summon Daemonad to macro-snoop into monad stacks</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+<section class="well">
+  <ul id="gh_repos" data-user="mandubian" data-count="5" data-skip="true" class="nav">
+	<li class="nav-header">On GitHub</li>
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+  <a class="github-follow" href="https://github.com/mandubian">Follow @mandubian</a>
+  
+</section>
+
+
+
+<section class="well">
+  <ul id="tweets" class="nav" data-user="mandubian" data-count="4" data-replies="false">
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+    <a href="http://twitter.com/mandubian" class="twitter-follow-button" data-show-count="false">Follow @mandubian</a>
+  
+</section>
+
+
+
+
+
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo" class="page-footer"><hr>
+<p>
+  Copyright &copy; 2015 - Pascal Voitot -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'mandubian';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://www.mandubian.com/2014/01/31/play-rules-shapeless/';
+        var disqus_url = 'http://www.mandubian.com/2014/01/31/play-rules-shapeless/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+  <script type="text/javascript">
+    (function() {
+      var script = document.createElement('script'); script.type = 'text/javascript'; script.async = true;
+      script.src = 'https://apis.google.com/js/plusone.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(script, s);
+    })();
+  </script>
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = 'http://platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

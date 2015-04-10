@@ -1,0 +1,761 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>FreeR - Hybrid Free Monads for Reduced Quadratic Complexity/Observability & Map-Fusion Optimization in Scala - Mandubian Blog</title>
+  <meta name="author" content="Pascal Voitot">
+
+  
+  <meta name="description" content="FreeR - Hybrid Free Monads for Reduced Quadratic Complexity/Observability & Map-Fusion Optimization in Scala &hellip;">
+  <meta name="keywords" content="free monad,functional programming,category,algebra,scala,quadratic complexity,observability,map fusion,cats">
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://www.mandubian.com/2015/04/09/freer">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/bootstrap/bootstrap.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/stylesheets/bootstrap/responsive.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/stylesheets/syntax/syntax.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/stylesheets/d3d.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <style type="text/css">
+    body {
+      padding-bottom: 40px;
+    }
+    h1 {
+      margin-bottom: 15px;
+    }
+    img {
+      max-width: 100%;
+    }
+    .sharing, .meta, .pager {
+      margin: 20px 0px 20px 0px;
+    }
+    .page-footer p {
+      text-align: center;
+    }
+
+    article {
+      margin-bottom: 50px;
+      border-top: #DDD solid 20px;
+    }
+ 
+  </style>
+  <script src="/javascripts/libs/jquery.js"></script>
+  <script src="/javascripts/libs/modernizr-2.0.js"></script>
+  <script src="/javascripts/libs/bootstrap.js"></script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <link href="/atom.xml" rel="alternate" title="Mandubian Blog" type="application/atom+xml">
+  
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-10417377-11']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   >
+  <nav role="navigation"><div class="navbar">
+  <div class="navbar-inner">
+    <div class="container">
+      <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </a>
+
+      <a class="brand" href="/">Mandubian Blog</a>
+
+      <div class="nav-collapse">
+        <ul class="nav">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+
+        <ul class="nav pull-right" data-subscription="rss">
+          <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+          
+        </ul>
+
+        
+          <form class="pull-right navbar-search" action="http://google.com/search" method="get">
+            <fieldset role="search">
+              <input type="hidden" name="q" value="site:www.mandubian.com" />
+              <input class="search-query" type="text" name="q" results="0" placeholder="Search"/>
+            </fieldset>
+          </form>
+        
+      </div>
+    </div>
+  </div>
+</div>
+</nav>
+  <div class="container">
+    <div class="row-fluid">
+      
+<article class="hentry span9" role="article">
+
+  
+  <header class="page-header">
+    
+      <h1 class="entry-title">FreeR - Hybrid Free Monads for Reduced Quadratic Complexity/Observability & Map-Fusion Optimization in Scala</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2015-04-09T23:23:00+02:00" pubdate data-updated="true">Apr 9<span>th</span>, 2015</time>
+        
+         | <a href="#disqus_thread">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><blockquote><p>Draft FreeR code is on <a href="https://github.com/mandubian/cats/blob/feature/freer/free/src/main/scala/cats/free/FreeR.scala">Github</a></p></blockquote>
+
+<br/>
+
+
+<h2>Introduction</h2>
+
+<p>I&#8217;ve recently pushed some <code>Free</code> code &amp; doc to the cool project <a href="https://github.com/non/cats/">cats</a> and I had a few more ideas in my head on optimizing <code>Free</code> and never took time to make them concrete. I&#8217;ve just found this time during my holidays&#8230;</p>
+
+<p><code>Free Monad</code> is often used to represent embedded DSL in functional programming languages like Haskell or Scala. One generally represents his grammar with a simple <code>Functor</code> ADT representing the available operations. Then, from within your programming language, <code>Free Monad</code> provides the facilities to:</p>
+
+<ul>
+<li>build in a monadic &amp; stack-safe way a static program composed of a sequence of operations,</li>
+<li>compile this program,</li>
+<li>run it.</li>
+</ul>
+
+
+<blockquote><p>To know more about the way to use <code>Free</code> and some more specific theory, please refer to <a href="https://github.com/non/cats/blob/master/docs/src/main/tut/freemonad.md">recent draft doc I&#8217;ve pushed on cats</a></p></blockquote>
+
+<p>The well-known classic representation in Scala is the following:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">sealed</span> <span class="k">abstract</span> <span class="k">class</span> <span class="nc">Free</span><span class="o">[</span><span class="kt">F</span><span class="o">[</span><span class="k">_</span><span class="o">]</span>, <span class="kt">A</span><span class="o">]</span>
+</span><span class='line'><span class="nc">case</span> <span class="k">class</span> <span class="nc">Pure</span><span class="o">[</span><span class="kt">F</span><span class="o">[</span><span class="k">_</span><span class="o">]</span>, <span class="kt">A</span><span class="o">](</span><span class="n">a</span><span class="k">:</span> <span class="kt">A</span><span class="o">)</span> <span class="k">extends</span> <span class="nc">Free</span><span class="o">[</span><span class="kt">F</span>, <span class="kt">A</span><span class="o">]</span>
+</span><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">Suspend</span><span class="o">[</span><span class="kt">F</span><span class="o">[</span><span class="k">_</span><span class="o">]</span>, <span class="kt">A</span><span class="o">](</span><span class="n">a</span><span class="k">:</span> <span class="kt">F</span><span class="o">[</span><span class="kt">Free</span><span class="o">[</span><span class="kt">F</span>, <span class="kt">A</span><span class="o">]])</span> <span class="k">extends</span> <span class="nc">Free</span><span class="o">[</span><span class="kt">F</span>, <span class="kt">A</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>Please note that <code>F[_]</code> should be a Functor to take advantage of <code>Free</code> construction.</p></blockquote>
+
+<p>Building a program can then just be a classic sequence of monadic <code>bind/flatMap</code> on <code>Free[S[_], _]</code>:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">for</span> <span class="o">{</span>
+</span><span class='line'>  <span class="n">a</span> <span class="k">&lt;-</span> <span class="n">doA</span><span class="o">(...)</span>
+</span><span class='line'>  <span class="n">b</span> <span class="k">&lt;-</span> <span class="n">doB</span><span class="o">(</span><span class="n">a</span><span class="o">,</span> <span class="o">...)</span>
+</span><span class='line'>  <span class="n">c</span> <span class="k">&lt;-</span> <span class="n">doC</span><span class="o">(</span><span class="n">c</span><span class="o">,</span> <span class="o">...)</span>
+</span><span class='line'><span class="o">}</span> <span class="k">yield</span> <span class="o">(</span><span class="n">c</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This actually constructs a recursive structure looking like:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="nc">Suspend</span><span class="o">(</span><span class="n">F</span><span class="o">(</span><span class="nc">Suspend</span><span class="o">(</span><span class="n">F</span><span class="o">(</span><span class="nc">Suspend</span><span class="o">(</span><span class="n">F</span><span class="o">(....(</span><span class="nc">Pure</span><span class="o">(</span><span class="n">a</span><span class="o">))))))))</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>It can be seen as a left-associated sequence of operations and as any left-associated structure, appending an element to it has a quadratic complexity. So the more you <code>flatMap</code>, the longer (in n²) it will take to drill down the structure.</p>
+
+<p>So if you try such code:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">def</span> <span class="n">gen</span><span class="o">[</span><span class="kt">I</span><span class="o">](</span><span class="n">i</span><span class="k">:</span> <span class="kt">I</span><span class="o">)</span><span class="k">:</span> <span class="kt">Trampoline</span><span class="o">[</span><span class="kt">I</span><span class="o">]</span> <span class="k">=</span> <span class="nc">Trampoline</span><span class="o">.</span><span class="n">suspend</span><span class="o">(</span><span class="nc">Trampoline</span><span class="o">.</span><span class="n">done</span><span class="o">(</span><span class="n">i</span><span class="o">))</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">//(a flatMap (b flatMap (c flatMap (...))))</span>
+</span><span class='line'><span class="k">def</span> <span class="n">lftBind</span><span class="o">[</span><span class="kt">S</span><span class="o">[</span><span class="k">_</span><span class="o">]](</span><span class="n">n</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)(</span><span class="n">gen</span><span class="k">:</span> <span class="kt">Int</span> <span class="o">=&gt;</span> <span class="n">S</span><span class="o">[</span><span class="kt">Int</span><span class="o">])(</span><span class="k">implicit</span> <span class="n">M</span><span class="k">:</span> <span class="kt">Monad</span><span class="o">[</span><span class="kt">S</span><span class="o">])</span> <span class="k">=</span> <span class="o">{</span>
+</span><span class='line'>  <span class="o">(</span><span class="mi">1</span> <span class="n">to</span> <span class="n">n</span><span class="o">).</span><span class="n">foldLeft</span><span class="o">(</span><span class="n">gen</span><span class="o">(</span><span class="mi">0</span><span class="o">)){</span> <span class="k">case</span> <span class="o">(</span><span class="n">acc</span><span class="o">,</span> <span class="n">i</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="n">acc</span> <span class="n">flatMap</span> <span class="o">{</span> <span class="n">a</span> <span class="k">=&gt;</span> <span class="n">gen</span><span class="o">(</span><span class="n">i</span><span class="o">)</span> <span class="o">}</span> <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>You will see that it has a quadratic curve in terms of execution time when you increase <code>n</code>.</p>
+
+<blockquote><p>First weakness of classic <code>Free</code> is its left-associativity that induces a quadratic complexity when flatMapping</p></blockquote>
+
+<br/>
+
+
+<br/>
+
+
+<h2>Solving left-associated quadratic complexity</h2>
+
+<p>To solve it, the immediate idea is to make <code>Free</code> right-associative instead of left associative (This idea was proposed by Kiselyov &amp; al. in a paper and called <em>Continuation-Passing-Style</em> or also Codensity construction)</p>
+
+<p>This is already done in current <code>scalaz/cats.Free</code> by adding a new element to the <code>Free</code> ADT:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="cm">/** Call a subroutine and continue with the given function. */</span>
+</span><span class='line'><span class="k">sealed</span> <span class="k">abstract</span> <span class="k">class</span> <span class="nc">Gosub</span><span class="o">[</span><span class="kt">S</span><span class="o">[</span><span class="k">_</span><span class="o">]</span>, <span class="kt">B</span><span class="o">]</span> <span class="nc">extends</span> <span class="nc">Free</span><span class="o">[</span><span class="kt">S</span>, <span class="kt">B</span><span class="o">]</span> <span class="o">{</span>
+</span><span class='line'>  <span class="k">type</span> <span class="kt">C</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">a</span><span class="k">:</span> <span class="o">()</span> <span class="o">=&gt;</span> <span class="nc">Free</span><span class="o">[</span><span class="kt">S</span>, <span class="kt">C</span><span class="o">]</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">f</span><span class="k">:</span> <span class="kt">C</span> <span class="o">=&gt;</span> <span class="nc">Free</span><span class="o">[</span><span class="kt">S</span>, <span class="kt">B</span><span class="o">]</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>If you test the same previous code, it has a linear behavior when <code>n</code> increases.</p>
+
+<br/>
+
+
+<br/>
+
+
+<h2>Quadratic observability</h2>
+
+<p>In this great paper <a href="http://homepages.cwi.nl/~ploeg/papers/zseq.pdf">Reflection Without Remorse</a>, Atze van der Ploeg &amp; Oleg Kiselyov show that <code>classic Free</code> are subject to another tricky quadratic behavior when, within your sequence of operations, one need to observe the current internal state of <code>Free</code>.</p>
+
+<p>Observing the state requires to drill down the recursive Free structure explicitly and go up and again down then up and again and again. As explained in the paper, this case is quite tricky because it&#8217;s very hard to see that it will happen. The deeper is the structure, the longer it takes to observe current state. It&#8217;s important to note that right-association doesn&#8217;t help in this case and that complexity is once again in <em>O(n²)</em>.</p>
+
+<blockquote><p>The second weakness of <code>Free</code> is its quadratic complexity when observing internal state.</p></blockquote>
+
+<p>To solve it, in <a href="http://homepages.cwi.nl/~ploeg/papers/zseq.pdf">Reflection Without Remorse</a>, they propose a very interesting approach by changing the representation of <code>Free</code> and take advantage of its sequential nature.</p>
+
+<p>A <code>Free</code> becomes the association of 2 elements:</p>
+
+<ul>
+<li>a <code>FreeView</code> representing current internal state of the <code>Free</code></li>
+<li>a sequence of <code>bind/flatMap</code> functions stored in an efficient data structure that can prepent/append in <em>O(1)</em>.</li>
+</ul>
+
+
+<blockquote><p>For the data structure, they propose to use a type-aligned dequeue to keep track of all types.</p></blockquote>
+
+<p>I have tried to implement this structure using a typed-aligned FingerTree in Scala. The code is <a href="https://github.com/mandubian/freez/blob/master/src/main/scala/view/DequeFreeComp.scala">here</a>. The result is pretty interesting but not much efficient: it has a linear behavior for left-association &amp; observability but&#8230;</p>
+
+<ul>
+<li>for lower values of <code>n</code>, <code>FingerTree</code> costs far too much to build</li>
+<li>memory cost is so high that it triggers the JVM GC far too soon and limitates a lot what you can do</li>
+<li>allocated memory locality isn&#8217;t good and requires huge amounts of memory jumps.</li>
+<li>type-alignment makes code quite ugly (yes Scala type inference isn&#8217;t as powerful as Haskell in this case and laziness of Haskell helps a lot for FingerTree)</li>
+</ul>
+
+
+<blockquote><p>As a conclusion, the idea is really nice on paper but in practice, we need to find something that costs less than this type-aligned dequeue (even if my FingerTree code is really raw, too strict and not optimized at all).</p></blockquote>
+
+<br/>
+
+
+<br/>
+
+
+<h2>FreeR hybrid structure</h2>
+
+<p>I wanted to improve <code>Free</code> behavior and decided to create a new version of it called <code>FreeR</code> thinking in terms of efficient Scala&#8230;</p>
+
+<p>I really liked the idea of representing a <code>Free</code> as a pure sequence of operations with a view of current internal state.</p>
+
+<p>To gain in efficiency, I decided to choose another efficient append/prepend data structure, optimized and very well known: <code>Vector</code> providing:</p>
+
+<ul>
+<li>append/prepend in <em>O(1)</em> (in average),</li>
+<li>random access in constant time,</li>
+<li>quite good locality.</li>
+</ul>
+
+
+<p>Then, I&#8217;ve decided to relax a lot type alignment and manipulate <code>Any</code> values internally and cast/reify to the right types when required.</p>
+
+<blockquote><p>BTW, I plagiarized some code written by Alois Cochard for his new IO model in <a href="https://github.com/scalaz/scalaz/blob/series/8.0.x/io/src/main/scala/IO.scala">Scalaz/8.0 branch</a>&#8230; Alois is a great dev &amp; had made concrete the idea I had in my head so why rewrite them differently? uh ;)</p></blockquote>
+
+<p>I also decided to reify the 2 kinds of operations:</p>
+
+<ul>
+<li>Bind for <code>flatMap/bind</code> calls</li>
+<li><code>Map</code> for <code>map</code> calls</li>
+</ul>
+
+
+<p>So a <code>Free</code> becomes:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// to mitigate the shock of Any in the code</span>
+</span><span class='line'><span class="c1">// and provide helpers for casting/reifying</span>
+</span><span class='line'><span class="k">type</span> <span class="kt">Val</span> <span class="o">=</span> <span class="nc">Any</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">FreeR</span><span class="o">[</span><span class="kt">S</span><span class="o">[</span><span class="k">_</span><span class="o">]</span>, <span class="kt">A</span><span class="o">](</span>
+</span><span class='line'>  <span class="n">head</span><span class="k">:</span> <span class="kt">FreeView</span><span class="o">[</span><span class="kt">S</span>, <span class="kt">Val</span><span class="o">],</span>
+</span><span class='line'>  <span class="n">ops</span><span class="k">:</span> <span class="kt">Ops</span> <span class="o">=</span> <span class="nc">Vector</span><span class="o">.</span><span class="n">empty</span>
+</span><span class='line'><span class="o">)</span> <span class="k">extends</span> <span class="nc">FreeR</span><span class="o">[</span><span class="kt">S</span>, <span class="kt">A</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>with <code>FreeView</code> as:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// The view of Free internal state can be of 2 types:</span>
+</span><span class='line'><span class="k">sealed</span> <span class="k">abstract</span> <span class="k">class</span> <span class="nc">FreeView</span><span class="o">[</span><span class="kt">S</span><span class="o">[</span><span class="k">_</span><span class="o">]</span>, <span class="kt">A</span><span class="o">]</span>
+</span><span class='line'>
+</span><span class='line'><span class="nc">object</span> <span class="nc">FreeView</span> <span class="o">{</span>
+</span><span class='line'>  <span class="c1">// Pure value</span>
+</span><span class='line'>  <span class="k">case</span> <span class="k">class</span> <span class="nc">Pure</span><span class="o">[</span><span class="kt">S</span><span class="o">[</span><span class="k">_</span><span class="o">]</span>, <span class="kt">A</span><span class="o">](</span><span class="n">a</span><span class="k">:</span> <span class="kt">A</span><span class="o">)</span> <span class="k">extends</span> <span class="nc">FreeView</span><span class="o">[</span><span class="kt">S</span>, <span class="kt">A</span><span class="o">]</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// Impure computation determined by the Functor S</span>
+</span><span class='line'>  <span class="k">case</span> <span class="k">class</span> <span class="nc">Impure</span><span class="o">[</span><span class="kt">S</span><span class="o">[</span><span class="k">_</span><span class="o">]</span>, <span class="kt">A</span><span class="o">](</span><span class="n">a</span><span class="k">:</span> <span class="kt">S</span><span class="o">[</span><span class="kt">FreeR</span><span class="o">[</span><span class="kt">S</span>, <span class="kt">A</span><span class="o">]])</span> <span class="k">extends</span> <span class="nc">FreeView</span><span class="o">[</span><span class="kt">S</span>, <span class="kt">A</span><span class="o">]</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>and <code>Ops</code> are:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">sealed</span> <span class="k">trait</span> <span class="nc">Op</span>
+</span><span class='line'><span class="k">object</span> <span class="nc">Op</span> <span class="o">{</span>
+</span><span class='line'>  <span class="k">case</span> <span class="k">class</span> <span class="nc">Map</span><span class="o">(</span><span class="n">f</span><span class="k">:</span> <span class="kt">Val</span> <span class="o">=&gt;</span> <span class="nc">Val</span><span class="o">)</span> <span class="k">extends</span> <span class="nc">Op</span>
+</span><span class='line'>  <span class="k">case</span> <span class="k">class</span> <span class="nc">Bind</span><span class="o">[</span><span class="kt">S</span><span class="o">[</span><span class="k">_</span><span class="o">]](</span><span class="n">f</span><span class="k">:</span> <span class="kt">Val</span> <span class="o">=&gt;</span> <span class="nc">FreeR</span><span class="o">[</span><span class="kt">S</span>, <span class="kt">Val</span><span class="o">])</span> <span class="k">extends</span> <span class="nc">Op</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>FYI This code is less than 300 lines so nothing really horrible except a few ugly casts ;)</p></blockquote>
+
+<br/>
+
+
+<br/>
+
+
+<h3>Left Association</h3>
+
+<p>The code used for testing can be found <a href="https://github.com/mandubian/cats/blob/feature/freer/tests/src/test/scala/cats/tests/FreeRTests.scala#L34-L36">here</a></p>
+
+<br/>
+
+
+<p><img src="/images/mandubian/left_assoc.jpg"/></p>
+
+<br/>
+
+
+<blockquote><p><code>FreeR</code> behavior is linear even for millions of <code>flatMap</code> (until the GC triggers naturally) whereas classic <code>Free</code> has clearly quadratic curve.</p></blockquote>
+
+<br/>
+
+
+<br/>
+
+
+<h3>Observability</h3>
+
+<p>The code used for testing can be found <a href="https://github.com/mandubian/cats/blob/feature/freer/tests/src/test/scala/cats/tests/FreeRTests.scala#L98-L136">here</a></p>
+
+<p><img src="/images/mandubian/iteratee.jpg"/></p>
+
+<blockquote><p><code>FreeR</code> behavior is quite linear even for millions of <code>flatMap</code> (until the GC triggers naturally) whereas classic <code>Free</code> has clearly quadratic curve.</p></blockquote>
+
+<br/>
+
+
+<br/>
+
+
+<h3>Right association complexity</h3>
+
+<p>I finally tried to check the behavior of my new <code>FreeR</code> when using <code>flatMap</code> in a right associated way like:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// (... flatMap (_ =&gt; c flatMap (_ =&gt; b flatMap (_ =&gt; a))))</span>
+</span><span class='line'><span class="k">def</span> <span class="n">rgtBind</span><span class="o">[</span><span class="kt">S</span><span class="o">[</span><span class="k">_</span><span class="o">]](</span><span class="n">n</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)(</span><span class="n">gen</span><span class="k">:</span> <span class="kt">Int</span> <span class="o">=&gt;</span> <span class="n">S</span><span class="o">[</span><span class="kt">Int</span><span class="o">])(</span><span class="k">implicit</span> <span class="n">M</span><span class="k">:</span> <span class="kt">Monad</span><span class="o">[</span><span class="kt">S</span><span class="o">])</span> <span class="k">=</span> <span class="o">{</span>
+</span><span class='line'>  <span class="o">(</span><span class="mi">1</span> <span class="n">to</span> <span class="n">n</span><span class="o">).</span><span class="n">foldLeft</span><span class="o">(</span><span class="n">gen</span><span class="o">(</span><span class="n">n</span><span class="o">)){</span> <span class="k">case</span> <span class="o">(</span><span class="n">acc</span><span class="o">,</span> <span class="n">i</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="n">gen</span><span class="o">(</span><span class="n">n</span><span class="o">-</span><span class="n">i</span><span class="o">)</span> <span class="n">flatMap</span> <span class="o">{</span> <span class="k">_</span> <span class="k">=&gt;</span> <span class="n">acc</span> <span class="o">}</span> <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This is not so frequent code but anyway, <code>Free</code> should be efficient for left &amp; right associated code.</p>
+
+<p>Using <code>FreeR</code> as described previously, I&#8217;ve discovered that it wasn&#8217;t efficient in right association when increasing <code>n</code> because it allocates recursively a lot of Vector with one element and it becomes slower and slower apparently (I&#8217;m not even sure of the real cause of it).</p>
+
+<p>I&#8217;ve refined my representation by distinguishing 3 kinds of <code>Free</code> in my ADT:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// No op</span>
+</span><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">FreeR0</span><span class="o">[</span><span class="kt">S</span><span class="o">[</span><span class="k">_</span><span class="o">]</span>, <span class="kt">A</span><span class="o">](</span><span class="n">head</span><span class="k">:</span> <span class="kt">FreeView</span><span class="o">[</span><span class="kt">S</span>, <span class="kt">Val</span><span class="o">])</span> <span class="k">extends</span> <span class="nc">FreeR</span><span class="o">[</span><span class="kt">S</span>, <span class="kt">A</span><span class="o">]</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// One single op (typically the right association case)</span>
+</span><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">FreeR1</span><span class="o">[</span><span class="kt">S</span><span class="o">[</span><span class="k">_</span><span class="o">]</span>, <span class="kt">A</span><span class="o">](</span><span class="n">head</span><span class="k">:</span> <span class="kt">FreeView</span><span class="o">[</span><span class="kt">S</span>, <span class="kt">Val</span><span class="o">],</span> <span class="n">op</span><span class="k">:</span> <span class="kt">Op</span><span class="o">)</span> <span class="k">extends</span> <span class="nc">FreeR</span><span class="o">[</span><span class="kt">S</span>, <span class="kt">A</span><span class="o">]</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// Multiple ops</span>
+</span><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">FreeRs</span><span class="o">[</span><span class="kt">S</span><span class="o">[</span><span class="k">_</span><span class="o">]</span>, <span class="kt">A</span><span class="o">](</span><span class="n">head</span><span class="k">:</span> <span class="kt">FreeView</span><span class="o">[</span><span class="kt">S</span>, <span class="kt">Val</span><span class="o">],</span> <span class="n">ops</span><span class="k">:</span> <span class="kt">Ops</span> <span class="o">=</span> <span class="nc">Vector</span><span class="o">.</span><span class="n">empty</span><span class="o">)</span> <span class="k">extends</span> <span class="nc">FreeR</span><span class="o">[</span><span class="kt">S</span>, <span class="kt">A</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>With this optimization, here is the performance in right association:</p>
+
+<p><img src="/images/mandubian/right_assoc.jpg"/></p>
+
+<p>It is quite comparable to classic <code>Free</code> for <code>n</code> under 1 million but it becomes quite bad when <code>n</code> becomes big. Yet, it remains for more efficient than previous representation with just <code>Vector</code>.</p>
+
+<blockquote><p>I need to work more on this issue (apparently GC is triggered too early) to see if more optimizations for right association can be found&#8230;</p></blockquote>
+
+<br/>
+
+
+<br/>
+
+
+<h3>Cherry on the cake: map-fusion optimization</h3>
+
+<p>Imagine doing a lot of <code>map</code> operations on a <code>Free</code> like:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">def</span> <span class="n">mapalot</span><span class="o">(</span><span class="n">n</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)</span><span class="k">:</span> <span class="kt">Trampoline</span><span class="o">[</span><span class="kt">Long</span><span class="o">]</span> <span class="k">=</span> <span class="o">{</span>
+</span><span class='line'>  <span class="o">(</span><span class="mi">1</span> <span class="n">to</span> <span class="n">n</span><span class="o">).</span><span class="n">foldLeft</span><span class="o">(</span><span class="nc">Trampoline</span><span class="o">.</span><span class="n">done</span><span class="o">(</span><span class="mi">0L</span><span class="o">)){</span> <span class="k">case</span> <span class="o">(</span><span class="n">acc</span><span class="o">,</span> <span class="n">i</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="n">acc</span> <span class="n">map</span> <span class="o">{</span> <span class="n">a</span> <span class="k">=&gt;</span> <span class="n">a</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">}</span> <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>If you think just a bit, you will clearly see that:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">a</span><span class="o">.</span><span class="n">map</span><span class="o">(</span><span class="n">f</span><span class="o">).</span><span class="n">map</span><span class="o">(</span><span class="n">g</span><span class="o">)</span> <span class="o">==</span> <span class="n">a</span><span class="o">.</span><span class="n">map</span><span class="o">(</span><span class="n">g</span> <span class="n">compose</span> <span class="n">f</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This is called <code>map-fusion</code> and as you may have deduced already, my decision to reify explicitly <code>Bind</code> and <code>Map</code> operations was made in this purpose.</p>
+
+<p>If I can know there are several <code>Map</code> operations in a row, I can <code>fusion</code> them in one single <code>Map</code> by just calling <code>mapFusion</code> on a <code>Free</code> to optimize it:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">free</span> <span class="k">=</span> <span class="nc">FreeRTools</span><span class="o">.</span><span class="n">mapalot</span><span class="o">(</span><span class="n">x</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// optimized free</span>
+</span><span class='line'><span class="k">val</span> <span class="n">freeOpt</span> <span class="k">=</span> <span class="n">free</span><span class="o">.</span><span class="n">mapFusion</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// run the trampoline</span>
+</span><span class='line'><span class="n">freeOpt</span><span class="o">.</span><span class="n">run</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Here is the difference in performance between <code>FreeR</code> and <code>FreeR.mapFusion</code>:</p>
+
+<p><img src="/images/mandubian/map_fusion.jpg"/></p>
+
+<p>As you can see, <code>mapFusion</code> can be very interesting in some cases.</p>
+
+<br/>
+
+
+<br/>
+
+
+<h2>Conclusion</h2>
+
+<p>Finally, I have created a new representation of <code>Free</code> using:</p>
+
+<ul>
+<li>type-relaxed version of <em>Reflection w/o Remorse</em></li>
+<li>sequence of operations managed by Scala <code>Vector</code></li>
+<li>reification of <code>Bind</code> &amp; <code>Map</code> operations</li>
+<li>differenciation of None/Single/Multiple operations cases</li>
+<li>Map Fusion optimization</li>
+</ul>
+
+
+<p>It allows to have a <code>Free</code> with:</p>
+
+<ul>
+<li>Linear behavior in Left-Assocation, Observability,</li>
+<li>Stack-safety is sill ensured,</li>
+<li>Right-Association should be optimized because it still has a too high cost for bigger <code>n</code> (yet it is far more acceptable than other alternatives),</li>
+<li>Map Fusion can provide an interesting optimization when using multiple consecutive <code>Map</code> operations,</li>
+<li>For small <code>n</code>, the cost is a bit higher than basic <code>Free</code> but quite low and acceptable.</li>
+</ul>
+
+
+<p>It is really interesting as it makes <code>Free</code> more and more usable in real-life problems without having to rewrite the code bootstrapped with <code>Free</code> in a more optimized way. I personally find it quite promising!</p>
+
+<blockquote><p>Please remark that this code has been written for the great project <a href="https://github.com/non/cats/">cats</a> that will soon be a viable &amp; efficient alternative for functional structures in Scala.</p></blockquote>
+
+<p>The full code is <a href="https://github.com/mandubian/cats/blob/feature/freer/free/src/main/scala/cats/free/FreeR.scala">there</a>.</p>
+
+<p>Don&#8217;t hesitate to test, find bugs, contribute, give remarks, ideas&#8230;</p>
+
+<p>Have fun in FreeR world&#8230;</p>
+
+<br/>
+
+
+<br/>
+
+
+<br/>
+
+
+<br/>
+
+
+
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Pascal Voitot</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2015-04-09T23:23:00+02:00" pubdate data-updated="true">Apr 9<span>th</span>, 2015</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/algebra/'>algebra</a>, <a class='category' href='/blog/categories/category/'>category</a>, <a class='category' href='/blog/categories/cats/'>cats</a>, <a class='category' href='/blog/categories/free-monad/'>free monad</a>, <a class='category' href='/blog/categories/functional-programming/'>functional programming</a>, <a class='category' href='/blog/categories/map-fusion/'>map fusion</a>, <a class='category' href='/blog/categories/observability/'>observability</a>, <a class='category' href='/blog/categories/quadratic-complexity/'>quadratic complexity</a>, <a class='category' href='/blog/categories/scala/'>scala</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://www.mandubian.com/2015/04/09/freer/" data-via="mandubian" data-counturl="http://www.mandubian.com/2015/04/09/freer/" >Tweet</a>
+  
+  
+  <div class="g-plusone" data-size="medium"></div>
+  
+  
+</div>
+
+    
+    
+    <section>
+      <h1>Comments</h1>
+      <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+    </section>
+    
+    <ul class="pager">
+      
+      <li class="previous"><a class="basic-alignment left"
+        href="/2014/12/21/scaledn/" title="Previous Post:
+        Scaledn: Promote EDN as a far better alternative to Json in Scala">&laquo; Scaledn: Promote EDN as a far better alternative to Json in Scala</a></li>
+      
+      <li><a href="/blog/archives">Blog Archives</a></li>
+      
+    </ul>
+  </footer>
+</article>
+
+<aside class="sidebar-nav span3">
+  
+    <section class="well">
+  <ul id="recent_posts" class="nav nav-list">
+    <li class="nav-header">Recent Posts</li>
+    
+      <li class="post">
+        <a href="/2015/04/09/freer/">FreeR - Hybrid Free Monads for Reduced Quadratic Complexity/Observability & Map-Fusion Optimization in Scala</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014/12/21/scaledn/">Scaledn: Promote EDN as a far better alternative to Json in Scala</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014/07/30/hfunctor/">Shapeless HFunctor for Heterogenous Structures (& others)</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014/07/29/hmonoid/">Shapeless HMonoid for Heterogenous Structures (& others)</a>
+      </li>
+    
+      <li class="post">
+        <a href="/2014/06/11/daemonad/">Summon Daemonad to macro-snoop into monad stacks</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+<section class="well">
+  <ul id="gh_repos" data-user="mandubian" data-count="5" data-skip="true" class="nav">
+	<li class="nav-header">On GitHub</li>
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+  <a class="github-follow" href="https://github.com/mandubian">Follow @mandubian</a>
+  
+</section>
+
+
+
+<section class="well">
+  <ul id="tweets" class="nav" data-user="mandubian" data-count="4" data-replies="false">
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+    <a href="http://twitter.com/mandubian" class="twitter-follow-button" data-show-count="false">Follow @mandubian</a>
+  
+</section>
+
+
+
+
+
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo" class="page-footer"><hr>
+<p>
+  Copyright &copy; 2015 - Pascal Voitot -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'mandubian';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://www.mandubian.com/2015/04/09/freer/';
+        var disqus_url = 'http://www.mandubian.com/2015/04/09/freer/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+  <script type="text/javascript">
+    (function() {
+      var script = document.createElement('script'); script.type = 'text/javascript'; script.async = true;
+      script.src = 'https://apis.google.com/js/plusone.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(script, s);
+    })();
+  </script>
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = 'http://platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>
