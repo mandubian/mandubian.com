@@ -1,17 +1,14 @@
 /*
-Syntax error: Mixin grid-core-span is missing argument $gridColumnWidth.
-        on line 185 of /home/mandubian/workspaces/mandubian/mandubian.com/sass/bootstrap/_navbar.scss, in `grid-core-span'
-        from line 185 of /home/mandubian/workspaces/mandubian/mandubian.com/sass/bootstrap/_navbar.scss
+Syntax error: Undefined mixin 'core-span'.
+        on line 186 of /home/mandubian/workspaces/mandubian/mandubian.com/sass/bootstrap/_navbar.scss, in `core-span'
+        from line 186 of /home/mandubian/workspaces/mandubian/mandubian.com/sass/bootstrap/_navbar.scss
         from line 47 of /home/mandubian/workspaces/mandubian/mandubian.com/sass/bootstrap/bootstrap.scss
 
 Backtrace:
-/home/mandubian/workspaces/mandubian/mandubian.com/sass/bootstrap/_navbar.scss:185:in `grid-core-span'
-/home/mandubian/workspaces/mandubian/mandubian.com/sass/bootstrap/_navbar.scss:185
+/home/mandubian/workspaces/mandubian/mandubian.com/sass/bootstrap/_navbar.scss:186:in `core-span'
+/home/mandubian/workspaces/mandubian/mandubian.com/sass/bootstrap/_navbar.scss:186
 /home/mandubian/workspaces/mandubian/mandubian.com/sass/bootstrap/bootstrap.scss:47
-/home/mandubian/.gem/ruby/2.2.0/gems/sass-3.2.5/lib/sass/tree/visitors/perform.rb:57:in `block in perform_arguments'
-/home/mandubian/.gem/ruby/2.2.0/gems/sass-3.2.5/lib/sass/tree/visitors/perform.rb:50:in `zip'
-/home/mandubian/.gem/ruby/2.2.0/gems/sass-3.2.5/lib/sass/tree/visitors/perform.rb:50:in `perform_arguments'
-/home/mandubian/.gem/ruby/2.2.0/gems/sass-3.2.5/lib/sass/tree/visitors/perform.rb:261:in `visit_mixin'
+/home/mandubian/.gem/ruby/2.2.0/gems/sass-3.2.5/lib/sass/tree/visitors/perform.rb:251:in `visit_mixin'
 /home/mandubian/.gem/ruby/2.2.0/gems/sass-3.2.5/lib/sass/tree/visitors/base.rb:37:in `visit'
 /home/mandubian/.gem/ruby/2.2.0/gems/sass-3.2.5/lib/sass/tree/visitors/perform.rb:98:in `visit'
 /home/mandubian/.gem/ruby/2.2.0/gems/sass-3.2.5/lib/sass/tree/visitors/base.rb:53:in `block in visit_children'
@@ -68,4 +65,4 @@ Backtrace:
 body:before {
   white-space: pre;
   font-family: monospace;
-  content: "Syntax error: Mixin grid-core-span is missing argument $gridColumnWidth.\A         on line 185 of /home/mandubian/workspaces/mandubian/mandubian.com/sass/bootstrap/_navbar.scss, in `grid-core-span'\A         from line 185 of /home/mandubian/workspaces/mandubian/mandubian.com/sass/bootstrap/_navbar.scss\A         from line 47 of /home/mandubian/workspaces/mandubian/mandubian.com/sass/bootstrap/bootstrap.scss"; }
+  content: "Syntax error: Undefined mixin 'core-span'.\A         on line 186 of /home/mandubian/workspaces/mandubian/mandubian.com/sass/bootstrap/_navbar.scss, in `core-span'\A         from line 186 of /home/mandubian/workspaces/mandubian/mandubian.com/sass/bootstrap/_navbar.scss\A         from line 47 of /home/mandubian/workspaces/mandubian/mandubian.com/sass/bootstrap/bootstrap.scss"; }
