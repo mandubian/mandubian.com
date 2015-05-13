@@ -2,10 +2,10 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
 
   <title><![CDATA[Mandubian Blog]]></title>
-  <link href="http://www.mandubian.com/atom.xml" rel="self"/>
-  <link href="http://www.mandubian.com/"/>
-  <updated>2015-05-13T14:31:33+02:00</updated>
-  <id>http://www.mandubian.com/</id>
+  <link href="http://mandubian.com/atom.xml" rel="self"/>
+  <link href="http://mandubian.com/"/>
+  <updated>2015-05-13T15:39:32+02:00</updated>
+  <id>http://mandubian.com/</id>
   <author>
     <name><![CDATA[Pascal Voitot]]></name>
     <email><![CDATA[pascal.voitot.dev@gmail.com]]></email>
@@ -15,9 +15,9 @@
   
   <entry>
     <title type="html"><![CDATA[ShapelessStream, when Akka-Stream meets Shapeless Coproduct at compile-time]]></title>
-    <link href="http://www.mandubian.com/2015/05/05/shapelessstream/"/>
+    <link href="http://mandubian.com/2015/05/05/shapelessstream/"/>
     <updated>2015-05-05T23:23:00+02:00</updated>
-    <id>http://www.mandubian.com/2015/05/05/shapelessstream</id>
+    <id>http://mandubian.com/2015/05/05/shapelessstream</id>
     <content type="html"><![CDATA[<p>You might have seen on my twitter that my current company <a href="http://www.mfglabs.com">MFG Labs</a> has opensourced the library <a href="http://mfglabs.github.io/akka-stream-extensions/">Akka-Stream Extensions</a>. We have developed it with <a href="http://twitter.com/altamborrino">Alexandre Tamborrino</a> and <a href="http://twitter.com/dmnpignaud">Damien Pignaud</a> for our recent production projects based on <a href="http://doc.akka.io/docs/akka-stream-and-http-experimental/1.0-RC2/scala.html">Typesafe Akka-Stream</a>.</p>
 
 <blockquote><p>In this article, I won&#8217;t explain all the reasons that motivated our choice of Akka-Stream at MFG Labs and the road towards our library <a href="https://mfglabs.github.com/akka-stream-extensions">Akka-Stream Extensions</a>. Here, I&#8217;ll focus on one precise aspect of our choice: <code>types</code>&#8230; And I&#8217;ll tell you about a specific extension I&#8217;ve created for this project: <code>ShapelessStream</code>.</p></blockquote>
@@ -61,7 +61,7 @@
 <p>Ok, Akka-Stream promotes <code>Types</code> as first citizen in your data flows. That&#8217;s cool!
 But it appears that you often need to handle multiple types in the same input channel:</p>
 
-<p><img src="http://www.mandubian.com/images/mandubian/flow_11.png" /></p>
+<p><img src="http://mandubian.com/images/mandubian/flow_11.png" /></p>
 
 <p>When you control completely the types in input, you can represent input types by a classic ADT:</p>
 
@@ -70,9 +70,9 @@ But it appears that you often need to handle multiple types in the same input ch
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
 </pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">sealed</span> <span class="k">trait</span> <span class="nc">A</span>
-</span><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">A1</span><span class="o">(...)</span> <span class="k">extends</span> <span class="nc">In</span>
-</span><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">A2</span><span class="o">(...)</span> <span class="k">extends</span> <span class="nc">In</span>
-</span><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">A3</span><span class="o">(...)</span> <span class="k">extends</span> <span class="nc">In</span>
+</span><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">A1</span><span class="o">(...)</span> <span class="k">extends</span> <span class="n">A</span>
+</span><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">A2</span><span class="o">(...)</span> <span class="k">extends</span> <span class="n">A</span>
+</span><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">A3</span><span class="o">(...)</span> <span class="k">extends</span> <span class="n">A</span>
 </span></code></pre></td></tr></table></div></figure>
 
 
@@ -95,7 +95,7 @@ But it appears that you often need to handle multiple types in the same input ch
 
 <p>Going further, in general, you don&#8217;t want to do that, you want to dispatch every element to a different flow according to its type:</p>
 
-<p><img src="http://www.mandubian.com/images/mandubian/flow_22.png" /></p>
+<p><img src="http://mandubian.com/images/mandubian/flow_22.png" /></p>
 
 <p>&#8230; and merge all results of all flows in one single channel&#8230;</p>
 
@@ -629,9 +629,9 @@ But it appears that you often need to handle multiple types in the same input ch
   
   <entry>
     <title type="html"><![CDATA[FreeR - Hybrid Free Monads for Reduced Quadratic Complexity/Observability & Map-Fusion Optimization in Scala]]></title>
-    <link href="http://www.mandubian.com/2015/04/09/freer/"/>
+    <link href="http://mandubian.com/2015/04/09/freer/"/>
     <updated>2015-04-09T23:23:00+02:00</updated>
-    <id>http://www.mandubian.com/2015/04/09/freer</id>
+    <id>http://mandubian.com/2015/04/09/freer</id>
     <content type="html"><![CDATA[<blockquote><p>Draft FreeR code is on <a href="https://github.com/mandubian/cats/blob/feature/freer/free/src/main/scala/cats/free/FreeR.scala">Github</a></p></blockquote>
 
 <br/>
@@ -886,7 +886,7 @@ But it appears that you often need to handle multiple types in the same input ch
 <br/>
 
 
-<p><img src="http://www.mandubian.com/images/mandubian/left_assoc.jpg"/></p>
+<p><img src="http://mandubian.com/images/mandubian/left_assoc.jpg"/></p>
 
 <br/>
 
@@ -903,7 +903,7 @@ But it appears that you often need to handle multiple types in the same input ch
 
 <p>The code used for testing can be found <a href="https://github.com/mandubian/cats/blob/feature/freer/tests/src/test/scala/cats/tests/FreeRTests.scala#L98-L136">here</a></p>
 
-<p><img src="http://www.mandubian.com/images/mandubian/iteratee.jpg"/></p>
+<p><img src="http://mandubian.com/images/mandubian/iteratee.jpg"/></p>
 
 <blockquote><p><code>FreeR</code> behavior is quite linear even for millions of <code>flatMap</code> (until the GC triggers naturally) whereas classic <code>Free</code> has clearly quadratic curve.</p></blockquote>
 
@@ -955,7 +955,7 @@ But it appears that you often need to handle multiple types in the same input ch
 
 <p>With this optimization, here is the performance in right association:</p>
 
-<p><img src="http://www.mandubian.com/images/mandubian/right_assoc.jpg"/></p>
+<p><img src="http://mandubian.com/images/mandubian/right_assoc.jpg"/></p>
 
 <p>It is quite comparable to classic <code>Free</code> for <code>n</code> under 1 million but it becomes quite bad when <code>n</code> becomes big. Yet, it remains for more efficient than previous representation with just <code>Vector</code>.</p>
 
@@ -1010,7 +1010,7 @@ But it appears that you often need to handle multiple types in the same input ch
 
 <p>Here is the difference in performance between <code>FreeR</code> and <code>FreeR.mapFusion</code>:</p>
 
-<p><img src="http://www.mandubian.com/images/mandubian/map_fusion.jpg"/></p>
+<p><img src="http://mandubian.com/images/mandubian/map_fusion.jpg"/></p>
 
 <p>As you can see, <code>mapFusion</code> can be very interesting in some cases.</p>
 
@@ -1072,9 +1072,9 @@ But it appears that you often need to handle multiple types in the same input ch
   
   <entry>
     <title type="html"><![CDATA[Scaledn: Promote EDN as a far better alternative to Json in Scala]]></title>
-    <link href="http://www.mandubian.com/2014/12/21/scaledn/"/>
+    <link href="http://mandubian.com/2014/12/21/scaledn/"/>
     <updated>2014-12-21T23:23:00+01:00</updated>
-    <id>http://www.mandubian.com/2014/12/21/scaledn</id>
+    <id>http://mandubian.com/2014/12/21/scaledn</id>
     <content type="html"><![CDATA[<h1>SCALEDN, <a href="https://github.com/edn-format/edn">EDN</a> Scala API</h1>
 
 <p><a href="https://github.com/mandubian/scaledn">Scaledn</a> is a Scala <a href="https://github.com/edn-format/edn">EDN</a> parser (runtime &amp; compile-time)/serializer/validator based on :</p>
@@ -1857,9 +1857,9 @@ That&#8217;s exactly why, I wanted to provide a complete Scala API for EDN to te
   
   <entry>
     <title type="html"><![CDATA[Shapeless HFunctor for Heterogenous Structures (& others)]]></title>
-    <link href="http://www.mandubian.com/2014/07/30/hfunctor/"/>
+    <link href="http://mandubian.com/2014/07/30/hfunctor/"/>
     <updated>2014-07-30T08:08:00+02:00</updated>
-    <id>http://www.mandubian.com/2014/07/30/hfunctor</id>
+    <id>http://mandubian.com/2014/07/30/hfunctor</id>
     <content type="html"><![CDATA[<blockquote><p>Not an article, just some reflections on this idea&#8230;</p></blockquote>
 
 <p>You know what is a functor?</p>
@@ -1990,9 +1990,9 @@ That&#8217;s exactly why, I wanted to provide a complete Scala API for EDN to te
   
   <entry>
     <title type="html"><![CDATA[Shapeless HMonoid for Heterogenous Structures (& others)]]></title>
-    <link href="http://www.mandubian.com/2014/07/29/hmonoid/"/>
+    <link href="http://mandubian.com/2014/07/29/hmonoid/"/>
     <updated>2014-07-29T23:23:00+02:00</updated>
-    <id>http://www.mandubian.com/2014/07/29/hmonoid</id>
+    <id>http://mandubian.com/2014/07/29/hmonoid</id>
     <content type="html"><![CDATA[<blockquote><p>Not an article, just some reflections on this idea&#8230;</p></blockquote>
 
 <p>You know what is a monoid?</p>
@@ -2083,9 +2083,9 @@ That&#8217;s exactly why, I wanted to provide a complete Scala API for EDN to te
   
   <entry>
     <title type="html"><![CDATA[Summon Daemonad to macro-snoop into monad stacks]]></title>
-    <link href="http://www.mandubian.com/2014/06/11/daemonad/"/>
+    <link href="http://mandubian.com/2014/06/11/daemonad/"/>
     <updated>2014-06-11T23:23:00+02:00</updated>
-    <id>http://www.mandubian.com/2014/06/11/daemonad</id>
+    <id>http://mandubian.com/2014/06/11/daemonad</id>
     <content type="html"><![CDATA[<p>The code &amp; sample apps can be found on <a href="https://github.com/mandubian/daemonad">Github</a></p>
 
 <blockquote><p>Forget the buzz title, this project is still very draft but it&#8217;s time to expel it out of my R&amp;D sandbox as imperfect as it might be&#8230; Before I lose my sanity while wandering in Scala macro hygiene ;)</p></blockquote>
@@ -2398,14 +2398,14 @@ That&#8217;s enough for you need in your everyday life, right?</p>
   
   <entry>
     <title type="html"><![CDATA[ZPark-Ztream II (Part 3/3): Fancy Spark Streamed Machine-Learning & new Scalaz-Stream NIO API]]></title>
-    <link href="http://www.mandubian.com/2014/03/10/zpark-ml-nio-3/"/>
+    <link href="http://mandubian.com/2014/03/10/zpark-ml-nio-3/"/>
     <updated>2014-03-10T19:19:00+01:00</updated>
-    <id>http://www.mandubian.com/2014/03/10/zpark-ml-nio-3</id>
+    <id>http://mandubian.com/2014/03/10/zpark-ml-nio-3</id>
     <content type="html"><![CDATA[<h2>Synopsis</h2>
 
 <p>The code &amp; sample apps can be found on <a href="https://github.com/mandubian/zpark-ztream">Github</a></p>
 
-<blockquote><p><a href="http://www.mandubian.com/2014-02-13-zpark">Zpark-Zstream I article</a> was a PoC trying to use <a href="https://github.com/scalaz/scalaz-stream">Scalaz-Stream</a> instead of DStream with <a href="https://spark.incubator.apache.org/">Spark-Streaming</a>. I had deliberately decided not to deal with fault-tolerance &amp; stream graph persistence to keep simple but without it, it was quite useless for real application&#8230;</p></blockquote>
+<blockquote><p><a href="http://mandubian.com/2014-02-13-zpark">Zpark-Zstream I article</a> was a PoC trying to use <a href="https://github.com/scalaz/scalaz-stream">Scalaz-Stream</a> instead of DStream with <a href="https://spark.incubator.apache.org/">Spark-Streaming</a>. I had deliberately decided not to deal with fault-tolerance &amp; stream graph persistence to keep simple but without it, it was quite useless for real application&#8230;</p></blockquote>
 
 <div class="well">
 <p>Here is a tryptic of articles trying to do something <i>concrete</i> with <a href="https://github.com/scalaz/scalaz-stream">Scalaz-Stream</a> and <a href="https://spark.incubator.apache.org/">Spark</a>.</p>
@@ -3282,7 +3282,7 @@ That&#8217;s enough for you need in your everyday life, right?</p>
 <br/>
 
 
-<blockquote><p><a href="http://www.mandubian.com/2014/03/09/zpark-ml-nio-2/">GO TO PART2</a> &lt;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;-</p></blockquote>
+<blockquote><p><a href="http://mandubian.com/2014/03/09/zpark-ml-nio-2/">GO TO PART2</a> &lt;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;-</p></blockquote>
 
 <p>Have a look at the code on <a href="https://github.com/mandubian/zpark-ztream">Github</a>.</p>
 
@@ -3306,14 +3306,14 @@ That&#8217;s enough for you need in your everyday life, right?</p>
   
   <entry>
     <title type="html"><![CDATA[ZPark-Ztream II (Part 2/3): Fancy Spark Streamed Machine-Learning & new Scalaz-Stream NIO API]]></title>
-    <link href="http://www.mandubian.com/2014/03/09/zpark-ml-nio-2/"/>
+    <link href="http://mandubian.com/2014/03/09/zpark-ml-nio-2/"/>
     <updated>2014-03-09T19:19:00+01:00</updated>
-    <id>http://www.mandubian.com/2014/03/09/zpark-ml-nio-2</id>
+    <id>http://mandubian.com/2014/03/09/zpark-ml-nio-2</id>
     <content type="html"><![CDATA[<h2>Synopsis</h2>
 
 <p>The code &amp; sample apps can be found on <a href="https://github.com/mandubian/zpark-ztream">Github</a></p>
 
-<blockquote><p><a href="http://www.mandubian.com/2014-02-13-zpark">Zpark-Zstream I article</a> was a PoC trying to use <a href="https://github.com/scalaz/scalaz-stream">Scalaz-Stream</a> instead of DStream with <a href="https://spark.incubator.apache.org/">Spark-Streaming</a>. I had deliberately decided not to deal with fault-tolerance &amp; stream graph persistence to keep simple but without it, it was quite useless for real application&#8230;</p></blockquote>
+<blockquote><p><a href="http://mandubian.com/2014-02-13-zpark">Zpark-Zstream I article</a> was a PoC trying to use <a href="https://github.com/scalaz/scalaz-stream">Scalaz-Stream</a> instead of DStream with <a href="https://spark.incubator.apache.org/">Spark-Streaming</a>. I had deliberately decided not to deal with fault-tolerance &amp; stream graph persistence to keep simple but without it, it was quite useless for real application&#8230;</p></blockquote>
 
 <div class="well">
 <p>Here is a tryptic of articles trying to do something <i>concrete</i> with <a href="https://github.com/scalaz/scalaz-stream">Scalaz-Stream</a> and <a href="https://spark.incubator.apache.org/">Spark</a>.</p>
@@ -4450,17 +4450,17 @@ That&#8217;s enough for you need in your everyday life, right?</p>
 
 <p>I spent this second part of my tryptic mainly explaining a few concepts of the new scalaz-stream brand new NIO API. With it, a client becomes just a stream of exchanges <code>Process[Task, Exchange[I, W]]</code> and a server becomes a stream of stream of exchanges <code>Process[Task, Process[Task, Exchange[I, W]]]</code>.</p>
 
-<p>As soon as you manipulate <code>Process</code>, you can then use the <code>dstreamize</code> API exposed in <a href="http://www.mandubian.com/2014/03/08/zpark-ml-nio-1/">Part 1</a> to pipe streamed data into Spark.</p>
+<p>As soon as you manipulate <code>Process</code>, you can then use the <code>dstreamize</code> API exposed in <a href="http://mandubian.com/2014/03/08/zpark-ml-nio-1/">Part 1</a> to pipe streamed data into Spark.</p>
 
-<p><strong>Let&#8217;s go to <a href="http://www.mandubian.com/2014/03/10/zpark-ml-nio-3/">Part 3</a> now in which we&#8217;re going to do some fancy Machine Learning training with these new tools.</strong></p>
-
-<br/>
-
+<p><strong>Let&#8217;s go to <a href="http://mandubian.com/2014/03/10/zpark-ml-nio-3/">Part 3</a> now in which we&#8217;re going to do some fancy Machine Learning training with these new tools.</strong></p>
 
 <br/>
 
 
-<blockquote><p><a href="http://www.mandubian.com/2014/03/08/zpark-ml-nio-1/">GO TO PART1</a> &lt; &#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8211;> <a href="http://www.mandubian.com/2014/03/10/zpark-ml-nio-3/">GO TO PART3</a></p></blockquote>
+<br/>
+
+
+<blockquote><p><a href="http://mandubian.com/2014/03/08/zpark-ml-nio-1/">GO TO PART1</a> &lt; &#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8211;> <a href="http://mandubian.com/2014/03/10/zpark-ml-nio-3/">GO TO PART3</a></p></blockquote>
 
 <br/>
 
@@ -4480,9 +4480,9 @@ That&#8217;s enough for you need in your everyday life, right?</p>
   
   <entry>
     <title type="html"><![CDATA[ZPark-Ztream II (Part 1/3): Fancy Spark Streamed Machine-Learning & new Scalaz-Stream NIO API]]></title>
-    <link href="http://www.mandubian.com/2014/03/08/zpark-ml-nio-1/"/>
+    <link href="http://mandubian.com/2014/03/08/zpark-ml-nio-1/"/>
     <updated>2014-03-08T19:19:00+01:00</updated>
-    <id>http://www.mandubian.com/2014/03/08/zpark-ml-nio-1</id>
+    <id>http://mandubian.com/2014/03/08/zpark-ml-nio-1</id>
     <content type="html"><![CDATA[<br/>
 
 
@@ -4490,7 +4490,7 @@ That&#8217;s enough for you need in your everyday life, right?</p>
 
 <p>The code &amp; sample apps can be found on <a href="https://github.com/mandubian/zpark-ztream">Github</a></p>
 
-<blockquote><p><a href="http://www.mandubian.com/2014/02/13/zpark/">Zpark-Zstream I article</a> was a PoC trying to use <a href="https://github.com/scalaz/scalaz-stream">Scalaz-Stream</a> instead of DStream with <a href="https://spark.incubator.apache.org/">Spark-Streaming</a>. I had deliberately decided not to deal with fault-tolerance &amp; stream graph persistence to keep simple but without it, it was quite useless for real application&#8230;</p></blockquote>
+<blockquote><p><a href="http://mandubian.com/2014/02/13/zpark/">Zpark-Zstream I article</a> was a PoC trying to use <a href="https://github.com/scalaz/scalaz-stream">Scalaz-Stream</a> instead of DStream with <a href="https://spark.incubator.apache.org/">Spark-Streaming</a>. I had deliberately decided not to deal with fault-tolerance &amp; stream graph persistence to keep simple but without it, it was quite useless for real application&#8230;</p></blockquote>
 
 <div class="well">
 <p>Here is a tryptic of articles trying to do something <i>concrete</i> with <a href="https://github.com/scalaz/scalaz-stream">Scalaz-Stream</a> and <a href="https://spark.incubator.apache.org/">Spark</a>.</p>
@@ -4824,7 +4824,7 @@ It&#8217;s important to note that <code>NetworkReceiver</code> is also meant to 
 
 <p>That was fun but what can we do with that?</p>
 
-<p><strong>In <a href="http://www.mandubian.com/2014/03/09/zpark-ml-nio-2/">part2</a>, I propose to have more fun and stream data to <code>DStream</code> using the brand new Scalaz-Stream NIO API to create cool NIO client/server streams&#8230;</strong></p>
+<p><strong>In <a href="http://mandubian.com/2014/03/09/zpark-ml-nio-2/">part2</a>, I propose to have more fun and stream data to <code>DStream</code> using the brand new Scalaz-Stream NIO API to create cool NIO client/server streams&#8230;</strong></p>
 
 <br/>
 
@@ -4832,7 +4832,7 @@ It&#8217;s important to note that <code>NetworkReceiver</code> is also meant to 
 <br/>
 
 
-<blockquote><p>&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;-> <a href="http://www.mandubian.com/2014/03/09/zpark-ml-nio-2/">GO TO PART2</a></p></blockquote>
+<blockquote><p>&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;-> <a href="http://mandubian.com/2014/03/09/zpark-ml-nio-2/">GO TO PART2</a></p></blockquote>
 
 <br/>
 
@@ -4852,9 +4852,9 @@ It&#8217;s important to note that <code>NetworkReceiver</code> is also meant to 
   
   <entry>
     <title type="html"><![CDATA[ZPark-Ztream: Driving Spark distributed stream with Scalaz-Stream]]></title>
-    <link href="http://www.mandubian.com/2014/02/13/zpark/"/>
+    <link href="http://mandubian.com/2014/02/13/zpark/"/>
     <updated>2014-02-13T18:18:00+01:00</updated>
-    <id>http://www.mandubian.com/2014/02/13/zpark</id>
+    <id>http://mandubian.com/2014/02/13/zpark</id>
     <content type="html"><![CDATA[<p>The code &amp; sample apps can be found on <a href="https://github.com/mandubian/zpark-ztream">Github</a></p>
 
 <blockquote><p>Today I&#8217;m going to write about a Proof of Concept I&#8217;ve been working on those last weeks: I wanted to <strong>use scalaz-stream as a driver of Spark distributed data processing</strong>.
@@ -5488,9 +5488,9 @@ This is still a mystery to me and I must investigate a bit more to know where th
   
   <entry>
     <title type="html"><![CDATA[New Play 2.3 Validation API : breaking the 22 limits with Shapeless]]></title>
-    <link href="http://www.mandubian.com/2014/01/31/play-rules-shapeless/"/>
+    <link href="http://mandubian.com/2014/01/31/play-rules-shapeless/"/>
     <updated>2014-01-31T08:08:00+01:00</updated>
-    <id>http://www.mandubian.com/2014/01/31/play-rules-shapeless</id>
+    <id>http://mandubian.com/2014/01/31/play-rules-shapeless</id>
     <content type="html"><![CDATA[<p>The code &amp; sample apps can be found on <a href="https://github.com/mandubian/shapeless-rules">Github</a></p>
 
 <p>After 5 months studying theories deeper &amp; deeper on my free-time and preparing 3 talks for <a href="http://www.scala.io">scala.io</a> &amp; <a href="http://www.ping-conf.com">ping-conf</a> with my friend <a href="http://www.twitter.com/skaalf">Julien Tournay aka @skaalf</a>, I&#8217;m back blogging and I&#8217;ve got a few more ideas of articles to come&#8230;</p>
@@ -6335,9 +6335,9 @@ Now let&#8217;s do something really useful&#8230;</p></blockquote>
   
   <entry>
     <title type="html"><![CDATA[Play 2.2 Actor Room: websocket (&more) room manager only with actors]]></title>
-    <link href="http://www.mandubian.com/2013/09/22/play-actor-room/"/>
+    <link href="http://mandubian.com/2013/09/22/play-actor-room/"/>
     <updated>2013-09-22T17:17:00+02:00</updated>
-    <id>http://www.mandubian.com/2013/09/22/play-actor-room</id>
+    <id>http://mandubian.com/2013/09/22/play-actor-room</id>
     <content type="html"><![CDATA[<p>The code &amp; sample apps can be found on Github <a href="https://github.com/mandubian/play-actor-room">here</a></p>
 
 <br/>
@@ -7025,9 +7025,9 @@ Everything you can override and everything that I didn&#8217;t implement yet&#82
   
   <entry>
     <title type="html"><![CDATA[Scalaz-Stream Plug'n'Play2 Iteratee/WS + Recursive streaming]]></title>
-    <link href="http://www.mandubian.com/2013/08/21/playztream/"/>
+    <link href="http://mandubian.com/2013/08/21/playztream/"/>
     <updated>2013-08-21T23:23:00+02:00</updated>
-    <id>http://www.mandubian.com/2013/08/21/playztream</id>
+    <id>http://mandubian.com/2013/08/21/playztream</id>
     <content type="html"><![CDATA[<p>The code for all autosources &amp; sample apps can be found on Github <a href="https://github.com/mandubian/playzstream">here</a></p>
 
 <blockquote><p>The aim of this article is to show how <a href="https://github.com/scalaz/scalaz-stream">scalaz-stream</a> could be plugged on existing Play Iteratee/Enumerator and used in your web projects. I also wanted to evaluate in depth the power of <a href="https://github.com/scalaz/scalaz-stream">scalaz-stream</a> <em>Processes</em> by trying to write a recursive streaming action: I mean a web endpoint streaming data and re-injecting its own streamed data in itself.</p></blockquote>
@@ -7841,9 +7841,9 @@ Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,
   
   <entry>
     <title type="html"><![CDATA[Play AutoSource & Datomisca: Proofing the concept on Datomic, a Schema DB]]></title>
-    <link href="http://www.mandubian.com/2013/07/11/play-autosource-datomisca/"/>
+    <link href="http://mandubian.com/2013/07/11/play-autosource-datomisca/"/>
     <updated>2013-07-11T18:18:00+02:00</updated>
-    <id>http://www.mandubian.com/2013/07/11/play-autosource-datomisca</id>
+    <id>http://mandubian.com/2013/07/11/play-autosource-datomisca</id>
     <content type="html"><![CDATA[<blockquote><p>Now you should use play-autosource 2.0 correcting a few issues &amp; introducing ActionBuilder from play2.2</p></blockquote>
 
 <br/>
@@ -8338,9 +8338,9 @@ Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,
   
   <entry>
     <title type="html"><![CDATA[Play2 Json Interpolation & Pattern Matching]]></title>
-    <link href="http://www.mandubian.com/2013/07/04/json-interpolation-pattern-matching/"/>
+    <link href="http://mandubian.com/2013/07/04/json-interpolation-pattern-matching/"/>
     <updated>2013-07-04T08:08:00+02:00</updated>
-    <id>http://www.mandubian.com/2013/07/04/json-interpolation-pattern-matching</id>
+    <id>http://mandubian.com/2013/07/04/json-interpolation-pattern-matching</id>
     <content type="html"><![CDATA[<h4>EXPERIMENTAL / DRAFT</h4>
 
 <br/>
@@ -8714,9 +8714,9 @@ Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,Fun,
   
   <entry>
     <title type="html"><![CDATA[Play AutoSource : 2'30 Kickstart Full REST & CRUD Datasource in Play App (demo'ed with ReactiveMongo + AngularJS)]]></title>
-    <link href="http://www.mandubian.com/2013/06/11/play-autosource/"/>
+    <link href="http://mandubian.com/2013/06/11/play-autosource/"/>
     <updated>2013-06-11T18:18:00+02:00</updated>
-    <id>http://www.mandubian.com/2013/06/11/play-autosource</id>
+    <id>http://mandubian.com/2013/06/11/play-autosource</id>
     <content type="html"><![CDATA[<blockquote><p>Now you should use play-autosource 2.0 correcting a few issues &amp; introducing ActionBuilder from play2.2</p></blockquote>
 
 <br/>
@@ -9609,9 +9609,9 @@ If you need to add headers in your responses and params to querystring, it&#8217
   
   <entry>
     <title type="html"><![CDATA[Reactive Json Crafting : JsZipper + ReactiveMongo + multiple Async WS calls]]></title>
-    <link href="http://www.mandubian.com/2013/05/01/reactive-json-crafting-jszipper-reactivemongo-webservice/"/>
+    <link href="http://mandubian.com/2013/05/01/reactive-json-crafting-jszipper-reactivemongo-webservice/"/>
     <updated>2013-05-01T17:17:00+02:00</updated>
-    <id>http://www.mandubian.com/2013/05/01/reactive-json-crafting-jszipper-reactivemongo-webservice</id>
+    <id>http://mandubian.com/2013/05/01/reactive-json-crafting-jszipper-reactivemongo-webservice</id>
     <content type="html"><![CDATA[<h4>EXPERIMENTAL / DRAFT</h4>
 
 <p>The sample app can be found on Github <a href="https://github.com/mandubian/play-json-zipper/tree/master/samples/multiservices">here</a></p>
@@ -9971,9 +9971,9 @@ If you need to add headers in your responses and params to querystring, it&#8217
   
   <entry>
     <title type="html"><![CDATA[Play2 Json Path Pattern Matching]]></title>
-    <link href="http://www.mandubian.com/2013/05/01/jspath-pattern-matching/"/>
+    <link href="http://mandubian.com/2013/05/01/jspath-pattern-matching/"/>
     <updated>2013-05-01T17:17:00+02:00</updated>
-    <id>http://www.mandubian.com/2013/05/01/jspath-pattern-matching</id>
+    <id>http://mandubian.com/2013/05/01/jspath-pattern-matching</id>
     <content type="html"><![CDATA[<h4>EXPERIMENTAL / DRAFT</h4>
 
 <br/>
@@ -10210,9 +10210,9 @@ If you need to add headers in your responses and params to querystring, it&#8217
   
   <entry>
     <title type="html"><![CDATA[JsZipper : Play2 Json advanced (& monadic) manipulations]]></title>
-    <link href="http://www.mandubian.com/2013/05/01/JsZipper/"/>
+    <link href="http://mandubian.com/2013/05/01/JsZipper/"/>
     <updated>2013-05-01T17:17:00+02:00</updated>
-    <id>http://www.mandubian.com/2013/05/01/JsZipper</id>
+    <id>http://mandubian.com/2013/05/01/JsZipper</id>
     <content type="html"><![CDATA[<h4>EXPERIMENTAL / DRAFT</h4>
 
 <br/>
@@ -10470,9 +10470,9 @@ Until now, if you wanted to do that with Play2/Json, it was quite tricky and req
   
   <entry>
     <title type="html"><![CDATA[Quick Survey about most basic concept in Functional Programming]]></title>
-    <link href="http://www.mandubian.com/2013/04/13/FP-survey/"/>
+    <link href="http://mandubian.com/2013/04/13/FP-survey/"/>
     <updated>2013-04-13T14:14:00+02:00</updated>
-    <id>http://www.mandubian.com/2013/04/13/FP-survey</id>
+    <id>http://mandubian.com/2013/04/13/FP-survey</id>
     <content type="html"><![CDATA[<h4>The question</h4>
 
 <div class="well">
