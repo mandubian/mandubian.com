@@ -47,9 +47,9 @@ When you control completely the types in input, you can represent input types by
 
 {% codeblock lang:scala %}
 sealed trait A
-case class A1(...) extends In
-case class A2(...) extends In
-case class A3(...) extends In
+case class A1(...) extends A
+case class A2(...) extends A
+case class A3(...) extends A
 {% endcodeblock %}
 
 ... And manage it in `Flow[A, B]`:
