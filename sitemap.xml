@@ -2,160 +2,164 @@
 <urlset xmlns='http://www.sitemaps.org/schemas/sitemap/0.9'>
     <url>
         <loc>http://www.mandubian.com/2012/07/14/xmlsoap-ersatz/</loc>
-        <lastmod>2015-04-10T17:43:28+02:00</lastmod>
+        <lastmod>2015-05-13T14:31:27+02:00</lastmod>
     </url>
     <url>
         <loc>
             http://www.mandubian.com/2012/08/27/understanding-play2-iteratees-for-normal-humans/
         </loc>
-        <lastmod>2015-04-10T17:43:28+02:00</lastmod>
+        <lastmod>2015-05-13T14:31:27+02:00</lastmod>
     </url>
     <url>
         <loc>
             http://www.mandubian.com/2012/09/08/unveiling-play-2-dot-1-json-api-part1-jspath-reads-combinators/
         </loc>
-        <lastmod>2015-04-10T17:43:28+02:00</lastmod>
+        <lastmod>2015-05-13T14:31:27+02:00</lastmod>
     </url>
     <url>
         <loc>
             http://www.mandubian.com/2012/10/01/unveiling-play-2-dot-1-json-api-part2-writes-format-combinators/
         </loc>
-        <lastmod>2015-04-10T17:43:28+02:00</lastmod>
+        <lastmod>2015-05-13T14:31:27+02:00</lastmod>
     </url>
     <url>
         <loc>
             http://www.mandubian.com/2012/10/29/unveiling-play-2-dot-1-json-api-part3-json-transformers/
         </loc>
-        <lastmod>2015-04-10T17:43:28+02:00</lastmod>
+        <lastmod>2015-05-13T14:31:27+02:00</lastmod>
     </url>
     <url>
         <loc>http://www.mandubian.com/2012/11/11/JSON-inception/</loc>
-        <lastmod>2015-04-10T17:43:28+02:00</lastmod>
+        <lastmod>2015-05-13T14:31:27+02:00</lastmod>
     </url>
     <url>
         <loc>http://www.mandubian.com/2013/01/13/JSON-Coast-to-Coast/</loc>
-        <lastmod>2015-04-10T17:43:28+02:00</lastmod>
+        <lastmod>2015-05-13T14:31:27+02:00</lastmod>
     </url>
     <url>
         <loc>http://www.mandubian.com/2013/01/30/maquereau-patamorphism/</loc>
-        <lastmod>2015-04-10T17:43:28+02:00</lastmod>
+        <lastmod>2015-05-13T14:31:27+02:00</lastmod>
     </url>
     <url>
         <loc>http://www.mandubian.com/2013/02/10/datomisca-query/</loc>
-        <lastmod>2015-04-10T17:43:28+02:00</lastmod>
+        <lastmod>2015-05-13T14:31:27+02:00</lastmod>
     </url>
     <url>
         <loc>http://www.mandubian.com/2013/02/18/datomisca-fact-operations/</loc>
-        <lastmod>2015-04-10T17:43:28+02:00</lastmod>
+        <lastmod>2015-05-13T14:31:27+02:00</lastmod>
     </url>
     <url>
         <loc>http://www.mandubian.com/2013/02/21/play-json-stand-alone/</loc>
-        <lastmod>2015-04-10T17:43:28+02:00</lastmod>
+        <lastmod>2015-05-13T14:31:27+02:00</lastmod>
     </url>
     <url>
         <loc>http://www.mandubian.com/2013/02/22/scala-future-fatal-exception/</loc>
-        <lastmod>2015-04-10T17:43:28+02:00</lastmod>
+        <lastmod>2015-05-13T14:31:27+02:00</lastmod>
     </url>
     <url>
         <loc>http://www.mandubian.com/2013/02/27/shapelaysson/</loc>
-        <lastmod>2015-04-10T17:43:28+02:00</lastmod>
+        <lastmod>2015-05-13T14:31:27+02:00</lastmod>
     </url>
     <url>
         <loc>http://www.mandubian.com/2013/03/04/datomisca-schema/</loc>
-        <lastmod>2015-04-10T17:43:28+02:00</lastmod>
+        <lastmod>2015-05-13T14:31:27+02:00</lastmod>
     </url>
     <url>
         <loc>http://www.mandubian.com/2013/03/12/datomisca-shapeless-hlist/</loc>
-        <lastmod>2015-04-10T17:43:28+02:00</lastmod>
+        <lastmod>2015-05-13T14:31:27+02:00</lastmod>
     </url>
     <url>
         <loc>http://www.mandubian.com/2013/04/13/FP-survey/</loc>
-        <lastmod>2015-04-10T17:43:28+02:00</lastmod>
+        <lastmod>2015-05-13T14:31:27+02:00</lastmod>
     </url>
     <url>
         <loc>http://www.mandubian.com/2013/05/01/JsZipper/</loc>
-        <lastmod>2015-04-10T17:43:28+02:00</lastmod>
+        <lastmod>2015-05-13T14:31:27+02:00</lastmod>
     </url>
     <url>
         <loc>http://www.mandubian.com/2013/05/01/jspath-pattern-matching/</loc>
-        <lastmod>2015-04-10T17:43:28+02:00</lastmod>
+        <lastmod>2015-05-13T14:31:27+02:00</lastmod>
     </url>
     <url>
         <loc>
             http://www.mandubian.com/2013/05/01/reactive-json-crafting-jszipper-reactivemongo-webservice/
         </loc>
-        <lastmod>2015-04-10T17:43:28+02:00</lastmod>
+        <lastmod>2015-05-13T14:31:27+02:00</lastmod>
     </url>
     <url>
         <loc>http://www.mandubian.com/2013/06/11/play-autosource/</loc>
-        <lastmod>2015-04-10T17:43:28+02:00</lastmod>
+        <lastmod>2015-05-13T14:31:27+02:00</lastmod>
     </url>
     <url>
         <loc>http://www.mandubian.com/2013/07/04/json-interpolation-pattern-matching/</loc>
-        <lastmod>2015-04-10T17:43:28+02:00</lastmod>
+        <lastmod>2015-05-13T14:31:27+02:00</lastmod>
     </url>
     <url>
         <loc>http://www.mandubian.com/2013/07/11/play-autosource-datomisca/</loc>
-        <lastmod>2015-04-10T17:43:28+02:00</lastmod>
+        <lastmod>2015-05-13T14:31:27+02:00</lastmod>
     </url>
     <url>
         <loc>http://www.mandubian.com/2013/08/21/playztream/</loc>
-        <lastmod>2015-04-10T17:43:28+02:00</lastmod>
+        <lastmod>2015-05-13T14:31:27+02:00</lastmod>
     </url>
     <url>
         <loc>http://www.mandubian.com/2013/09/22/play-actor-room/</loc>
-        <lastmod>2015-04-10T17:43:28+02:00</lastmod>
+        <lastmod>2015-05-13T14:31:27+02:00</lastmod>
     </url>
     <url>
         <loc>http://www.mandubian.com/2014/01/31/play-rules-shapeless/</loc>
-        <lastmod>2015-04-10T17:43:28+02:00</lastmod>
+        <lastmod>2015-05-13T14:31:27+02:00</lastmod>
     </url>
     <url>
         <loc>http://www.mandubian.com/2014/02/13/zpark/</loc>
-        <lastmod>2015-04-10T17:43:28+02:00</lastmod>
+        <lastmod>2015-05-13T14:31:27+02:00</lastmod>
     </url>
     <url>
         <loc>http://www.mandubian.com/2014/03/08/zpark-ml-nio-1/</loc>
-        <lastmod>2015-04-10T17:43:28+02:00</lastmod>
+        <lastmod>2015-05-13T14:31:27+02:00</lastmod>
     </url>
     <url>
         <loc>http://www.mandubian.com/2014/03/09/zpark-ml-nio-2/</loc>
-        <lastmod>2015-04-10T17:43:28+02:00</lastmod>
+        <lastmod>2015-05-13T14:31:27+02:00</lastmod>
     </url>
     <url>
         <loc>http://www.mandubian.com/2014/03/10/zpark-ml-nio-3/</loc>
-        <lastmod>2015-04-10T17:43:28+02:00</lastmod>
+        <lastmod>2015-05-13T14:31:27+02:00</lastmod>
     </url>
     <url>
         <loc>http://www.mandubian.com/2014/06/11/daemonad/</loc>
-        <lastmod>2015-04-10T17:43:28+02:00</lastmod>
+        <lastmod>2015-05-13T14:31:27+02:00</lastmod>
     </url>
     <url>
         <loc>http://www.mandubian.com/2014/07/29/hmonoid/</loc>
-        <lastmod>2015-04-10T17:43:28+02:00</lastmod>
+        <lastmod>2015-05-13T14:31:27+02:00</lastmod>
     </url>
     <url>
         <loc>http://www.mandubian.com/2014/07/30/hfunctor/</loc>
-        <lastmod>2015-04-10T17:43:28+02:00</lastmod>
+        <lastmod>2015-05-13T14:31:27+02:00</lastmod>
     </url>
     <url>
         <loc>http://www.mandubian.com/2014/12/21/scaledn/</loc>
-        <lastmod>2015-04-10T17:43:28+02:00</lastmod>
+        <lastmod>2015-05-13T14:31:27+02:00</lastmod>
     </url>
     <url>
         <loc>http://www.mandubian.com/2015/04/09/freer/</loc>
-        <lastmod>2015-04-10T17:43:28+02:00</lastmod>
+        <lastmod>2015-05-13T14:31:27+02:00</lastmod>
     </url>
     <url>
-        <loc>http://www.mandubian.com/blog/archives/</loc>
-        <lastmod>2015-04-10T17:43:29+02:00</lastmod>
-    </url>
-    <url>
-        <loc>http://www.mandubian.com/</loc>
-        <lastmod>2015-04-10T17:43:29+02:00</lastmod>
+        <loc>http://www.mandubian.com/2015/05/05/shapelessstream/</loc>
+        <lastmod>2015-05-13T14:31:27+02:00</lastmod>
     </url>
     <url>
         <loc>http://www.mandubian.com/archives/</loc>
-        <lastmod>2015-04-10T17:43:28+02:00</lastmod>
+        <lastmod>2015-05-13T14:31:27+02:00</lastmod>
+    </url>
+    <url>
+        <loc>http://www.mandubian.com/blog/archives/</loc>
+        <lastmod>2015-05-13T14:31:27+02:00</lastmod>
+    </url>
+    <url>
+        <loc>http://www.mandubian.com/</loc>
+        <lastmod>2015-05-13T14:31:27+02:00</lastmod>
     </url>
 </urlset>

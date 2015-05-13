@@ -4,7 +4,7 @@
   <title><![CDATA[Mandubian Blog]]></title>
   <link href="http://www.mandubian.com/atom.xml" rel="self"/>
   <link href="http://www.mandubian.com/"/>
-  <updated>2015-04-10T17:52:19+02:00</updated>
+  <updated>2015-05-13T14:31:33+02:00</updated>
   <id>http://www.mandubian.com/</id>
   <author>
     <name><![CDATA[Pascal Voitot]]></name>
@@ -12,6 +12,620 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[ShapelessStream, when Akka-Stream meets Shapeless Coproduct at compile-time]]></title>
+    <link href="http://www.mandubian.com/2015/05/05/shapelessstream/"/>
+    <updated>2015-05-05T23:23:00+02:00</updated>
+    <id>http://www.mandubian.com/2015/05/05/shapelessstream</id>
+    <content type="html"><![CDATA[<p>You might have seen on my twitter that my current company <a href="http://www.mfglabs.com">MFG Labs</a> has opensourced the library <a href="http://mfglabs.github.io/akka-stream-extensions/">Akka-Stream Extensions</a>. We have developed it with <a href="http://twitter.com/altamborrino">Alexandre Tamborrino</a> and <a href="http://twitter.com/dmnpignaud">Damien Pignaud</a> for our recent production projects based on <a href="http://doc.akka.io/docs/akka-stream-and-http-experimental/1.0-RC2/scala.html">Typesafe Akka-Stream</a>.</p>
+
+<blockquote><p>In this article, I won&#8217;t explain all the reasons that motivated our choice of Akka-Stream at MFG Labs and the road towards our library <a href="https://mfglabs.github.com/akka-stream-extensions">Akka-Stream Extensions</a>. Here, I&#8217;ll focus on one precise aspect of our choice: <code>types</code>&#8230; And I&#8217;ll tell you about a specific extension I&#8217;ve created for this project: <code>ShapelessStream</code>.</p></blockquote>
+
+<p>The code is <a href="https://github.com/MfgLabs/akka-stream-extensions/tree/master/extensions/shapeless/src">there on github</a></p>
+
+<br/>
+
+
+<br/>
+
+
+<h2>Akka-Stream loves Types</h2>
+
+<p>As you may know, I&#8217;m a <code>Type</code> lover. Types are proofs and proofs are types. Proofs are what you want in your code to ensure <em>in a robust &amp; reliable way</em> that it does what it pretends <em>with the support of the compiler</em>.</p>
+
+<p><strong>First of all, let&#8217;s remind that typesafety is a very interesting feature of Akka-Stream.</strong></p>
+
+<p>Akka-Stream most basic primitive <code>Flow[A, B]</code> represents a <code>data-flow</code> that accepts elements of type <code>A</code> and will return elements of type <code>B</code>. You can&#8217;t pass a <code>C</code> to it and you are sure that this flow won&#8217;t return any <code>C</code> for example.</p>
+
+<p>At MFG Labs, we have inherited some Scala legacy code mostly based on Akka actors which provide a very good way to handle failures but which are not typesafe at all (till Akka Typed) and not composable. Developers using Akka tend to scatter the business logic in the code and it can become hard to maintain. It has appeared that in many cases where Akka was used to transform data in a flow, call external services, Akka-Stream would be a very good way to replace those actors:</p>
+
+<ul>
+<li>better type-safety,</li>
+<li>fluent &amp; composable code with great builder DSL</li>
+<li>same Akka failure management</li>
+<li>buffer, parallel computing, backpressure out-of-the-box</li>
+</ul>
+
+
+<blockquote><p>Yes, it&#8217;s quite weird to say it but Akka-Stream helped us correct most problems that had been introduced using Akka (rightly or wrongly).</p></blockquote>
+
+<br/>
+
+
+<br/>
+
+
+<h2>Multi-type flows</h2>
+
+<p>Ok, Akka-Stream promotes <code>Types</code> as first citizen in your data flows. That&#8217;s cool!
+But it appears that you often need to handle multiple types in the same input channel:</p>
+
+<p><img src="http://www.mandubian.com/images/mandubian/flow_11.png" /></p>
+
+<p>When you control completely the types in input, you can represent input types by a classic ADT:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">sealed</span> <span class="k">trait</span> <span class="nc">A</span>
+</span><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">A1</span><span class="o">(...)</span> <span class="k">extends</span> <span class="nc">In</span>
+</span><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">A2</span><span class="o">(...)</span> <span class="k">extends</span> <span class="nc">In</span>
+</span><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">A3</span><span class="o">(...)</span> <span class="k">extends</span> <span class="nc">In</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>&#8230; And manage it in <code>Flow[A, B]</code>:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="nc">Flow</span><span class="o">[</span><span class="kt">A</span><span class="o">].</span><span class="n">map</span> <span class="o">{</span>
+</span><span class='line'>  <span class="k">case</span> <span class="n">A1</span><span class="o">(...)</span> <span class="k">=&gt;</span> <span class="c1">// some B</span>
+</span><span class='line'>  <span class="k">case</span> <span class="n">A2</span><span class="o">(...)</span> <span class="k">=&gt;</span> <span class="c1">// some B</span>
+</span><span class='line'>  <span class="k">case</span> <span class="n">A3</span><span class="o">(...)</span> <span class="k">=&gt;</span> <span class="c1">// some B</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Nice but you need to wrap all input types in an ADT and this involves some boring code that can even be different for every custom flow.</p>
+
+<p>Going further, in general, you don&#8217;t want to do that, you want to dispatch every element to a different flow according to its type:</p>
+
+<p><img src="http://www.mandubian.com/images/mandubian/flow_22.png" /></p>
+
+<p>&#8230; and merge all results of all flows in one single channel&#8230;</p>
+
+<p>&#8230; and every flow has its own behavior in terms of parallelism, bufferization, data generation and back-pressure&#8230;</p>
+
+<p>In Akka-Stream, if you wanted to build a flow corresponding to the previous schema, you would have to use:</p>
+
+<ul>
+<li>a <a href="http://doc.akka.io/docs/akka-stream-and-http-experimental/1.0-RC2/scala/stream-customize.html">FlexiRoute</a> for the input dispatcher</li>
+<li>a <a href="http://doc.akka.io/docs/akka-stream-and-http-experimental/1.0-RC2/scala/stream-customize.html">FlexiMerge</a> for the output merger.</li>
+</ul>
+
+
+<p>Have a look at the doc and see that it requires quite a bunch of lines to write one of those. It&#8217;s really powerful but quite tedious to implement and not so typesafe after all. Moreover, you certainly would have to write one <code>FlexiRoute</code> and one <code>FlexiMerge</code> per use-case as the number of inputs types and return types depend on your context.</p>
+
+<br/>
+
+
+<br/>
+
+
+<h2>Miles Sabin to the rescue</h2>
+
+<p>In my latest project, this <code>dispatcher/flows/merger</code> pattern was required in multiple places and as I&#8217;m lazy, I wanted something more elegant &amp; typesafe if possible to build this kind of flow graphs.</p>
+
+<p>Thinking in terms of pure types and from an external point of view, we can see the previous <code>dispatcher/flows/merger</code> flow graph in pseudo-code as:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="nc">Flow</span><span class="o">[</span>
+</span><span class='line'>  <span class="kt">Input</span> <span class="kt">=</span> <span class="kt">A1</span> <span class="kt">or</span> <span class="kt">A2</span> <span class="kt">or</span> <span class="kt">A3</span>, <span class="kt">//</span> <span class="kt">in</span> <span class="kt">input</span> <span class="kt">it</span> <span class="kt">accepts</span> <span class="kt">A1</span> <span class="kt">or</span> <span class="kt">A2</span> <span class="kt">or</span> <span class="kt">A3</span>
+</span><span class='line'>  <span class="kt">Ouput</span> <span class="kt">=</span> <span class="kt">B1</span> <span class="kt">or</span> <span class="kt">B2</span> <span class="kt">or</span> <span class="kt">B3</span>  <span class="kt">//</span> <span class="kt">in</span> <span class="kt">output</span> <span class="kt">it</span> <span class="kt">generates</span> <span class="kt">B1</span> <span class="kt">or</span> <span class="kt">B2</span> <span class="kt">or</span> <span class="kt">B3</span>
+</span><span class='line'><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>And to build the full flow graph, we need to provide a list of flows for all pairs of input/output types corresponding to our graph branches:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="nc">Flow</span><span class="o">[</span><span class="kt">A1</span>, <span class="kt">B1</span><span class="o">]</span> <span class="n">and</span> <span class="nc">Flow</span><span class="o">[</span><span class="kt">A2</span>, <span class="kt">B2</span><span class="o">]</span> <span class="n">and</span> <span class="nc">Flow</span><span class="o">[</span><span class="kt">A3</span>, <span class="kt">B3</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>In <a href="https://github.com/milessabin/shapeless">Shapeless</a>, there are 2 very very very useful structures:</p>
+
+<ul>
+<li><code>Coproduct</code> is a generalization of the well known <code>Either</code>. You have <code>A or B</code> in <code>Either[A, B]</code>. With <code>Coproduct</code>, you can have more than 2 alternatives <code>A or B or C or D</code>. So, for our previous external view of flow graph, using <code>Coproduct</code>, it could be written as:</li>
+</ul>
+
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="nc">Flow</span><span class="o">[</span>
+</span><span class='line'>  <span class="kt">A1</span> <span class="kt">:+:</span> <span class="kt">A2</span> <span class="kt">:+:</span> <span class="kt">A3</span> <span class="kt">:+:</span> <span class="kt">CNil</span>,
+</span><span class='line'>  <span class="kt">B1</span> <span class="kt">:+:</span> <span class="kt">B2</span> <span class="kt">:+:</span> <span class="kt">B3</span> <span class="kt">:+:</span> <span class="kt">CNil</span>
+</span><span class='line'><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<ul>
+<li><code>HList</code> allows to build heterogenous <code>List</code> of elements keeping &amp; tracking all types at compile time. For our previous list of flows, it would fit quite well as we want to match all input/output types of all flows. It would give:</li>
+</ul>
+
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="nc">Flow</span><span class="o">[</span><span class="kt">A1</span>, <span class="kt">B1</span><span class="o">]</span> <span class="o">::</span> <span class="nc">Flow</span><span class="o">[</span><span class="kt">A2</span>, <span class="kt">B2</span><span class="o">]</span> <span class="o">::</span> <span class="nc">Flow</span><span class="o">[</span><span class="kt">A3</span>, <span class="kt">B3</span><span class="o">]</span> <span class="o">::</span> <span class="nc">HNil</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>So, from an external point of view, the process of building our <code>dispatcher/flows/merger</code> flow graph looks like a <code>Function taking a</code>Hlist of flows<code>in input and returning the built</code>Flow of Coproducts`:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="nc">Flow</span><span class="o">[</span><span class="kt">A1</span>, <span class="kt">B1</span><span class="o">]</span> <span class="o">::</span> <span class="nc">Flow</span><span class="o">[</span><span class="kt">A2</span>, <span class="kt">B2</span><span class="o">]</span> <span class="o">::</span> <span class="nc">Flow</span><span class="o">[</span><span class="kt">A3</span>, <span class="kt">B3</span><span class="o">]</span> <span class="o">::</span> <span class="nc">HNil</span> <span class="k">=&gt;</span>
+</span><span class='line'>  <span class="nc">Flow</span><span class="o">[</span><span class="kt">A1</span> <span class="kt">:+:</span> <span class="kt">A2</span> <span class="kt">:+:</span> <span class="kt">A3</span> <span class="kt">:+:</span> <span class="kt">CNil</span>, <span class="kt">B1</span> <span class="kt">:+:</span> <span class="kt">B2</span> <span class="kt">:+:</span> <span class="kt">B3</span> <span class="kt">:+:</span> <span class="kt">CNil</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Let&#8217;s write it in terms of Shapeless Scala code:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="cm">/**</span>
+</span><span class='line'><span class="cm"> * Builds at compile-time a fully typed-controlled flow that transforms a HList of Flows to a Flow of the Coproduct of inputs to Coproduct of outputs.</span>
+</span><span class='line'><span class="cm"> *</span>
+</span><span class='line'><span class="cm"> * @param a Hlist of flows Flow[A1, B1] :: FLow[A2, B2] :: ... :: Flow[An, Bn] :: HNil</span>
+</span><span class='line'><span class="cm"> * @return the flow of the Coproduct of inputs and the Coproduct of outputs Flow[A1 :+: A2 :+: ... :+: An :+: CNil, B1 :+: B2 :+: ... +: Bn :+: CNil, Unit]</span>
+</span><span class='line'><span class="cm"> */</span>
+</span><span class='line'><span class="k">def</span> <span class="n">coproductFlow</span><span class="o">[</span><span class="kt">HL</span> <span class="k">&lt;:</span> <span class="kt">HList</span>, <span class="kt">CIn</span> <span class="k">&lt;:</span> <span class="kt">Coproduct</span>, <span class="kt">COut</span> <span class="k">&lt;:</span> <span class="kt">Coproduct</span><span class="o">](</span>
+</span><span class='line'>  <span class="n">flows</span><span class="k">:</span> <span class="kt">HL</span>
+</span><span class='line'><span class="o">)</span><span class="k">:</span> <span class="kt">Flow</span><span class="o">[</span><span class="kt">CIn</span>, <span class="kt">COut</span>, <span class="kt">Unit</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Fantastic !!!</p>
+
+<blockquote><p>Now the question is how can we build <strong>at compile-time</strong> this <code>Flow[CIn, COut, Unit]</code> from an <code>HList</code> of <code>Flows</code> and be sure that the compiler checks all links are correctly typed and all types are managed by the provided flows?</p></blockquote>
+
+<br/>
+
+
+<br/>
+
+
+<h2>Akka-Stream Graph Mutable builders</h2>
+
+<p>An important concept in Akka-Stream is the separation of concerns between:</p>
+
+<ul>
+<li>constructing/describing a data-flow</li>
+<li>materializing with live resources (like actor system)</li>
+<li>running the data-flow by plugging live sources/sinks on it (like web, file, hdfs, queues etc&#8230;).</li>
+</ul>
+
+
+<blockquote><p>For the curious, you find the same idea in scalaz-stream but in a FP-purer way as scalaz-stream directly relies on <code>Free</code> concepts that formalize this idea quite directly.</p></blockquote>
+
+<p>Akka-Stream has taken a more custom way to respond to these requirements. To build complex data flows, it provides a very nice DSL described <a href="http://doc.akka.io/docs/akka-stream-and-http-experimental/1.0-RC2/scala/stream-graphs.html">here</a>. This DSL is based on the idea of a mutable structure used while building your graph until you decide to fix it definitely into an immutable structure.</p>
+
+<p>An example from the doc:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">g</span> <span class="k">=</span> <span class="nc">FlowGraph</span><span class="o">.</span><span class="n">closed</span><span class="o">()</span> <span class="o">{</span> <span class="k">implicit</span> <span class="n">builder</span><span class="k">:</span> <span class="kt">FlowGraph.Builder</span><span class="o">[</span><span class="kt">Unit</span><span class="o">]</span> <span class="k">=&gt;</span>
+</span><span class='line'>  <span class="k">import</span> <span class="nn">FlowGraph.Implicits._</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">in</span> <span class="k">=</span> <span class="nc">Source</span><span class="o">(</span><span class="mi">1</span> <span class="n">to</span> <span class="mi">10</span><span class="o">)</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">out</span> <span class="k">=</span> <span class="nc">Sink</span><span class="o">.</span><span class="n">ignore</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">val</span> <span class="n">bcast</span> <span class="k">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="nc">Broadcast</span><span class="o">[</span><span class="kt">Int</span><span class="o">](</span><span class="mi">2</span><span class="o">))</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">merge</span> <span class="k">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="nc">Merge</span><span class="o">[</span><span class="kt">Int</span><span class="o">](</span><span class="mi">2</span><span class="o">))</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">val</span> <span class="n">f1</span><span class="o">,</span> <span class="n">f2</span><span class="o">,</span> <span class="n">f3</span><span class="o">,</span> <span class="n">f4</span> <span class="k">=</span> <span class="nc">Flow</span><span class="o">[</span><span class="kt">Int</span><span class="o">].</span><span class="n">map</span><span class="o">(</span><span class="k">_</span> <span class="o">+</span> <span class="mi">10</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="n">in</span> <span class="o">~&gt;</span> <span class="n">f1</span> <span class="o">~&gt;</span> <span class="n">bcast</span> <span class="o">~&gt;</span> <span class="n">f2</span> <span class="o">~&gt;</span> <span class="n">merge</span> <span class="o">~&gt;</span> <span class="n">f3</span> <span class="o">~&gt;</span> <span class="n">out</span>
+</span><span class='line'>              <span class="n">bcast</span> <span class="o">~&gt;</span> <span class="n">f4</span> <span class="o">~&gt;</span> <span class="n">merge</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>builder</code> is the mutable structure used to build the flow graph using the DSL inside the <code>{...}</code> block.</p>
+
+<p>The value <code>g</code> is the immutable structure resulting from the builder that will later be materialized and run using live resources.</p>
+
+<p>Please remark that once built, <code>g</code> value can reused and materialized/run several times, it is just the description of your flow graph.</p>
+
+<blockquote><p>This idea of mutable builders is really interesting in general: mutability in the small can help a lot to make your building block efficient and easy to write/read without endangering immutability in the large.</p></blockquote>
+
+<br/>
+
+
+<br/>
+
+
+<h2>Hacking mutable builders with Shapeless</h2>
+
+<blockquote><p>My intuition was to <em>hack</em> these mutable Akka-Stream builders using Shapeless type-dependent mechanics to build a Flow of Coproducts from an HList of Flows&#8230;</p></blockquote>
+
+<p>Let&#8217;s show the real signature of <code>coproductFlow</code>:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">def</span> <span class="n">coproductFlow</span><span class="o">[</span><span class="kt">HL</span> <span class="k">&lt;:</span> <span class="kt">HList</span>, <span class="kt">CIn</span> <span class="k">&lt;:</span> <span class="kt">Coproduct</span>, <span class="kt">COut</span> <span class="k">&lt;:</span> <span class="kt">Coproduct</span>, <span class="kt">CInOutlets</span> <span class="k">&lt;:</span> <span class="kt">HList</span>, <span class="kt">COutInlets</span> <span class="k">&lt;:</span> <span class="kt">HList</span><span class="o">](</span>
+</span><span class='line'>  <span class="n">flows</span><span class="k">:</span> <span class="kt">HL</span>
+</span><span class='line'><span class="o">)(</span>
+</span><span class='line'>  <span class="k">implicit</span>
+</span><span class='line'>    <span class="n">flowTypes</span><span class="k">:</span> <span class="kt">FlowTypes.Aux</span><span class="o">[</span><span class="kt">HL</span>, <span class="kt">CIn</span>, <span class="kt">COut</span><span class="o">],</span>
+</span><span class='line'>    <span class="n">obuild</span><span class="k">:</span> <span class="kt">OutletBuilder.Aux</span><span class="o">[</span><span class="kt">CIn</span>, <span class="kt">CInOutlets</span><span class="o">],</span>
+</span><span class='line'>    <span class="n">ibuild</span><span class="k">:</span> <span class="kt">InletBuilder.Aux</span><span class="o">[</span><span class="kt">COut</span>, <span class="kt">COut</span>, <span class="kt">COutInlets</span><span class="o">],</span>
+</span><span class='line'>    <span class="n">otrav</span><span class="k">:</span> <span class="kt">ToTraversable.Aux</span><span class="o">[</span><span class="kt">CInOutlets</span>, <span class="kt">List</span>, <span class="kt">Outlet</span><span class="o">[</span><span class="k">_</span><span class="o">]],</span>
+</span><span class='line'>    <span class="n">itrav</span><span class="k">:</span> <span class="kt">ToTraversable.Aux</span><span class="o">[</span><span class="kt">COutInlets</span>, <span class="kt">List</span>, <span class="kt">Inlet</span><span class="o">[</span><span class="kt">COut</span><span class="o">]],</span>
+</span><span class='line'>    <span class="n">selOutletValue</span><span class="k">:</span> <span class="kt">SelectOutletValue.Aux</span><span class="o">[</span><span class="kt">CIn</span>, <span class="kt">CInOutlets</span><span class="o">],</span>
+</span><span class='line'>    <span class="n">flowBuilder</span><span class="k">:</span> <span class="kt">FlowBuilderC.Aux</span><span class="o">[</span><span class="kt">CIn</span>, <span class="kt">COut</span>, <span class="kt">CInOutlets</span>, <span class="kt">HL</span>, <span class="kt">COutInlets</span><span class="o">]</span>
+</span><span class='line'><span class="o">)</span><span class="k">:</span> <span class="kt">Flow</span><span class="o">[</span><span class="kt">CIn</span>, <span class="kt">COut</span>, <span class="kt">Unit</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Frightening!!!!!!!</p>
+
+<p>No, don&#8217;t be, it&#8217;s just the transcription in types of the requirements to build the full flow.</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">def</span> <span class="n">coproductFlow</span><span class="o">[</span><span class="kt">HL</span> <span class="k">&lt;:</span> <span class="kt">HList</span>, <span class="kt">CIn</span> <span class="k">&lt;:</span> <span class="kt">Coproduct</span>, <span class="kt">COut</span> <span class="k">&lt;:</span> <span class="kt">Coproduct</span>, <span class="kt">CInOutlets</span> <span class="k">&lt;:</span> <span class="kt">HList</span>, <span class="kt">COutInlets</span> <span class="k">&lt;:</span> <span class="kt">HList</span><span class="o">](</span>
+</span><span class='line'>  <span class="n">flows</span><span class="k">:</span> <span class="kt">HL</span>
+</span><span class='line'><span class="o">)(</span>
+</span><span class='line'>  <span class="k">implicit</span>
+</span><span class='line'>    <span class="c1">// 1 - Introspects HList of Flows to extract</span>
+</span><span class='line'>    <span class="c1">//      * all input types in CIn Coproduct</span>
+</span><span class='line'>    <span class="c1">//      * all output types in COut Coproduct</span>
+</span><span class='line'>    <span class="n">flowTypes</span><span class="k">:</span> <span class="kt">FlowTypes.Aux</span><span class="o">[</span><span class="kt">HL</span>, <span class="kt">CIn</span>, <span class="kt">COut</span><span class="o">],</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="c1">// 2 - Builds all Akka-Stream outlets branching the FlexiRoute</span>
+</span><span class='line'>    <span class="c1">//     outlets to the right Flow inlet in the HList</span>
+</span><span class='line'>    <span class="n">obuild</span><span class="k">:</span> <span class="kt">OutletBuilder.Aux</span><span class="o">[</span><span class="kt">CIn</span>, <span class="kt">CInOutlets</span><span class="o">],</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="c1">// 3 - Builds all Akka-Stream inlets branching the outlets of each Flow</span>
+</span><span class='line'>    <span class="c1">//     in the HList to the right inlet of FlexiMerge</span>
+</span><span class='line'>    <span class="n">ibuild</span><span class="k">:</span> <span class="kt">InletBuilder.Aux</span><span class="o">[</span><span class="kt">COut</span>, <span class="kt">COut</span>, <span class="kt">COutInlets</span><span class="o">],</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="c1">// 4 - Technical structures to be able to traverse</span>
+</span><span class='line'>    <span class="c1">//     and select all those previously built thingies</span>
+</span><span class='line'>    <span class="n">otrav</span><span class="k">:</span> <span class="kt">ToTraversable.Aux</span><span class="o">[</span><span class="kt">CInOutlets</span>, <span class="kt">List</span>, <span class="kt">Outlet</span><span class="o">[</span><span class="k">_</span><span class="o">]],</span>
+</span><span class='line'>    <span class="n">itrav</span><span class="k">:</span> <span class="kt">ToTraversable.Aux</span><span class="o">[</span><span class="kt">COutInlets</span>, <span class="kt">List</span>, <span class="kt">Inlet</span><span class="o">[</span><span class="kt">COut</span><span class="o">]],</span>
+</span><span class='line'>    <span class="n">selOutletValue</span><span class="k">:</span> <span class="kt">SelectOutletValue.Aux</span><span class="o">[</span><span class="kt">CIn</span>, <span class="kt">CInOutlets</span><span class="o">],</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="c1">// 5 - The AkkaStream mutable Builder that:</span>
+</span><span class='line'>    <span class="c1">//      * builds the input FlexiRoute with the right output types</span>
+</span><span class='line'>    <span class="c1">//      * plugs all FlexiRoute outlets to the right flow inlet</span>
+</span><span class='line'>    <span class="c1">//      * builds the output FlexiMerge with the right input types</span>
+</span><span class='line'>    <span class="c1">//      * plugs all flow outlets to the right inlet of FlexiMerge</span>
+</span><span class='line'>    <span class="n">flowBuilder</span><span class="k">:</span> <span class="kt">FlowBuilderC.Aux</span><span class="o">[</span><span class="kt">CIn</span>, <span class="kt">COut</span>, <span class="kt">CInOutlets</span>, <span class="kt">HL</span>, <span class="kt">COutInlets</span><span class="o">]</span>
+</span><span class='line'><span class="o">)</span><span class="k">:</span> <span class="kt">Flow</span><span class="o">[</span><span class="kt">CIn</span>, <span class="kt">COut</span>, <span class="kt">Unit</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>The Scala code might seem a bit ugly to a few of you. That&#8217;s not false but keep in mind what we have done: mixing shapeless-style recursive implicit typeclass inference with the versatility of Akka-Stream mutable builders&#8230; And we were able to build our complex flow graph, to check all types and to plug all together <strong>at compile-time</strong>&#8230;</p></blockquote>
+
+<br/>
+
+
+<br/>
+
+
+<h2>Sample</h2>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// 1 - Create a type alias for your coproduct</span>
+</span><span class='line'><span class="k">type</span> <span class="kt">C</span> <span class="o">=</span> <span class="nc">Int</span> <span class="o">:+:</span> <span class="nc">String</span> <span class="o">:+:</span> <span class="nc">Boolean</span> <span class="o">:+:</span> <span class="nc">CNil</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// The sink to consume all output data</span>
+</span><span class='line'><span class="k">val</span> <span class="n">sink</span> <span class="k">=</span> <span class="nc">Sink</span><span class="o">.</span><span class="n">fold</span><span class="o">[</span><span class="kt">Seq</span><span class="o">[</span><span class="kt">C</span><span class="o">]</span>, <span class="kt">C</span><span class="o">](</span><span class="nc">Seq</span><span class="o">())(</span><span class="k">_</span> <span class="o">:+</span> <span class="k">_</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// 2 - a sample source wrapping incoming data in the Coproduct</span>
+</span><span class='line'><span class="k">val</span> <span class="n">f</span> <span class="k">=</span> <span class="nc">FlowGraph</span><span class="o">.</span><span class="n">closed</span><span class="o">(</span><span class="n">sink</span><span class="o">)</span> <span class="o">{</span> <span class="k">implicit</span> <span class="n">builder</span> <span class="k">=&gt;</span> <span class="n">sink</span> <span class="k">=&gt;</span>
+</span><span class='line'>  <span class="k">import</span> <span class="nn">FlowGraph.Implicits._</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">s</span> <span class="k">=</span> <span class="nc">Source</span><span class="o">(()</span> <span class="k">=&gt;</span> <span class="nc">Seq</span><span class="o">(</span>
+</span><span class='line'>    <span class="nc">Coproduct</span><span class="o">[</span><span class="kt">C</span><span class="o">](</span><span class="mi">1</span><span class="o">),</span>
+</span><span class='line'>    <span class="nc">Coproduct</span><span class="o">[</span><span class="kt">C</span><span class="o">](</span><span class="s">&quot;foo&quot;</span><span class="o">),</span>
+</span><span class='line'>    <span class="nc">Coproduct</span><span class="o">[</span><span class="kt">C</span><span class="o">](</span><span class="mi">2</span><span class="o">),</span>
+</span><span class='line'>    <span class="nc">Coproduct</span><span class="o">[</span><span class="kt">C</span><span class="o">](</span><span class="kc">false</span><span class="o">),</span>
+</span><span class='line'>    <span class="nc">Coproduct</span><span class="o">[</span><span class="kt">C</span><span class="o">](</span><span class="s">&quot;bar&quot;</span><span class="o">),</span>
+</span><span class='line'>    <span class="nc">Coproduct</span><span class="o">[</span><span class="kt">C</span><span class="o">](</span><span class="mi">3</span><span class="o">),</span>
+</span><span class='line'>    <span class="nc">Coproduct</span><span class="o">[</span><span class="kt">C</span><span class="o">](</span><span class="kc">true</span><span class="o">)</span>
+</span><span class='line'>  <span class="o">).</span><span class="n">toIterator</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// 3 - our typed flows</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">flowInt</span> <span class="k">=</span> <span class="nc">Flow</span><span class="o">[</span><span class="kt">Int</span><span class="o">].</span><span class="n">map</span><span class="o">{</span><span class="n">i</span> <span class="k">=&gt;</span> <span class="n">println</span><span class="o">(</span><span class="s">&quot;i:&quot;</span><span class="o">+</span><span class="n">i</span><span class="o">);</span> <span class="n">i</span><span class="o">}</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">flowString</span> <span class="k">=</span> <span class="nc">Flow</span><span class="o">[</span><span class="kt">String</span><span class="o">].</span><span class="n">map</span><span class="o">{</span><span class="n">s</span> <span class="k">=&gt;</span> <span class="n">println</span><span class="o">(</span><span class="s">&quot;s:&quot;</span><span class="o">+</span><span class="n">s</span><span class="o">);</span> <span class="n">s</span><span class="o">}</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">flowBool</span> <span class="k">=</span> <span class="nc">Flow</span><span class="o">[</span><span class="kt">Boolean</span><span class="o">].</span><span class="n">map</span><span class="o">{</span><span class="n">s</span> <span class="k">=&gt;</span> <span class="n">println</span><span class="o">(</span><span class="s">&quot;s:&quot;</span><span class="o">+</span><span class="n">s</span><span class="o">);</span> <span class="n">s</span><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// &gt;&gt;&gt;&gt;&gt;&gt; THE IMPORTANT THING</span>
+</span><span class='line'><span class="c1">// 4 - build the coproductFlow in a 1-liner</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">fr</span> <span class="k">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="nc">ShapelessStream</span><span class="o">.</span><span class="n">coproductFlow</span><span class="o">(</span><span class="n">flowInt</span> <span class="o">::</span> <span class="n">flowString</span> <span class="o">::</span> <span class="n">flowBool</span> <span class="o">::</span> <span class="nc">HNil</span><span class="o">))</span>
+</span><span class='line'><span class="c1">// &lt;&lt;&lt;&lt;&lt;&lt; THE IMPORTANT THING</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// 5 - plug everything together using akkastream DSL</span>
+</span><span class='line'>  <span class="n">s</span> <span class="o">~&gt;</span> <span class="n">fr</span><span class="o">.</span><span class="n">inlet</span>
+</span><span class='line'>       <span class="n">fr</span><span class="o">.</span><span class="n">outlet</span> <span class="o">~&gt;</span> <span class="n">sink</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// 6 - run it</span>
+</span><span class='line'><span class="n">f</span><span class="o">.</span><span class="n">run</span><span class="o">().</span><span class="n">futureValue</span><span class="o">.</span><span class="n">toSet</span> <span class="n">should</span> <span class="n">equal</span> <span class="o">(</span><span class="nc">Set</span><span class="o">(</span>
+</span><span class='line'>  <span class="nc">Coproduct</span><span class="o">[</span><span class="kt">C</span><span class="o">](</span><span class="mi">1</span><span class="o">),</span>
+</span><span class='line'>  <span class="nc">Coproduct</span><span class="o">[</span><span class="kt">C</span><span class="o">](</span><span class="s">&quot;foo&quot;</span><span class="o">),</span>
+</span><span class='line'>  <span class="nc">Coproduct</span><span class="o">[</span><span class="kt">C</span><span class="o">](</span><span class="mi">2</span><span class="o">),</span>
+</span><span class='line'>  <span class="nc">Coproduct</span><span class="o">[</span><span class="kt">C</span><span class="o">](</span><span class="kc">false</span><span class="o">),</span>
+</span><span class='line'>  <span class="nc">Coproduct</span><span class="o">[</span><span class="kt">C</span><span class="o">](</span><span class="s">&quot;bar&quot;</span><span class="o">),</span>
+</span><span class='line'>  <span class="nc">Coproduct</span><span class="o">[</span><span class="kt">C</span><span class="o">](</span><span class="mi">3</span><span class="o">),</span>
+</span><span class='line'>  <span class="nc">Coproduct</span><span class="o">[</span><span class="kt">C</span><span class="o">](</span><span class="kc">true</span><span class="o">)</span>
+</span><span class='line'><span class="o">))</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>FYI, Shapeless Coproduct provides a lot of useful operations on Coproducts such as unifying all types or merging Coproducts together.</p></blockquote>
+
+<br/>
+
+
+<br/>
+
+
+<h2>Some compile errors now ?</h2>
+
+<p>Imagine you forget to manage one type of the Coproduct in the HList of flows:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="o">...</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// 4 - build the coproductFlow in a 1-liner</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">fr</span> <span class="k">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">add</span><span class="o">(</span><span class="nc">ShapelessStream</span><span class="o">.</span><span class="n">coproductFlow</span><span class="o">(</span><span class="n">flowInt</span> <span class="o">::</span> <span class="n">flowString</span> <span class="o">::</span> <span class="nc">HNil</span><span class="o">))</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">..</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>If you compile, it will produce this:</p>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="nc">ShapelessExtensionsSpec</span><span class="o">.</span><span class="n">scala</span><span class="k">:</span><span class="err">97</span><span class="kt">:</span> <span class="kt">overloaded</span> <span class="kt">method</span> <span class="kt">value</span> <span class="kt">~&gt;</span> <span class="kt">with</span> <span class="kt">alternatives:</span>
+</span><span class='line'><span class="o">[</span><span class="kt">error</span><span class="o">]</span>   <span class="o">(</span><span class="n">to</span><span class="k">:</span> <span class="kt">akka.stream.SinkShape</span><span class="o">[</span><span class="kt">C</span><span class="o">])(</span><span class="k">implicit</span> <span class="n">b</span><span class="k">:</span> <span class="kt">akka.stream.scaladsl.FlowGraph.Builder</span><span class="o">[</span><span class="k">_</span><span class="o">])</span><span class="nc">Unit</span> <span class="o">&lt;</span><span class="n">and</span><span class="o">&gt;</span>
+</span><span class='line'><span class="o">[</span><span class="kt">error</span><span class="o">]</span>   <span class="o">(</span><span class="n">to</span><span class="k">:</span> <span class="kt">akka.stream.Graph</span><span class="o">[</span><span class="kt">akka.stream.SinkShape</span><span class="o">[</span><span class="kt">C</span><span class="o">]</span>, <span class="k">_</span><span class="o">])(</span><span class="k">implicit</span> <span class="n">b</span><span class="k">:</span> <span class="kt">akka.stream.scaladsl.FlowGraph.Builder</span><span class="o">[</span><span class="k">_</span><span class="o">])</span><span class="nc">Unit</span> <span class="o">&lt;</span><span class="n">and</span><span class="o">&gt;</span>
+</span><span class='line'><span class="o">[</span><span class="kt">error</span><span class="o">]</span>   <span class="o">[</span><span class="kt">Out</span><span class="o">](</span><span class="n">flow</span><span class="k">:</span> <span class="kt">akka.stream.FlowShape</span><span class="o">[</span><span class="kt">C</span>,<span class="kt">Out</span><span class="o">])(</span><span class="k">implicit</span> <span class="n">b</span><span class="k">:</span> <span class="kt">akka.stream.scaladsl.FlowGraph.Builder</span><span class="o">[</span><span class="k">_</span><span class="o">])</span><span class="n">akka</span><span class="o">.</span><span class="n">stream</span><span class="o">.</span><span class="n">scaladsl</span><span class="o">.</span><span class="nc">FlowGraph</span><span class="o">.</span><span class="nc">Implicits</span><span class="o">.</span><span class="nc">PortOps</span><span class="o">[</span><span class="kt">Out</span>,<span class="kt">Unit</span><span class="o">]</span> <span class="o">&lt;</span><span class="n">and</span><span class="o">&gt;</span>
+</span><span class='line'><span class="o">[</span><span class="kt">error</span><span class="o">]</span>   <span class="o">[</span><span class="kt">Out</span><span class="o">](</span><span class="n">junction</span><span class="k">:</span> <span class="kt">akka.stream.UniformFanOutShape</span><span class="o">[</span><span class="kt">C</span>,<span class="kt">Out</span><span class="o">])(</span><span class="k">implicit</span> <span class="n">b</span><span class="k">:</span> <span class="kt">akka.stream.scaladsl.FlowGraph.Builder</span><span class="o">[</span><span class="k">_</span><span class="o">])</span><span class="n">akka</span><span class="o">.</span><span class="n">stream</span><span class="o">.</span><span class="n">scaladsl</span><span class="o">.</span><span class="nc">FlowGraph</span><span class="o">.</span><span class="nc">Implicits</span><span class="o">.</span><span class="nc">PortOps</span><span class="o">[</span><span class="kt">Out</span>,<span class="kt">Unit</span><span class="o">]</span> <span class="o">&lt;</span><span class="n">and</span><span class="o">&gt;</span>
+</span><span class='line'><span class="o">[</span><span class="kt">error</span><span class="o">]</span>   <span class="o">[</span><span class="kt">Out</span><span class="o">](</span><span class="n">junction</span><span class="k">:</span> <span class="kt">akka.stream.UniformFanInShape</span><span class="o">[</span><span class="kt">C</span>,<span class="kt">Out</span><span class="o">])(</span><span class="k">implicit</span> <span class="n">b</span><span class="k">:</span> <span class="kt">akka.stream.scaladsl.FlowGraph.Builder</span><span class="o">[</span><span class="k">_</span><span class="o">])</span><span class="n">akka</span><span class="o">.</span><span class="n">stream</span><span class="o">.</span><span class="n">scaladsl</span><span class="o">.</span><span class="nc">FlowGraph</span><span class="o">.</span><span class="nc">Implicits</span><span class="o">.</span><span class="nc">PortOps</span><span class="o">[</span><span class="kt">Out</span>,<span class="kt">Unit</span><span class="o">]</span> <span class="o">&lt;</span><span class="n">and</span><span class="o">&gt;</span>
+</span><span class='line'><span class="o">[</span><span class="kt">error</span><span class="o">]</span>   <span class="o">[</span><span class="kt">Out</span><span class="o">](</span><span class="n">via</span><span class="k">:</span> <span class="kt">akka.stream.Graph</span><span class="o">[</span><span class="kt">akka.stream.FlowShape</span><span class="o">[</span><span class="kt">C</span>,<span class="kt">Out</span><span class="o">]</span>,<span class="kt">Any</span><span class="o">])(</span><span class="k">implicit</span> <span class="n">b</span><span class="k">:</span> <span class="kt">akka.stream.scaladsl.FlowGraph.Builder</span><span class="o">[</span><span class="k">_</span><span class="o">])</span><span class="n">akka</span><span class="o">.</span><span class="n">stream</span><span class="o">.</span><span class="n">scaladsl</span><span class="o">.</span><span class="nc">FlowGraph</span><span class="o">.</span><span class="nc">Implicits</span><span class="o">.</span><span class="nc">PortOps</span><span class="o">[</span><span class="kt">Out</span>,<span class="kt">Unit</span><span class="o">]</span> <span class="o">&lt;</span><span class="n">and</span><span class="o">&gt;</span>
+</span><span class='line'><span class="o">[</span><span class="kt">error</span><span class="o">]</span>   <span class="o">(</span><span class="n">to</span><span class="k">:</span> <span class="kt">akka.stream.Inlet</span><span class="o">[</span><span class="kt">C</span><span class="o">])(</span><span class="k">implicit</span> <span class="n">b</span><span class="k">:</span> <span class="kt">akka.stream.scaladsl.FlowGraph.Builder</span><span class="o">[</span><span class="k">_</span><span class="o">])</span><span class="nc">Unit</span>
+</span><span class='line'><span class="o">[</span><span class="kt">error</span><span class="o">]</span>  <span class="n">cannot</span> <span class="n">be</span> <span class="n">applied</span> <span class="n">to</span> <span class="o">(</span><span class="n">akka</span><span class="o">.</span><span class="n">stream</span><span class="o">.</span><span class="nc">Inlet</span><span class="o">[</span><span class="kt">shapeless.:+:</span><span class="o">[</span><span class="kt">Int</span>,<span class="kt">shapeless.:+:</span><span class="o">[</span><span class="kt">String</span>,<span class="kt">com.mfglabs.stream.extensions.shapeless.FlowTypes.last.CIn</span><span class="o">]]])</span>
+</span><span class='line'><span class="o">[</span><span class="kt">error</span><span class="o">]</span>       <span class="n">s</span> <span class="o">~&gt;</span> <span class="n">fr</span><span class="o">.</span><span class="n">inlet</span>
+</span><span class='line'><span class="o">[</span><span class="kt">error</span><span class="o">]</span>         <span class="o">^</span>
+</span><span class='line'><span class="o">[</span><span class="kt">error</span><span class="o">]</span> <span class="o">/</span><span class="nc">Users</span><span class="o">/</span><span class="n">pvo</span><span class="o">/</span><span class="n">workspaces</span><span class="o">/</span><span class="n">mfg</span><span class="o">/</span><span class="n">akka</span><span class="o">-</span><span class="n">stream</span><span class="o">-</span><span class="n">extensions</span><span class="o">/</span><span class="n">extensions</span><span class="o">/</span><span class="n">shapeless</span><span class="o">/</span><span class="n">src</span><span class="o">/</span><span class="n">test</span><span class="o">/</span><span class="n">scala</span><span class="o">/</span><span class="nc">ShapelessExtensionsSpec</span><span class="o">.</span><span class="n">scala</span><span class="k">:</span><span class="err">98</span><span class="kt">:</span> <span class="kt">overloaded</span> <span class="kt">method</span> <span class="kt">value</span> <span class="kt">~&gt;</span> <span class="kt">with</span> <span class="kt">alternatives:</span>
+</span><span class='line'><span class="o">[</span><span class="kt">error</span><span class="o">]</span>   <span class="o">(</span><span class="n">to</span><span class="k">:</span> <span class="kt">akka.stream.SinkShape</span><span class="o">[</span><span class="kt">shapeless.:+:</span><span class="o">[</span><span class="kt">Int</span>,<span class="kt">shapeless.:+:</span><span class="o">[</span><span class="kt">String</span>,<span class="kt">com.mfglabs.stream.extensions.shapeless.FlowTypes.last.COut</span><span class="o">]]])(</span><span class="k">implicit</span> <span class="n">b</span><span class="k">:</span> <span class="kt">akka.stream.scaladsl.FlowGraph.Builder</span><span class="o">[</span><span class="k">_</span><span class="o">])</span><span class="nc">Unit</span> <span class="o">&lt;</span><span class="n">and</span><span class="o">&gt;</span>
+</span><span class='line'><span class="o">[</span><span class="kt">error</span><span class="o">]</span>   <span class="o">(</span><span class="n">to</span><span class="k">:</span> <span class="kt">akka.stream.Graph</span><span class="o">[</span><span class="kt">akka.stream.SinkShape</span><span class="o">[</span><span class="kt">shapeless.:+:</span><span class="o">[</span><span class="kt">Int</span>,<span class="kt">shapeless.:+:</span><span class="o">[</span><span class="kt">String</span>,<span class="kt">com.mfglabs.stream.extensions.shapeless.FlowTypes.last.COut</span><span class="o">]]]</span>, <span class="k">_</span><span class="o">])(</span><span class="k">implicit</span> <span class="n">b</span><span class="k">:</span> <span class="kt">akka.stream.scaladsl.FlowGraph.Builder</span><span class="o">[</span><span class="k">_</span><span class="o">])</span><span class="nc">Unit</span> <span class="o">&lt;</span><span class="n">and</span><span class="o">&gt;</span>
+</span><span class='line'><span class="o">[</span><span class="kt">error</span><span class="o">]</span>   <span class="o">[</span><span class="kt">Out</span><span class="o">](</span><span class="n">flow</span><span class="k">:</span> <span class="kt">akka.stream.FlowShape</span><span class="o">[</span><span class="kt">shapeless.:+:</span><span class="o">[</span><span class="kt">Int</span>,<span class="kt">shapeless.:+:</span><span class="o">[</span><span class="kt">String</span>,<span class="kt">com.mfglabs.stream.extensions.shapeless.FlowTypes.last.COut</span><span class="o">]]</span>,<span class="kt">Out</span><span class="o">])(</span><span class="k">implicit</span> <span class="n">b</span><span class="k">:</span> <span class="kt">akka.stream.scaladsl.FlowGraph.Builder</span><span class="o">[</span><span class="k">_</span><span class="o">])</span><span class="n">akka</span><span class="o">.</span><span class="n">stream</span><span class="o">.</span><span class="n">scaladsl</span><span class="o">.</span><span class="nc">FlowGraph</span><span class="o">.</span><span class="nc">Implicits</span><span class="o">.</span><span class="nc">PortOps</span><span class="o">[</span><span class="kt">Out</span>,<span class="kt">Unit</span><span class="o">]</span> <span class="o">&lt;</span><span class="n">and</span><span class="o">&gt;</span>
+</span><span class='line'><span class="o">[</span><span class="kt">error</span><span class="o">]</span>   <span class="o">[</span><span class="kt">Out</span><span class="o">](</span><span class="n">junction</span><span class="k">:</span> <span class="kt">akka.stream.UniformFanOutShape</span><span class="o">[</span><span class="kt">shapeless.:+:</span><span class="o">[</span><span class="kt">Int</span>,<span class="kt">shapeless.:+:</span><span class="o">[</span><span class="kt">String</span>,<span class="kt">com.mfglabs.stream.extensions.shapeless.FlowTypes.last.COut</span><span class="o">]]</span>,<span class="kt">Out</span><span class="o">])(</span><span class="k">implicit</span> <span class="n">b</span><span class="k">:</span> <span class="kt">akka.stream.scaladsl.FlowGraph.Builder</span><span class="o">[</span><span class="k">_</span><span class="o">])</span><span class="n">akka</span><span class="o">.</span><span class="n">stream</span><span class="o">.</span><span class="n">scaladsl</span><span class="o">.</span><span class="nc">FlowGraph</span><span class="o">.</span><span class="nc">Implicits</span><span class="o">.</span><span class="nc">PortOps</span><span class="o">[</span><span class="kt">Out</span>,<span class="kt">Unit</span><span class="o">]</span> <span class="o">&lt;</span><span class="n">and</span><span class="o">&gt;</span>
+</span><span class='line'><span class="o">[</span><span class="kt">error</span><span class="o">]</span>   <span class="o">[</span><span class="kt">Out</span><span class="o">](</span><span class="n">junction</span><span class="k">:</span> <span class="kt">akka.stream.UniformFanInShape</span><span class="o">[</span><span class="kt">shapeless.:+:</span><span class="o">[</span><span class="kt">Int</span>,<span class="kt">shapeless.:+:</span><span class="o">[</span><span class="kt">String</span>,<span class="kt">com.mfglabs.stream.extensions.shapeless.FlowTypes.last.COut</span><span class="o">]]</span>,<span class="kt">Out</span><span class="o">])(</span><span class="k">implicit</span> <span class="n">b</span><span class="k">:</span> <span class="kt">akka.stream.scaladsl.FlowGraph.Builder</span><span class="o">[</span><span class="k">_</span><span class="o">])</span><span class="n">akka</span><span class="o">.</span><span class="n">stream</span><span class="o">.</span><span class="n">scaladsl</span><span class="o">.</span><span class="nc">FlowGraph</span><span class="o">.</span><span class="nc">Implicits</span><span class="o">.</span><span class="nc">PortOps</span><span class="o">[</span><span class="kt">Out</span>,<span class="kt">Unit</span><span class="o">]</span> <span class="o">&lt;</span><span class="n">and</span><span class="o">&gt;</span>
+</span><span class='line'><span class="o">[</span><span class="kt">error</span><span class="o">]</span>   <span class="o">[</span><span class="kt">Out</span><span class="o">](</span><span class="n">via</span><span class="k">:</span> <span class="kt">akka.stream.Graph</span><span class="o">[</span><span class="kt">akka.stream.FlowShape</span><span class="o">[</span><span class="kt">shapeless.:+:</span><span class="o">[</span><span class="kt">Int</span>,<span class="kt">shapeless.:+:</span><span class="o">[</span><span class="kt">String</span>,<span class="kt">com.mfglabs.stream.extensions.shapeless.FlowTypes.last.COut</span><span class="o">]]</span>,<span class="kt">Out</span><span class="o">]</span>,<span class="kt">Any</span><span class="o">])(</span><span class="k">implicit</span> <span class="n">b</span><span class="k">:</span> <span class="kt">akka.stream.scaladsl.FlowGraph.Builder</span><span class="o">[</span><span class="k">_</span><span class="o">])</span><span class="n">akka</span><span class="o">.</span><span class="n">stream</span><span class="o">.</span><span class="n">scaladsl</span><span class="o">.</span><span class="nc">FlowGraph</span><span class="o">.</span><span class="nc">Implicits</span><span class="o">.</span><span class="nc">PortOps</span><span class="o">[</span><span class="kt">Out</span>,<span class="kt">Unit</span><span class="o">]</span> <span class="o">&lt;</span><span class="n">and</span><span class="o">&gt;</span>
+</span><span class='line'><span class="o">[</span><span class="kt">error</span><span class="o">]</span>   <span class="o">(</span><span class="n">to</span><span class="k">:</span> <span class="kt">akka.stream.Inlet</span><span class="o">[</span><span class="kt">shapeless.:+:</span><span class="o">[</span><span class="kt">Int</span>,<span class="kt">shapeless.:+:</span><span class="o">[</span><span class="kt">String</span>,<span class="kt">com.mfglabs.stream.extensions.shapeless.FlowTypes.last.COut</span><span class="o">]]])(</span><span class="k">implicit</span> <span class="n">b</span><span class="k">:</span> <span class="kt">akka.stream.scaladsl.FlowGraph.Builder</span><span class="o">[</span><span class="k">_</span><span class="o">])</span><span class="nc">Unit</span>
+</span><span class='line'><span class="o">[</span><span class="kt">error</span><span class="o">]</span>  <span class="n">cannot</span> <span class="n">be</span> <span class="n">applied</span> <span class="n">to</span> <span class="o">(</span><span class="n">sink</span><span class="o">.</span><span class="nc">Shape</span><span class="o">)</span>
+</span><span class='line'><span class="o">[</span><span class="kt">error</span><span class="o">]</span>            <span class="n">fr</span><span class="o">.</span><span class="n">outlet</span> <span class="o">~&gt;</span> <span class="n">sink</span>
+</span><span class='line'><span class="o">[</span><span class="kt">error</span><span class="o">]</span>                      <span class="o">^</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><strong>OUCHHHH</strong>, this is a mix of the worst error of Akka-Stream and the kind of errors you get with Shapeless :)</p>
+
+<blockquote><p>Don&#8217;t panic, breathe deep and just tell yourself that in this case, it just means that your types do not fit well</p></blockquote>
+
+<p>In general, the first line and the last lines are the important ones.</p>
+
+<h4>For input:</h4>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="nc">ShapelessExtensionsSpec</span><span class="o">.</span><span class="n">scala</span><span class="k">:</span><span class="err">97</span><span class="kt">:</span> <span class="kt">overloaded</span> <span class="kt">method</span> <span class="kt">value</span> <span class="kt">~&gt;</span> <span class="kt">with</span> <span class="kt">alternatives:</span>
+</span><span class='line'><span class="o">[</span><span class="kt">error</span><span class="o">]</span>   <span class="o">(</span><span class="n">to</span><span class="k">:</span> <span class="kt">akka.stream.SinkShape</span><span class="o">[</span><span class="kt">C</span><span class="o">])(</span><span class="k">implicit</span> <span class="n">b</span><span class="k">:</span> <span class="kt">akka.stream.scaladsl.FlowGraph.Builder</span><span class="o">[</span><span class="k">_</span><span class="o">])</span><span class="nc">Unit</span> <span class="o">&lt;</span><span class="n">and</span><span class="o">&gt;</span>
+</span><span class='line'><span class="o">[</span><span class="kt">error</span><span class="o">]</span>  <span class="n">cannot</span> <span class="n">be</span> <span class="n">applied</span> <span class="n">to</span> <span class="o">(</span><span class="n">akka</span><span class="o">.</span><span class="n">stream</span><span class="o">.</span><span class="nc">Inlet</span><span class="o">[</span><span class="kt">shapeless.:+:</span><span class="o">[</span><span class="kt">Int</span>,<span class="kt">shapeless.:+:</span><span class="o">[</span><span class="kt">String</span>,<span class="kt">com.mfglabs.stream.extensions.shapeless.FlowTypes.last.CIn</span><span class="o">]]])</span>
+</span><span class='line'><span class="o">[</span><span class="kt">error</span><span class="o">]</span>       <span class="n">s</span> <span class="o">~&gt;</span> <span class="n">fr</span><span class="o">.</span><span class="n">inlet</span>
+</span><span class='line'><span class="o">[</span><span class="kt">error</span><span class="o">]</span>         <span class="o">^</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>It just means you try to plug a <code>C == Int :+: String :+: Bool :+: CNil</code> to a <code>Int :+: String :+: CNil</code> and the compiler is angry against you!!</p>
+
+<h4>For output:</h4>
+
+<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="nc">ShapelessExtensionsSpec</span><span class="o">.</span><span class="n">scala</span><span class="k">:</span><span class="err">98</span><span class="kt">:</span> <span class="kt">overloaded</span> <span class="kt">method</span> <span class="kt">value</span> <span class="kt">~&gt;</span> <span class="kt">with</span> <span class="kt">alternatives:</span>
+</span><span class='line'><span class="o">[</span><span class="kt">error</span><span class="o">]</span>   <span class="o">(</span><span class="n">to</span><span class="k">:</span> <span class="kt">akka.stream.SinkShape</span><span class="o">[</span><span class="kt">shapeless.:+:</span><span class="o">[</span><span class="kt">Int</span>,<span class="kt">shapeless.:+:</span><span class="o">[</span><span class="kt">String</span>,<span class="kt">com.mfglabs.stream.extensions.shapeless.FlowTypes.last.COut</span><span class="o">]]])(</span><span class="k">implicit</span> <span class="n">b</span><span class="k">:</span> <span class="kt">akka.stream.scaladsl.FlowGraph.Builder</span><span class="o">[</span><span class="k">_</span><span class="o">])</span><span class="nc">Unit</span> <span class="o">&lt;</span><span class="n">and</span><span class="o">&gt;</span>
+</span><span class='line'><span class="o">[</span><span class="kt">error</span><span class="o">]</span>   <span class="o">(</span><span class="n">to</span><span class="k">:</span> <span class="kt">akka.stream.Inlet</span><span class="o">[</span><span class="kt">shapeless.:+:</span><span class="o">[</span><span class="kt">Int</span>,<span class="kt">shapeless.:+:</span><span class="o">[</span><span class="kt">String</span>,<span class="kt">com.mfglabs.stream.extensions.shapeless.FlowTypes.last.COut</span><span class="o">]]])(</span><span class="k">implicit</span> <span class="n">b</span><span class="k">:</span> <span class="kt">akka.stream.scaladsl.FlowGraph.Builder</span><span class="o">[</span><span class="k">_</span><span class="o">])</span><span class="nc">Unit</span>
+</span><span class='line'><span class="o">[</span><span class="kt">error</span><span class="o">]</span>  <span class="n">cannot</span> <span class="n">be</span> <span class="n">applied</span> <span class="n">to</span> <span class="o">(</span><span class="n">sink</span><span class="o">.</span><span class="nc">Shape</span><span class="o">)</span>
+</span><span class='line'><span class="o">[</span><span class="kt">error</span><span class="o">]</span>            <span class="n">fr</span><span class="o">.</span><span class="n">outlet</span> <span class="o">~&gt;</span> <span class="n">sink</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>It just means you try to plug a <code>Int :+: String :+: CNil</code> to a <code>C == Int :+: String :+: Bool :+: CNil</code> and the compiler is 2X-angry against you!!!</p>
+
+<br/>
+
+
+<br/>
+
+
+<h2>Conclusion</h2>
+
+<p>Mixing the power of Shapeless compile-time type dependent structures and Akka-Stream mutable builders, we are able to build at compile-time a complex <code>dispatcher/flows/merger</code> flow graph that checks all types and all flows correspond to each other and plugs all together in a 1-liner&#8230;</p>
+
+<p>This code is the first iteration on this principle but it appeared to be so efficient and I trusted the mechanism so much (nothing happens at runtime but just at compile-time) that I&#8217;ve put that in production two weeks ago. <strong>It runs like a charm.</strong></p>
+
+<p>Finally, there are a few specificities/limitations to know:</p>
+
+<ul>
+<li><p>Wrapping input data into the <code>Coproduct</code> is still the boring part with some pattern matching potentially. But this is like Json/Xml validation, you need to validate only the data you expect. Yet I expect to reduce the work soon by providing a Scala macro that will generate this part for you as it&#8217;s just mechanical&#8230;</p></li>
+<li><p>Wrapping everything in <code>Coproduct</code> could have some impact on performance if what you expect is pure performance but in my use-cases IO are so much more impacting that this is not a problem&#8230;</p></li>
+<li><p><code>coproductFlow</code> is built with a custom FlexiRoute with <code>DemandFromAll</code> condition &amp; FlexiMerge using <code>ReadAny</code> condition. This implies :</p>
+
+<ul>
+<li><p>the order is NOT guaranteed due to the nature of used FlexiRoute &amp; FlexiMerge and potentially to the flows you provide in your HList (each branch flow has its own parallelism/buffer/backpressure behavior and is not necessarily a 1-to-1 flow).</p></li>
+<li><p>the slowest branch will slow down all other branches (as with a broadcast). <em>To manage these issues, you can add buffers in your branch flows to allow other branches to go on pulling input data</em></p></li>
+</ul>
+</li>
+</ul>
+
+
+<p>The future?</p>
+
+<ul>
+<li><p>A macro generating the Coproduct wrapping flow</p></li>
+<li><p>Some other flows based on Shapeless</p></li>
+</ul>
+
+
+<p>Have more backpressured and typed fun&#8230;</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[FreeR - Hybrid Free Monads for Reduced Quadratic Complexity/Observability & Map-Fusion Optimization in Scala]]></title>
@@ -9933,201 +10547,6 @@ d3.select(self.frameElement).style("height", height + "px");
 <blockquote><p>For info, this dendrograph was pre-computed using Play2.1 app sucking Tweets &amp; filtering/grouping the results in a very manual-o-matic way…</p></blockquote>
 
 <p>Have Fun(ctional)</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Shapeless HList Schema-Type-Safe conversion to Datomisca/Datomic Entities]]></title>
-    <link href="http://www.mandubian.com/2013/03/12/datomisca-shapeless-hlist/"/>
-    <updated>2013-03-12T12:12:00+01:00</updated>
-    <id>http://www.mandubian.com/2013/03/12/datomisca-shapeless-hlist</id>
-    <content type="html"><![CDATA[<blockquote><p>The code is on github project <a href="https://github.com/mandubian/shapotomic">shapotomic</a></p></blockquote>
-
-<h4>Datomisca is a Scala API for Datomic DB</h4>
-
-<p>If you want to know more about Datomisca/Datomic schema go to my <a href="http://mandubian.com/2013/03/04/datomisca-schema/">recent article</a>. What&#8217;s interesting with Datomisca schema is that they are statically typed allowing some compiler validations and type inference.</p>
-
-<h4><a href="https://github.com/milessabin/shapeless">Shapeless HList</a> are heterogenous polymorphic lists</h4>
-
-<p>HList are able to contain different types of data and able to keep tracks of these types.</p>
-
-<br/>
-
-
-<div class="well">
-<b><p>This project is an experience trying to :</p>
-
-<ul>
-  <li>convert HList to/from Datomic Entities</li>
-  <li>check HList types against schema at compile-time</li>
-</ul></b>
-</div>
-
-
-<p>This uses :</p>
-
-<ul>
-<li>Datomisca type-safe schema</li>
-<li>Shapeless HList</li>
-<li>Shapeless polymorphic functions</li>
-</ul>
-
-
-<p>Please note that we don&#8217;t provide any <code>Iso[From, To]</code> since there is no isomorphism here.
-Actually, there are 2 monomorphisms (injective):</p>
-
-<ul>
-<li><code>HList   =&gt; AddEntity</code> to provision an entity</li>
-<li><code>DEntity =&gt; HList</code> when retrieving entity</li>
-</ul>
-
-
-<p>We would need to implement <code>Mono[From, To]</code> certainly for our case&#8230;</p>
-
-<h2>Code sample</h2>
-
-<h3>Create schema based on <code>HList</code></h3>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// Koala Schema</span>
-</span><span class='line'><span class="k">object</span> <span class="nc">Koala</span> <span class="o">{</span>
-</span><span class='line'>  <span class="k">object</span> <span class="nc">ns</span> <span class="o">{</span>
-</span><span class='line'>    <span class="k">val</span> <span class="n">koala</span> <span class="k">=</span> <span class="nc">Namespace</span><span class="o">(</span><span class="s">&quot;koala&quot;</span><span class="o">)</span>
-</span><span class='line'>  <span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="c1">// schema attributes</span>
-</span><span class='line'>  <span class="k">val</span> <span class="n">name</span>        <span class="k">=</span> <span class="nc">Attribute</span><span class="o">(</span><span class="n">ns</span><span class="o">.</span><span class="n">koala</span> <span class="o">/</span> <span class="s">&quot;name&quot;</span><span class="o">,</span> <span class="nc">SchemaType</span><span class="o">.</span><span class="n">string</span><span class="o">,</span> <span class="nc">Cardinality</span><span class="o">.</span><span class="n">one</span><span class="o">).</span><span class="n">withDoc</span><span class="o">(</span><span class="s">&quot;Koala&#39;s name&quot;</span><span class="o">)</span>
-</span><span class='line'>  <span class="k">val</span> <span class="n">age</span>         <span class="k">=</span> <span class="nc">Attribute</span><span class="o">(</span><span class="n">ns</span><span class="o">.</span><span class="n">koala</span> <span class="o">/</span> <span class="s">&quot;age&quot;</span><span class="o">,</span> <span class="nc">SchemaType</span><span class="o">.</span><span class="n">long</span><span class="o">,</span> <span class="nc">Cardinality</span><span class="o">.</span><span class="n">one</span><span class="o">).</span><span class="n">withDoc</span><span class="o">(</span><span class="s">&quot;Koala&#39;s age&quot;</span><span class="o">)</span>
-</span><span class='line'>  <span class="k">val</span> <span class="n">trees</span>       <span class="k">=</span> <span class="nc">Attribute</span><span class="o">(</span><span class="n">ns</span><span class="o">.</span><span class="n">koala</span> <span class="o">/</span> <span class="s">&quot;trees&quot;</span><span class="o">,</span> <span class="nc">SchemaType</span><span class="o">.</span><span class="n">string</span><span class="o">,</span> <span class="nc">Cardinality</span><span class="o">.</span><span class="n">many</span><span class="o">).</span><span class="n">withDoc</span><span class="o">(</span><span class="s">&quot;Koala&#39;s trees&quot;</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="c1">// the schema in HList form</span>
-</span><span class='line'>  <span class="k">val</span> <span class="n">schema</span> <span class="k">=</span> <span class="n">name</span> <span class="o">::</span> <span class="n">age</span> <span class="o">::</span> <span class="n">trees</span> <span class="o">::</span> <span class="nc">HNil</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="c1">// the datomic facts corresponding to schema </span>
-</span><span class='line'>  <span class="c1">// (need specifying upper type for shapeless conversion to list)</span>
-</span><span class='line'>  <span class="k">val</span> <span class="n">txData</span> <span class="k">=</span> <span class="n">schema</span><span class="o">.</span><span class="n">toList</span><span class="o">[</span><span class="kt">Operation</span><span class="o">]</span>
-</span><span class='line'><span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'><span class="c1">// Provision schema</span>
-</span><span class='line'><span class="nc">Datomic</span><span class="o">.</span><span class="n">transact</span><span class="o">(</span><span class="nc">Koala</span><span class="o">.</span><span class="n">txData</span><span class="o">)</span> <span class="n">map</span> <span class="o">{</span> <span class="n">tx</span> <span class="k">=&gt;</span> <span class="o">...</span> <span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h3>Validate <code>HList</code> against Schema</h3>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="c1">// creates a Temporary ID &amp; keeps it for resolving entity after insertion</span>
-</span><span class='line'><span class="k">val</span> <span class="n">id</span> <span class="k">=</span> <span class="nc">DId</span><span class="o">(</span><span class="nc">Partition</span><span class="o">.</span><span class="nc">USER</span><span class="o">)</span>
-</span><span class='line'><span class="c1">// creates an HList entity </span>
-</span><span class='line'><span class="k">val</span> <span class="n">hListEntity</span> <span class="k">=</span>
-</span><span class='line'>  <span class="n">id</span> <span class="o">::</span> <span class="s">&quot;kaylee&quot;</span> <span class="o">::</span> <span class="mi">3L</span> <span class="o">::</span>
-</span><span class='line'>  <span class="nc">Set</span><span class="o">(</span> <span class="s">&quot;manna_gum&quot;</span><span class="o">,</span> <span class="s">&quot;tallowwood&quot;</span> <span class="o">)</span> <span class="o">::</span>
-</span><span class='line'>  <span class="nc">HNil</span>
-</span><span class='line'>
-</span><span class='line'><span class="c1">// validates and converts at compile-time this HList against schema</span>
-</span><span class='line'><span class="n">hListEntity</span><span class="o">.</span><span class="n">toAddEntity</span><span class="o">(</span><span class="nc">Koala</span><span class="o">.</span><span class="n">schema</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'><span class="c1">// If you remove a field from HList and try again, the compiler fails</span>
-</span><span class='line'><span class="k">val</span> <span class="n">badHListEntity</span> <span class="k">=</span>
-</span><span class='line'>  <span class="n">id</span> <span class="o">::</span> <span class="s">&quot;kaylee&quot;</span> <span class="o">::</span>
-</span><span class='line'>  <span class="nc">Set</span><span class="o">(</span> <span class="s">&quot;manna_gum&quot;</span><span class="o">,</span> <span class="s">&quot;tallowwood&quot;</span> <span class="o">)</span> <span class="o">::</span>
-</span><span class='line'>  <span class="nc">HNil</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="n">badHListEntity</span><span class="o">.</span><span class="n">toAddEntity</span><span class="o">(</span><span class="nc">Koala</span><span class="o">.</span><span class="n">schema</span><span class="o">)</span>
-</span><span class='line'><span class="o">&lt;</span><span class="n">console</span><span class="k">&gt;:</span><span class="mi">23</span><span class="k">:</span> <span class="kt">error:</span> <span class="kt">could</span> <span class="kt">not</span> <span class="kt">find</span> <span class="kt">implicit</span> <span class="kt">value</span> <span class="kt">for</span> <span class="kt">parameter</span> <span class="kt">pull:</span>
-</span><span class='line'>  <span class="n">shapotomic</span><span class="o">.</span><span class="nc">SchemaCheckerFromHList</span><span class="o">.</span><span class="nc">Pullback2</span><span class="o">[</span><span class="kt">shapeless.::</span><span class="o">[</span><span class="kt">datomisca.TempId</span>,<span class="kt">shapeless.::</span><span class="o">[</span><span class="kt">String</span>,<span class="kt">shapeless.::</span><span class="o">[</span><span class="kt">scala.collection.immutable.Set</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span>,<span class="kt">shapeless.HNil</span><span class="o">]]]</span>,
-</span><span class='line'>  <span class="kt">shapeless.::</span><span class="o">[</span><span class="kt">datomisca.RawAttribute</span><span class="o">[</span><span class="kt">datomisca.DString</span>,<span class="kt">datomisca.CardinalityOne.</span><span class="k">type</span><span class="o">]</span>,
-</span><span class='line'>  <span class="kt">shapeless.::</span><span class="o">[</span><span class="kt">datomisca.RawAttribute</span><span class="o">[</span><span class="kt">datomisca.DLong</span>,<span class="kt">datomisca.CardinalityOne.</span><span class="k">type</span><span class="o">]</span>,
-</span><span class='line'>  <span class="kt">shapeless.::</span><span class="o">[</span><span class="kt">datomisca.RawAttribute</span><span class="o">[</span><span class="kt">datomisca.DString</span>,<span class="kt">datomisca.CardinalityMany.</span><span class="k">type</span><span class="o">]</span>,<span class="kt">shapeless.HNil</span><span class="o">]]]</span>,<span class="kt">datomisca.AddEntity</span><span class="o">]</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p><em>The compiler error is a bit weird at first but if you take a few seconds to read it, you&#8217;ll see that there is nothing hard about it, it just says:</em></p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="n">scala</span><span class="o">&gt;</span> <span class="n">I</span> <span class="n">can</span><span class="-Symbol">&#39;t</span> <span class="n">convert</span>
-</span><span class='line'><span class="o">(</span><span class="nc">TempId</span> <span class="o">::)</span> <span class="nc">String</span>             <span class="o">::</span> <span class="nc">Set</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span>      <span class="o">::</span> <span class="nc">HNil</span> <span class="k">=&gt;</span>
-</span><span class='line'>            <span class="nc">Attr</span><span class="o">[</span><span class="kt">DString</span>, <span class="kt">one</span><span class="o">]</span> <span class="o">::</span> <span class="nc">Attr</span><span class="o">[</span><span class="kt">DLong</span>, <span class="kt">one</span><span class="o">]</span> <span class="o">::</span> <span class="nc">Attr</span><span class="o">[</span><span class="kt">DString</span>, <span class="kt">many</span><span class="o">]</span> <span class="o">::</span> <span class="nc">HNil</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h3>Convert <code>DEntity</code> to static-typed <code>HList</code> based on schema</h3>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">e</span> <span class="k">=</span> <span class="nc">Datomic</span><span class="o">.</span><span class="n">resolveEntity</span><span class="o">(</span><span class="n">tx</span><span class="o">,</span> <span class="n">id</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'><span class="c1">// rebuilds HList entity from DEntity statically typed by schema</span>
-</span><span class='line'><span class="k">val</span> <span class="n">postHListEntity</span> <span class="k">=</span> <span class="n">e</span><span class="o">.</span><span class="n">toHList</span><span class="o">(</span><span class="nc">Koala</span><span class="o">.</span><span class="n">schema</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'><span class="c1">// Explicitly typing the value to show that the compiler builds the right typed HList from schema</span>
-</span><span class='line'><span class="k">val</span> <span class="n">validateHListEntityType</span><span class="k">:</span> <span class="kt">Long</span> <span class="kt">::</span> <span class="kt">String</span> <span class="kt">::</span> <span class="kt">Long</span> <span class="kt">::</span> <span class="kt">Set</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="o">::</span> <span class="nc">HNil</span> <span class="k">=</span> <span class="n">postHListEntity</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>Conclusion</h2>
-
-<p>Using <code>HList</code> with compile-time schema validation is quite interesting because it provides a very basic and versatile data structure to manipulate Datomic entities in a type-safe style.</p>
-
-<p>Moreover, as Datomic pushes atomic data manipulation (simple facts instead of full entities), it&#8217;s really cool to use <code>HList</code> instead of rigid static structure such as case-class.</p>
-
-<p>For ex:</p>
-
-<figure class='code'><div class='highlight'><table><td class='gutter'><pre class='line-numbers'><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">val</span> <span class="n">simplerOp</span> <span class="k">=</span> <span class="o">(</span><span class="n">id</span> <span class="o">::</span> <span class="s">&quot;kaylee&quot;</span> <span class="o">::</span> <span class="mi">5L</span><span class="o">).</span><span class="n">toAddEntity</span><span class="o">(</span><span class="nc">Koala</span><span class="o">.</span><span class="n">name</span> <span class="o">::</span> <span class="nc">Koala</span><span class="o">.</span><span class="n">age</span> <span class="o">::</span> <span class="nc">HNil</span><span class="o">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Have TypedFun</p>
 ]]></content>
   </entry>
   
